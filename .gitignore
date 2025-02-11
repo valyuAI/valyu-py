@@ -1,0 +1,13 @@
+*/venv
+venv/
+.python-version
+.env
+*__pycache__
+*downloads/
+*.egg-info
+*/dist
+*/build
+build/
+dist/
+*/.venv]
+.DS_Store
