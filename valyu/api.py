@@ -12,17 +12,17 @@ class ErrorResponse(BaseModel):
 class Valyu:
     def __init__(
         self, 
-        api_key: Optional[str],
+        api_key: Optional[str] = None,
         base_url: str = "https://api.valyu.network/v1"
     ):
         """
         Initialize the Valyu client.
 
         Args:
-            api_key (Optional[str]): The API key to use for the client.
+            api_key (Optional[str]): The API key to use for the client. If not provided, will attempt to read from VALYU_API_KEY environment variable.
             base_url (str): The base URL for the Valyu API.
         """
-        if not api_key:
+        if api_key is None:
             api_key = os.getenv("VALYU_API_KEY")
             if not api_key:
                 raise ValueError("VALYU_API_KEY is not set")
