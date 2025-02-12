@@ -1,7 +1,7 @@
 import json
 import requests
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Literal
 from valyu.types.context import SearchResponse, SearchType, ResultsBySource
 import os
 
@@ -100,3 +100,41 @@ class Valyu:
                 total_deduction_dollars=0.0,
                 total_characters=0
             )
+
+    def feedback(
+        self,
+        tx_id: str,
+        feedback: str,
+        sentiment: Literal["very good", "good", "bad", "very bad"]
+    ) -> dict:
+        """
+        Send feedback about a previous search response. Positive or negative, we want to know!
+
+        Args:
+            tx_id (str): The transaction ID from a previous search response
+            feedback (str): Feedback message about the search results, be as detailed as possible
+            sentiment (Literal["very good", "good", "bad", "very bad"]): The sentiment of the feedback
+
+        Returns:
+            dict: Response containing success status and optional error message
+        """
+        try:
+            payload = {
+                "tx_id": tx_id,
+                "feedback": feedback,
+                "sentiment": sentiment.lower()
+            }
+
+            response = requests.post(
+                f"{self.base_url}/feedback",
+                json=payload,
+                headers=self.headers
+            )
+
+            return response.json()
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
