@@ -20,6 +20,7 @@ class ResultsBySource(BaseModel):
 class SearchResponse(BaseModel):
     success: bool
     error: Optional[str] = None
+    tx_id: str
     query: str
     results: List[SearchResult]
     results_by_source: ResultsBySource
