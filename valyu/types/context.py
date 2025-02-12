@@ -11,7 +11,6 @@ class SearchResult(BaseModel):
     source: str
     price: float
     length: int
-    org_id: str
     relevance_score: float
 
 class ResultsBySource(BaseModel):
