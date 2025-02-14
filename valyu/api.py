@@ -5,15 +5,17 @@ from typing import Optional, List, Literal
 from valyu.types.context import SearchResponse, SearchType, ResultsBySource
 import os
 
+
 class ErrorResponse(BaseModel):
     success: bool
     error: str
 
+
 class Valyu:
     def __init__(
-        self, 
+        self,
         api_key: Optional[str] = None,
-        base_url: str = "https://api.valyu.network/v1"
+        base_url: str = "https://api.valyu.network/v1",
     ):
         """
         Initialize the Valyu client.
@@ -28,19 +30,17 @@ class Valyu:
                 raise ValueError("VALYU_API_KEY is not set")
 
         self.base_url = base_url
-        self.headers = {
-            "Content-Type": "application/json",
-            "x-api-key": api_key
-        }
+        self.headers = {"Content-Type": "application/json", "x-api-key": api_key}
 
     def context(
-        self, 
-        query: str, 
-        search_type: SearchType, 
-        num_query: int = 10,
-        num_results: int = 10,
+        self,
+        query: str,
+        search_type: SearchType,
+        max_num_results: int = 10,
+        query_rewrite: Optional[bool] = True,
+        similarity_threshold: Optional[float] = 0.4,
         max_price: int = 1,
-        data_sources: Optional[List[str]] = None
+        data_sources: Optional[List[str]] = None,
     ) -> Optional[SearchResponse]:
         """
         Fetch context from the Valyu API.
@@ -48,9 +48,11 @@ class Valyu:
         Args:
             query (str): The query to search for.
             search_type (SearchType): The type of search to perform.
-            num_query (int): The number of queries to run.
-            num_results (int): The number of results to return per query.
-            max_price (int): The maximum price (per thousand queries) to spend on the search. 
+            max_num_results (int): The maximum number of results to return.
+            query_rewrite (Optional[bool]): Whether to rewrite the query to improve search quality.
+            similarity_threshold (Optional[float]): The similarity threshold to not return results below.
+            max_price (int): The maximum price (per thousand queries) to spend on the search.
+            data_sources (Optional[List[str]]): The data sources to use for the search.
 
         Returns:
             Optional[SearchResponse]: The search response.
@@ -59,18 +61,17 @@ class Valyu:
             payload = {
                 "query": query,
                 "search_type": search_type,
-                "num_query": num_query,
-                "num_results": num_results,
-                "max_price": max_price
+                "max_num_results": max_num_results,
+                "query_rewrite": query_rewrite,
+                "similarity_threshold": similarity_threshold,
+                "max_price": max_price,
             }
 
             if data_sources is not None:
                 payload["data_sources"] = data_sources
 
             response = requests.post(
-                f"{self.base_url}/knowledge", 
-                json=payload,
-                headers=self.headers
+                f"{self.base_url}/knowledge", json=payload, headers=self.headers
             )
 
             data = response.json()
@@ -84,7 +85,7 @@ class Valyu:
                     results_by_source=ResultsBySource(web=0, proprietary=0),
                     total_deduction_pcm=0.0,
                     total_deduction_dollars=0.0,
-                    total_characters=0
+                    total_characters=0,
                 )
 
             return SearchResponse(**data)
@@ -98,14 +99,14 @@ class Valyu:
                 results_by_source=ResultsBySource(web=0, proprietary=0),
                 total_deduction_pcm=0.0,
                 total_deduction_dollars=0.0,
-                total_characters=0
+                total_characters=0,
             )
 
     def feedback(
         self,
         tx_id: str,
         feedback: str,
-        sentiment: Literal["very good", "good", "bad", "very bad"]
+        sentiment: Literal["very good", "good", "bad", "very bad"],
     ) -> dict:
         """
         Send feedback about a previous search response. Positive or negative, we want to know!
@@ -122,19 +123,14 @@ class Valyu:
             payload = {
                 "tx_id": tx_id,
                 "feedback": feedback,
-                "sentiment": sentiment.lower()
+                "sentiment": sentiment.lower(),
             }
 
             response = requests.post(
-                f"{self.base_url}/feedback",
-                json=payload,
-                headers=self.headers
+                f"{self.base_url}/feedback", json=payload, headers=self.headers
             )
 
             return response.json()
 
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
