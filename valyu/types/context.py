@@ -1,7 +1,8 @@
 from typing import List, Optional, Literal
 from pydantic import BaseModel
 
-SearchType = Literal['web', 'proprietary']
+SearchType = Literal["web", "proprietary", "all"]
+
 
 class SearchResult(BaseModel):
     title: str
@@ -12,10 +13,15 @@ class SearchResult(BaseModel):
     price: float
     length: int
     relevance_score: float
+    data_type: Optional[Literal["structured", "unstructured"]] = (
+        None  # structured means content is json as str
+    )
+
 
 class ResultsBySource(BaseModel):
     web: int
     proprietary: int
+
 
 class SearchResponse(BaseModel):
     success: bool
