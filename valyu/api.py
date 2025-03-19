@@ -76,10 +76,10 @@ class Valyu:
 
             data = response.json()
             if not response.ok:
-                # Create a SearchResponse with error information
                 return SearchResponse(
                     success=False,
                     error=data.get("error"),
+                    tx_id=data.get("tx_id", "error-" + str(response.status_code)),
                     query=query,
                     results=[],
                     results_by_source=ResultsBySource(web=0, proprietary=0),
@@ -94,6 +94,7 @@ class Valyu:
             return SearchResponse(
                 success=False,
                 error=str(e),
+                tx_id="exception-" + str(hash(str(e)))[:8],
                 query=query,
                 results=[],
                 results_by_source=ResultsBySource(web=0, proprietary=0),
