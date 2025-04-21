@@ -35,11 +35,11 @@ class Valyu:
     def context(
         self,
         query: str,
-        search_type: SearchType,
+        search_type: SearchType = "all",
         max_num_results: int = 10,
-        query_rewrite: Optional[bool] = True,
+        query_rewrite: Optional[bool] = False,
         similarity_threshold: Optional[float] = 0.4,
-        max_price: int = 1,
+        max_price: int = 30,
         data_sources: Optional[List[str]] = None,
     ) -> Optional[SearchResponse]:
         """
@@ -75,17 +75,35 @@ class Valyu:
             )
 
             data = response.json()
+
+            # Handle HTTP errors first
             if not response.ok:
                 return SearchResponse(
                     success=False,
-                    error=data.get("error"),
-                    tx_id=data.get("tx_id", "error-" + str(response.status_code)),
+                    error=data.get("error", f"HTTP Error: {response.status_code}"),
+                    tx_id=data.get("tx_id", f"error-{response.status_code}"),
                     query=query,
                     results=[],
                     results_by_source=ResultsBySource(web=0, proprietary=0),
                     total_deduction_pcm=0.0,
                     total_deduction_dollars=0.0,
                     total_characters=0,
+                )
+
+            # Handle successful response but "No results found" case
+            if not data.get("results") and data.get("error"):
+                return SearchResponse(
+                    success=True,
+                    error=data.get("error"),
+                    tx_id=data.get("tx_id", "0x0"),
+                    query=data.get("query", query),
+                    results=[],
+                    results_by_source=data.get(
+                        "results_by_source", ResultsBySource(web=0, proprietary=0)
+                    ),
+                    total_deduction_pcm=data.get("total_deduction_pcm", 0.0),
+                    total_deduction_dollars=data.get("total_deduction_dollars", 0.0),
+                    total_characters=data.get("total_characters", 0),
                 )
 
             return SearchResponse(**data)
