@@ -37,22 +37,28 @@ class Valyu:
         query: str,
         search_type: SearchType = "all",
         max_num_results: int = 10,
-        query_rewrite: Optional[bool] = False,
-        similarity_threshold: Optional[float] = 0.4,
+        is_tool_call: Optional[bool] = True,
+        relevance_threshold: Optional[float] = 0.5,
         max_price: int = 30,
-        data_sources: Optional[List[str]] = None,
+        included_sources: Optional[List[str]] = None,
+        category: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
     ) -> Optional[SearchResponse]:
         """
         Query the Valyu DeepSearch API to give your AI relevant context.
 
         Args:
-            query (str): The query to search for.
+            query (str): The query string.
             search_type (SearchType): The type of search to perform.
-            max_num_results (int): The maximum number of results to return.
-            query_rewrite (Optional[bool]): Whether to rewrite the query to improve search quality.
-            similarity_threshold (Optional[float]): The similarity threshold to not return results below.
+            max_num_results (int): The maximum number of search results to return.
+            is_tool_call (Optional[bool]): Whether this is a tool call.
+            relevance_threshold (Optional[float]): The relevance threshold to not return results below.
             max_price (int): The maximum price (per thousand queries) to spend on the search.
-            data_sources (Optional[List[str]]): The data sources to use for the search.
+            included_sources (Optional[List[str]]): The data sources to use for the search.
+            category (Optional[str]): Category filter for search results.
+            start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
+            end_date (Optional[str]): End date filter in YYYY-MM-DD format.
 
         Returns:
             Optional[SearchResponse]: The search response.
@@ -62,13 +68,22 @@ class Valyu:
                 "query": query,
                 "search_type": search_type,
                 "max_num_results": max_num_results,
-                "query_rewrite": query_rewrite,
-                "similarity_threshold": similarity_threshold,
+                "is_tool_call": is_tool_call,
+                "relevance_threshold": relevance_threshold,
                 "max_price": max_price,
             }
 
-            if data_sources is not None:
-                payload["data_sources"] = data_sources
+            if included_sources is not None:
+                payload["included_sources"] = included_sources
+
+            if category is not None:
+                payload["category"] = category
+
+            if start_date is not None:
+                payload["start_date"] = start_date
+
+            if end_date is not None:
+                payload["end_date"] = end_date
 
             response = requests.post(
                 f"{self.base_url}/knowledge", json=payload, headers=self.headers
@@ -76,7 +91,6 @@ class Valyu:
 
             data = response.json()
 
-            # Handle HTTP errors first
             if not response.ok:
                 return SearchResponse(
                     success=False,
@@ -90,7 +104,6 @@ class Valyu:
                     total_characters=0,
                 )
 
-            # Handle successful response but "No results found" case
             if not data.get("results") and data.get("error"):
                 return SearchResponse(
                     success=True,
@@ -108,7 +121,6 @@ class Valyu:
 
             return SearchResponse(**data)
         except Exception as e:
-            # Create a SearchResponse with the exception information
             return SearchResponse(
                 success=False,
                 error=str(e),
