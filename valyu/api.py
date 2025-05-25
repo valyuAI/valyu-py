@@ -2,7 +2,7 @@ import json
 import requests
 from pydantic import BaseModel
 from typing import Optional, List, Literal
-from valyu.types.context import SearchResponse, SearchType, ResultsBySource
+from valyu.types.response import SearchResponse, SearchType, ResultsBySource
 import os
 
 
@@ -32,7 +32,7 @@ class Valyu:
         self.base_url = base_url
         self.headers = {"Content-Type": "application/json", "x-api-key": api_key}
 
-    def context(
+    def search(
         self,
         query: str,
         search_type: SearchType = "all",
@@ -43,7 +43,7 @@ class Valyu:
         data_sources: Optional[List[str]] = None,
     ) -> Optional[SearchResponse]:
         """
-        Fetch context from the Valyu API.
+        Query the Valyu DeepSearch API to give your AI relevant context.
 
         Args:
             query (str): The query to search for.
