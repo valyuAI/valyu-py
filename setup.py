@@ -7,12 +7,12 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="valyu",
-    version="1.0.9",
+    version="2.0.0",
     author="Valyu",
     author_email="contact@valyu.network",
     maintainer="Harvey Yorke",
     maintainer_email="harvey@valyu.network",
-    description="We handle the data. You handle the AI.",
+    description="Deepsearch API for AI.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://valyu.network",
