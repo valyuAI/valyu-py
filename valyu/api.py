@@ -1,9 +1,53 @@
 import json
 import requests
 from pydantic import BaseModel
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Union
 from valyu.types.response import SearchResponse, SearchType, ResultsBySource
 import os
+
+# Supported country codes for the country_code parameter
+CountryCode = Literal[
+    "ALL",
+    "AR",
+    "AU",
+    "AT",
+    "BE",
+    "BR",
+    "CA",
+    "CL",
+    "DK",
+    "FI",
+    "FR",
+    "DE",
+    "HK",
+    "IN",
+    "ID",
+    "IT",
+    "JP",
+    "KR",
+    "MY",
+    "MX",
+    "NL",
+    "NZ",
+    "NO",
+    "CN",
+    "PL",
+    "PT",
+    "PH",
+    "RU",
+    "SA",
+    "ZA",
+    "ES",
+    "SE",
+    "CH",
+    "TW",
+    "TR",
+    "GB",
+    "US",
+]
+
+# Response length options
+ResponseLength = Union[Literal["short", "medium", "large", "max"], int]
 
 
 class ErrorResponse(BaseModel):
@@ -15,7 +59,7 @@ class Valyu:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        base_url: str = "https://api.valyu.network/v1",
+        base_url: str = "https://stage.api.valyu.network/v1",
     ):
         """
         Initialize the Valyu client.
@@ -41,6 +85,9 @@ class Valyu:
         relevance_threshold: Optional[float] = 0.5,
         max_price: int = 30,
         included_sources: Optional[List[str]] = None,
+        exclude_sources: Optional[List[str]] = None,
+        country_code: Optional[CountryCode] = None,
+        response_length: Optional[ResponseLength] = None,
         category: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
@@ -56,6 +103,9 @@ class Valyu:
             relevance_threshold (Optional[float]): The relevance threshold to not return results below.
             max_price (int): The maximum price (per thousand queries) to spend on the search.
             included_sources (Optional[List[str]]): The data sources to use for the search.
+            exclude_sources (Optional[List[str]]): The data sources to exclude from the search.
+            country_code (Optional[CountryCode]): Country code filter for search results.
+            response_length (Optional[ResponseLength]): Length of response content - "short", "medium", "large", "max", or integer for character count.
             category (Optional[str]): Category filter for search results.
             start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
             end_date (Optional[str]): End date filter in YYYY-MM-DD format.
@@ -75,6 +125,15 @@ class Valyu:
 
             if included_sources is not None:
                 payload["included_sources"] = included_sources
+
+            if exclude_sources is not None:
+                payload["exclude_sources"] = exclude_sources
+
+            if country_code is not None:
+                payload["country_code"] = country_code
+
+            if response_length is not None:
+                payload["response_length"] = response_length
 
             if category is not None:
                 payload["category"] = category
