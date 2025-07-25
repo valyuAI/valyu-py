@@ -61,6 +61,9 @@ def search(
     relevance_threshold: float = 0.5,             # Minimum relevance score (0-1)
     max_price: int = 30,                          # Maximum price per thousand queries (CPM)
     included_sources: List[str] = None,           # Specific sources to search
+    exclude_sources: List[str] = None,            # Sources to exclude from search
+    country_code: str = None,                     # Country code filter (e.g., "US", "GB")
+    response_length: Union[str, int] = None,      # Response length: "short"/"medium"/"large"/"max" or character count
     category: str = None,                         # Category filter
     start_date: str = None,                       # Start date (YYYY-MM-DD)
     end_date: str = None,                         # End date (YYYY-MM-DD)
@@ -78,6 +81,9 @@ def search(
 | `relevance_threshold` | `float` | `0.5` | Minimum relevance score for results (0.0-1.0) |
 | `max_price` | `int` | `30` | Maximum price per thousand queries in CPM |
 | `included_sources` | `List[str]` | `None` | Specific data sources or URLs to search |
+| `exclude_sources` | `List[str]` | `None` | Data sources or URLs to exclude from search |
+| `country_code` | `str` | `None` | Country code filter (e.g., "US", "GB", "JP", "ALL") |
+| `response_length` | `Union[str, int]` | `None` | Response length: "short"/"medium"/"large"/"max" or character count |
 | `category` | `str` | `None` | Category filter for results |
 | `start_date` | `str` | `None` | Start date filter in YYYY-MM-DD format |
 | `end_date` | `str` | `None` | End date filter in YYYY-MM-DD format |
