@@ -71,7 +71,7 @@ response = valyu.search(
     max_num_results=8,
     relevance_threshold=0.5,
     max_price=40,
-    exclude_sources=["paperswithcode.com", "wikipedia.org"],
+    excluded_sources=["paperswithcode.com", "wikipedia.org"],
     response_length="large",
     is_tool_call=True,
 )

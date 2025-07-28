@@ -85,7 +85,7 @@ class Valyu:
         relevance_threshold: Optional[float] = 0.5,
         max_price: int = 30,
         included_sources: Optional[List[str]] = None,
-        exclude_sources: Optional[List[str]] = None,
+        excluded_sources: Optional[List[str]] = None,
         country_code: Optional[CountryCode] = None,
         response_length: Optional[ResponseLength] = None,
         category: Optional[str] = None,
@@ -103,7 +103,7 @@ class Valyu:
             relevance_threshold (Optional[float]): The relevance threshold to not return results below.
             max_price (int): The maximum price (per thousand queries) to spend on the search.
             included_sources (Optional[List[str]]): The data sources to use for the search.
-            exclude_sources (Optional[List[str]]): The data sources to exclude from the search.
+            excluded_sources (Optional[List[str]]): The data sources to exclude from the search.
             country_code (Optional[CountryCode]): Country code filter for search results.
             response_length (Optional[ResponseLength]): Length of response content - "short", "medium", "large", "max", or integer for character count.
             category (Optional[str]): Category filter for search results.
@@ -126,8 +126,8 @@ class Valyu:
             if included_sources is not None:
                 payload["included_sources"] = included_sources
 
-            if exclude_sources is not None:
-                payload["exclude_sources"] = exclude_sources
+            if excluded_sources is not None:
+                payload["excluded_sources"] = excluded_sources
 
             if country_code is not None:
                 payload["country_code"] = country_code
