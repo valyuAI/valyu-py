@@ -1,6 +1,6 @@
 # Valyu SDK
 
-**DeepSearch API for AI**
+**Search for AIs**
 
 Valyu's Deepsearch API gives AI the context it needs. Integrate trusted, high-quality public and proprietary sources, with full-text multimodal retrieval.
 
@@ -10,7 +10,7 @@ Get **$10 free credits** for the Valyu API when you sign up at [Valyu](https://e
 
 ## How does it work?
 
-We do all the heavy lifting for you - through a single API we provide:
+We do all the heavy lifting for you - one unified API for all data:
 
 - **Academic & Research Content** - Access millions of scholarly papers and textbooks
 - **Real-time Web Search** - Get the latest information from across the internet  
@@ -121,6 +121,63 @@ class SearchResult:
     data_type: Optional[str]              # "structured" or "unstructured"
 ```
 
+### Contents Method
+
+The `contents()` method extracts clean, structured content from web pages with optional AI-powered data extraction and summarization.
+
+```python
+def contents(
+    urls: List[str],                                      # List of URLs to process (max 10)
+    summary: Union[bool, str, Dict] = None,              # AI summary configuration
+    extract_effort: str = None,                          # "normal" or "high"
+    response_length: Union[str, int] = None,             # Content length configuration
+    max_price_dollars: float = None,                     # Maximum cost limit in USD
+) -> ContentsResponse
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `urls` | `List[str]` | *required* | List of URLs to process (maximum 10 URLs per request) |
+| `summary` | `Union[bool, str, Dict]` | `None` | AI summary configuration:<br>- `False/None`: No AI processing (raw content)<br>- `True`: Basic automatic summarization<br>- `str`: Custom instructions (max 500 chars)<br>- `dict`: JSON schema for structured extraction |
+| `extract_effort` | `str` | `None` | Extraction thoroughness: `"normal"` (fast) or `"high"` (thorough but slower) |
+| `response_length` | `Union[str, int]` | `None` | Content length per URL:<br>- `"short"`: 25,000 characters<br>- `"medium"`: 50,000 characters<br>- `"large"`: 100,000 characters<br>- `"max"`: No limit<br>- `int`: Custom character limit |
+| `max_price_dollars` | `float` | `None` | Maximum cost limit in USD |
+
+### Response Format
+
+The contents method returns a `ContentsResponse` object:
+
+```python
+class ContentsResponse:
+    success: bool                          # Whether the request was successful
+    error: Optional[str]                   # Error message if any
+    tx_id: str                            # Transaction ID for tracking
+    urls_requested: int                   # Number of URLs submitted
+    urls_processed: int                   # Number of URLs successfully processed
+    urls_failed: int                      # Number of URLs that failed
+    results: List[ContentsResult]        # List of extraction results
+    total_cost_dollars: float             # Total cost in dollars
+    total_characters: int                 # Total characters extracted
+```
+
+Each `ContentsResult` contains:
+
+```python
+class ContentsResult:
+    url: str                              # Source URL
+    title: str                            # Page/document title
+    content: Union[str, int, float]       # Extracted content
+    length: int                           # Content length in characters
+    source: str                           # Data source identifier
+    summary: Optional[Union[str, Dict]]   # AI-generated summary or structured data
+    summary_success: Optional[bool]       # Whether summary generation succeeded
+    data_type: Optional[str]              # Type of data extracted
+    image_url: Optional[Dict[str, str]]   # Extracted images
+    citation: Optional[str]               # APA-style citation
+```
+
 ## Examples
 
 ### Basic Search
@@ -190,6 +247,82 @@ if response.success:
         print(f"   Content: {result.content[:200]}...")
 else:
     print(f"Search failed: {response.error}")
+```
+
+### Content Extraction Examples
+
+#### Basic Content Extraction
+
+```python
+# Extract raw content from URLs
+response = valyu.contents(
+    urls=["https://techcrunch.com/2025/08/28/anthropic-users-face-a-new-choice-opt-out-or-share-your-data-for-ai-training/"]
+)
+
+if response.success:
+    for result in response.results:
+        print(f"Title: {result.title}")
+        print(f"Content: {result.content[:500]}...")
+```
+
+#### Content with AI Summary
+
+```python
+# Extract content with automatic summarization
+response = valyu.contents(
+    urls=["https://docs.python.org/3/tutorial/"],
+    summary=True,
+    response_length="max"
+)
+
+for result in response.results:
+    print(f"Summary: {result.summary}")
+```
+
+#### Structured Data Extraction
+
+```python
+# Extract structured data using JSON schema
+company_schema = {
+    "type": "object",
+    "properties": {
+        "company_name": {"type": "string"},
+        "founded_year": {"type": "integer"},
+        "key_products": {
+            "type": "array",
+            "items": {"type": "string"},
+            "maxItems": 3
+        }
+    }
+}
+
+response = valyu.contents(
+    urls=["https://en.wikipedia.org/wiki/OpenAI"],
+    summary=company_schema,
+    response_length="max"
+)
+
+if response.success:
+    for result in response.results:
+        if result.summary:
+            print(f"Structured data: {json.dumps(result.summary, indent=2)}")
+```
+
+#### Multiple URLs
+
+```python
+# Process multiple URLs with a cost limit
+response = valyu.contents(
+    urls=[
+        "https://www.valyu.network/",
+        "https://docs.valyu.network/overview",
+        "https://www.valyu.network/blogs/why-ai-agents-and-llms-struggle-with-search-and-data-access"
+    ],
+    summary="Provide key takeaways in bullet points, and write in very emphasised singaporean english"
+)
+
+print(f"Processed {response.urls_processed}/{response.urls_requested} URLs")
+print(f"Cost: ${response.total_cost_dollars:.4f}")
 ```
 
 ## Authentication
