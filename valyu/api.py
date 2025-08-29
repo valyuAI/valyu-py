@@ -1,8 +1,14 @@
 import json
 import requests
 from pydantic import BaseModel
-from typing import Optional, List, Literal, Union
+from typing import Optional, List, Literal, Union, Dict, Any
 from valyu.types.response import SearchResponse, SearchType, ResultsBySource
+from valyu.types.contents import (
+    ContentsResponse,
+    ContentsResult,
+    ExtractEffort,
+    ContentsResponseLength,
+)
 import os
 
 # Supported country codes for the country_code parameter
@@ -189,5 +195,100 @@ class Valyu:
                 results_by_source=ResultsBySource(web=0, proprietary=0),
                 total_deduction_pcm=0.0,
                 total_deduction_dollars=0.0,
+                total_characters=0,
+            )
+
+    def contents(
+        self,
+        urls: List[str],
+        summary: Optional[Union[bool, str, Dict[str, Any]]] = None,
+        extract_effort: Optional[ExtractEffort] = None,
+        response_length: Optional[ContentsResponseLength] = None,
+        max_price_dollars: Optional[float] = None,
+    ) -> Optional[ContentsResponse]:
+        """
+        Extract clean, structured content from web pages with optional AI-powered data extraction and summarization.
+
+        Args:
+            urls (List[str]): List of URLs to process (maximum 10 URLs per request).
+            summary (Optional[Union[bool, str, Dict[str, Any]]]): AI summary configuration:
+                - False/None: No AI processing (raw content)
+                - True: Basic automatic summarization
+                - str: Custom instructions (max 500 chars)
+                - dict: JSON schema for structured extraction
+            extract_effort (Optional[ExtractEffort]): Extraction thoroughness:
+                - "normal": Fast extraction (default)
+                - "high": More thorough but slower
+            response_length (Optional[ContentsResponseLength]): Content length per URL:
+                - "short": 25,000 characters (default)
+                - "medium": 50,000 characters
+                - "large": 100,000 characters
+                - "max": No limit
+                - int: Custom character limit
+            max_price_dollars (Optional[float]): Maximum cost limit in USD.
+
+        Returns:
+            Optional[ContentsResponse]: The contents extraction response.
+        """
+        try:
+            if len(urls) > 10:
+                return ContentsResponse(
+                    success=False,
+                    error="Maximum 10 URLs allowed per request",
+                    tx_id="error-max-urls",
+                    urls_requested=len(urls),
+                    urls_processed=0,
+                    urls_failed=len(urls),
+                    results=[],
+                    total_cost_dollars=0.0,
+                    total_characters=0,
+                )
+
+            payload = {
+                "urls": urls,
+            }
+
+            if summary is not None:
+                payload["summary"] = summary
+
+            if extract_effort is not None:
+                payload["extract_effort"] = extract_effort
+
+            if response_length is not None:
+                payload["response_length"] = response_length
+
+            if max_price_dollars is not None:
+                payload["max_price_dollars"] = max_price_dollars
+
+            response = requests.post(
+                f"{self.base_url}/contents", json=payload, headers=self.headers
+            )
+
+            data = response.json()
+
+            if not response.ok:
+                return ContentsResponse(
+                    success=False,
+                    error=data.get("error", f"HTTP Error: {response.status_code}"),
+                    tx_id=data.get("tx_id", f"error-{response.status_code}"),
+                    urls_requested=len(urls),
+                    urls_processed=0,
+                    urls_failed=len(urls),
+                    results=[],
+                    total_cost_dollars=0.0,
+                    total_characters=0,
+                )
+
+            return ContentsResponse(**data)
+        except Exception as e:
+            return ContentsResponse(
+                success=False,
+                error=str(e),
+                tx_id="exception-" + str(hash(str(e)))[:8],
+                urls_requested=len(urls),
+                urls_processed=0,
+                urls_failed=len(urls),
+                results=[],
+                total_cost_dollars=0.0,
                 total_characters=0,
             )
