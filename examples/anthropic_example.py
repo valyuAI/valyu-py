@@ -24,7 +24,7 @@ tools = provider.get_tools()
 input_messages = [
     {
         "role": "user",
-        "content": "Research the latest developments in multimodal AI models",
+        "content": "Research the latest developments in multimodal AI models, then generate a detailed report on the findings",
     }
 ]
 
