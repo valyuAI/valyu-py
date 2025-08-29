@@ -29,7 +29,7 @@ input_messages = [
     },
     {
         "role": "user",
-        "content": "Get the price of bitcoin and dogecoin over the last 7 days, then research the latest news on their price movements",
+        "content": "Get the price of bitcoin and dogecoin over the last 7 days, then research the latest news on their price movements, the generate a detailed report on the price movements and the news",
     },
 ]
 
