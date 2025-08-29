@@ -4,7 +4,7 @@
 
 Valyu's Deepsearch API gives AI the context it needs. Integrate trusted, high-quality public and proprietary sources, with full-text multimodal retrieval.
 
-Get **$10 free credits** for the Valyu API when you sign up at [Valyu](https://exchange.valyu.network)!
+Get **$10 free credits** for the Valyu API when you sign up at [Valyu](https://platform.valyu.network)!
 
 *No credit card required.*
 
@@ -357,7 +357,7 @@ else:
 
 ## Getting Started
 
-1. Sign up for a free account at [Valyu](https://exchange.valyu.network)
+1. Sign up for a free account at [Valyu](https://platform.valyu.network)
 2. Get your API key from the dashboard  
 3. Install the SDK: `pip install valyu`
 4. Start building with the examples above
