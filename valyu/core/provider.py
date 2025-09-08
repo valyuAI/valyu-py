@@ -84,12 +84,12 @@ class BaseProvider(ABC, t.Generic[T, U]):
                         },
                         "included_sources": {
                             "type": ["array", "null"],
-                            "description": "Search over specific sources, can pass a domain (e.g. news.ycombinator.com), a url (e.g. https://arxiv.org/abs/1706.03762), or a specific valyu dataset (e.g. valyu/valyu-arxiv, wiley/wiley-finance-books). For most cases, do not use unless the user asks for it.",
+                            "description": "Search over specific sources. Sources must be formatted as: (1) Domain: 'example.com', 'news.ycombinator.com' (2) URL with path: 'https://arxiv.org/abs/1706.03762' (3) Dataset name: 'valyu/valyu-arxiv', 'wiley/wiley-finance-books'. For most cases, do not use unless the user asks for it.",
                             "items": {"type": "string"},
                         },
                         "excluded_sources": {
                             "type": ["array", "null"],
-                            "description": "Select specific sources to exclude from the search, can pass a domain (e.g. news.ycombinator.com), a url (e.g. https://arxiv.org/abs/1706.03762), or a specific valyu dataset (e.g. valyu/valyu-arxiv, wiley/wiley-finance-book). For most cases, do not use unless the user asks for it.",
+                            "description": "Select specific sources to exclude from the search. Sources must be formatted as: (1) Domain: 'paperswithcode.com', 'wikipedia.org' (2) URL with path: 'https://example.com/path' (3) Dataset name: 'provider/dataset-name'. For most cases, do not use unless the user asks for it.",
                             "items": {"type": "string"},
                         },
                         "category": {

@@ -6,6 +6,12 @@ from .contents import (
     ContentsResponseLength,
 )
 
+# Source format types
+from typing import Literal, Union
+
+SourceFormat = Union[str]  # Can be domain, URL, or dataset format
+ValidatedSource = str  # A source that has passed validation
+
 __all__ = [
     "SearchResponse",
     "SearchResult",
@@ -15,4 +21,6 @@ __all__ = [
     "ContentsResult",
     "ExtractEffort",
     "ContentsResponseLength",
+    "SourceFormat",
+    "ValidatedSource",
 ]

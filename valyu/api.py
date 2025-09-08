@@ -9,6 +9,7 @@ from valyu.types.contents import (
     ExtractEffort,
     ContentsResponseLength,
 )
+from valyu.validation import validate_sources, format_validation_error
 import os
 
 # Supported country codes for the country_code parameter
@@ -109,7 +110,15 @@ class Valyu:
             relevance_threshold (Optional[float]): The relevance threshold to not return results below.
             max_price (int): The maximum price (per thousand queries) to spend on the search.
             included_sources (Optional[List[str]]): The data sources to use for the search.
+                Sources must be formatted as one of:
+                • Domain: 'example.com', 'news.ycombinator.com'
+                • URL with path: 'https://arxiv.org/abs/1706.03762'
+                • Dataset name: 'valyu/valyu-arxiv', 'wiley/wiley-finance-books'
             excluded_sources (Optional[List[str]]): The data sources to exclude from the search.
+                Sources must be formatted as one of:
+                • Domain: 'paperswithcode.com', 'wikipedia.org'
+                • URL with path: 'https://example.com/path/to/page'
+                • Dataset name: 'provider/dataset-name'
             country_code (Optional[CountryCode]): Country code filter for search results.
             response_length (Optional[ResponseLength]): Length of response content - "short", "medium", "large", "max", or integer for character count.
             category (Optional[str]): Category filter for search results.
@@ -120,6 +129,38 @@ class Valyu:
             Optional[SearchResponse]: The search response.
         """
         try:
+            # Validate included_sources if provided
+            if included_sources is not None:
+                is_valid, invalid_sources = validate_sources(included_sources)
+                if not is_valid:
+                    return SearchResponse(
+                        success=False,
+                        error=format_validation_error(invalid_sources),
+                        tx_id="validation-error-included",
+                        query=query,
+                        results=[],
+                        results_by_source=ResultsBySource(web=0, proprietary=0),
+                        total_deduction_pcm=0.0,
+                        total_deduction_dollars=0.0,
+                        total_characters=0,
+                    )
+
+            # Validate excluded_sources if provided
+            if excluded_sources is not None:
+                is_valid, invalid_sources = validate_sources(excluded_sources)
+                if not is_valid:
+                    return SearchResponse(
+                        success=False,
+                        error=format_validation_error(invalid_sources),
+                        tx_id="validation-error-excluded",
+                        query=query,
+                        results=[],
+                        results_by_source=ResultsBySource(web=0, proprietary=0),
+                        total_deduction_pcm=0.0,
+                        total_deduction_dollars=0.0,
+                        total_characters=0,
+                    )
+
             payload = {
                 "query": query,
                 "search_type": search_type,
