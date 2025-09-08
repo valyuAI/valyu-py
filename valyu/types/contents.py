@@ -1,7 +1,7 @@
 from typing import List, Optional, Literal, Union, Dict, Any
 from pydantic import BaseModel
 
-ExtractEffort = Literal["normal", "high"]
+ExtractEffort = Literal["normal", "high", "auto"]
 ContentsResponseLength = Union[Literal["short", "medium", "large", "max"], int]
 
 

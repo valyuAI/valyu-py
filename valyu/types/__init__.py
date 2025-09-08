@@ -1,5 +1,10 @@
 from .response import SearchResponse, SearchResult, SearchType, ResultsBySource
-from .contents import ContentsResponse, ContentsResult, ExtractEffort, ContentsResponseLength
+from .contents import (
+    ContentsResponse,
+    ContentsResult,
+    ExtractEffort,
+    ContentsResponseLength,
+)
 
 __all__ = [
     "SearchResponse",

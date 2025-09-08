@@ -219,6 +219,7 @@ class Valyu:
             extract_effort (Optional[ExtractEffort]): Extraction thoroughness:
                 - "normal": Fast extraction (default)
                 - "high": More thorough but slower
+                - "auto": Automatically determine extraction effort but slowest
             response_length (Optional[ContentsResponseLength]): Content length per URL:
                 - "short": 25,000 characters (default)
                 - "medium": 50,000 characters
