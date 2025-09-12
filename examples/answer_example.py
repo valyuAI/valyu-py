@@ -28,8 +28,8 @@ response = valyu.answer(query)
 print(f"Success: {response.success}")
 if response.success:
     print(f"Answer: {response.contents[:500]}...")  # First 500 chars
-    print(f"Documents processed: {response.documents_processed}")
-    print(f"Total cost: ${response.search_metadata.total_deduction_dollars:.4f}")
+    print(f"Search results: {response.search_metadata.number_of_results}")
+    print(f"Total cost: ${response.cost.total_deduction_dollars:.4f}")
 else:
     print(f"Error: {response.error}")
 
@@ -50,8 +50,10 @@ response = valyu.answer(
 print(f"Success: {response.success}")
 if response.success:
     print(f"Answer: {response.contents}")
-    print(f"AI cost: ${response.ai_usage.cost_dollars:.4f}")
-    print(f"Tokens used: {response.ai_usage.total_tokens}")
+    print(f"AI cost: ${response.cost.ai_deduction_dollars:.4f}")
+    print(
+        f"Tokens used: {response.ai_usage.input_tokens + response.ai_usage.output_tokens}"
+    )
 else:
     print(f"Error: {response.error}")
 
@@ -104,7 +106,7 @@ print(f"Success: {response.success}")
 if response.success:
     print(f"Data type: {response.data_type}")
     print(f"Structured result: {response.contents}")
-    print(f"Total cost: ${response.search_metadata.total_deduction_dollars:.4f}")
+    print(f"Total cost: ${response.cost.total_deduction_dollars:.4f}")
 else:
     print(f"Error: {response.error}")
 
@@ -126,10 +128,8 @@ print(f"Query: {query}")
 print(f"Success: {response.success}")
 if response.success:
     print(f"Answer: {response.contents[:400]}...")
-    print(f"Sources breakdown: {response.search_metadata.results_by_source}")
-    print(
-        f"Documents used: {response.documents_processed}/{response.total_documents_available}"
-    )
+    print(f"Search results: {response.search_metadata.number_of_results}")
+    print(f"Total characters: {response.search_metadata.total_characters}")
 else:
     print(f"Error: {response.error}")
 

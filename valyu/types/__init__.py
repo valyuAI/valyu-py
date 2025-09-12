@@ -12,6 +12,7 @@ from .answer import (
     AnswerRequest,
     SearchMetadata,
     AIUsage,
+    CostBreakdown,
     SUPPORTED_COUNTRY_CODES,
 )
 
@@ -36,6 +37,7 @@ __all__ = [
     "AnswerRequest",
     "SearchMetadata",
     "AIUsage",
+    "CostBreakdown",
     "SUPPORTED_COUNTRY_CODES",
     "SourceFormat",
     "ValidatedSource",

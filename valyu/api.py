@@ -68,6 +68,7 @@ class Valyu:
         category: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        fast_mode: bool = False,
     ) -> Optional[SearchResponse]:
         """
         Query the Valyu DeepSearch API to give your AI relevant context.
@@ -94,6 +95,7 @@ class Valyu:
             category (Optional[str]): Category filter for search results.
             start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
             end_date (Optional[str]): End date filter in YYYY-MM-DD format.
+            fast_mode (bool): Enable fast mode for faster but shorter results. Good for general purpose queries. Defaults to False.
 
         Returns:
             Optional[SearchResponse]: The search response.
@@ -155,6 +157,7 @@ class Valyu:
                 "is_tool_call": is_tool_call,
                 "relevance_threshold": relevance_threshold,
                 "max_price": max_price,
+                "fast_mode": fast_mode,
             }
 
             if included_sources is not None:
@@ -334,6 +337,7 @@ class Valyu:
         excluded_sources: Optional[List[str]] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        fast_mode: bool = False,
     ) -> Optional[AnswerResponse]:
         """
         Query the Valyu Answer API to get AI-processed answers to your questions.
@@ -358,6 +362,7 @@ class Valyu:
                 • Dataset name: 'provider/dataset-name'
             start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
             end_date (Optional[str]): End date filter in YYYY-MM-DD format.
+            fast_mode (bool): Enable fast mode for faster but shorter results. Good for general purpose queries. Defaults to False.
 
         Returns:
             Optional[AnswerResponse]: The answer response.
@@ -401,6 +406,7 @@ class Valyu:
                 "query": query,
                 "search_type": search_type,
                 "data_max_price": data_max_price,
+                "fast_mode": fast_mode,
             }
 
             if structured_output is not None:

@@ -100,6 +100,10 @@ class AnswerRequest(BaseModel):
         gt=0,
         description="Maximum spend (USD) for data retrieval. Separate from AI costs.",
     )
+    fast_mode: bool = Field(
+        default=False,
+        description="Enable fast mode for faster but shorter results. Good for general purpose queries.",
+    )
     country_code: Optional[str] = Field(
         default=None, description="2-letter ISO code or 'ALL'."
     )
@@ -184,57 +188,56 @@ class AnswerRequest(BaseModel):
 
 
 class SearchMetadata(BaseModel):
-    tx_id: str = Field(
-        description="Transaction id for the underlying search operation."
+    tx_ids: List[str] = Field(
+        default_factory=list,
+        description="List of transaction ids for the search operations.",
     )
-    ai_tx_id: str = Field(description="Transaction id for the AI processing step.")
-    results_by_source: Dict[str, int] = Field(
-        default_factory=dict, description="Breakdown of result counts by source type."
-    )
-    search_deduction_dollars: float = Field(
-        default=0.0, description="Cost of data retrieval in dollars."
-    )
-    ai_deduction_dollars: float = Field(
-        default=0.0, description="AI processing cost in dollars."
-    )
-    total_deduction_dollars: float = Field(
-        default=0.0, description="Total combined cost in dollars."
-    )
-    total_deduction_pcm: float = Field(
-        default=0.0, description="Total combined cost in price-per-thousand (CPM)."
+    number_of_results: int = Field(
+        default=0, description="Number of search results returned."
     )
     total_characters: int = Field(
-        default=0, description="Total characters across fetched content (if tracked)."
+        default=0, description="Total characters across fetched content."
     )
 
 
 class AIUsage(BaseModel):
     input_tokens: int
     output_tokens: int
-    total_tokens: int
-    cost_dollars: float
+
+
+class CostBreakdown(BaseModel):
+    total_deduction_dollars: float = Field(
+        description="Total combined cost in dollars."
+    )
+    search_deduction_dollars: float = Field(
+        description="Cost of data retrieval in dollars."
+    )
+    ai_deduction_dollars: float = Field(description="AI processing cost in dollars.")
+
+
+class SearchResult(BaseModel):
+    title: str
+    url: str
+    content: Union[str, List[Dict[str, Any]]]
+    description: Optional[str] = None
+    source: str
+    price: float
+    length: int
+    image_url: Optional[Dict[str, str]] = None
+    relevance_score: float
+    data_type: Optional[Literal["structured", "unstructured"]] = None
 
 
 class AnswerSuccessResponse(BaseModel):
     success: Literal[True] = True
-    ai_processed: bool
     ai_tx_id: str
-    data_type: Literal["structured", "unstructured"]
     original_query: str
-    documents_processed: int
-    total_documents_available: int
-
-    # The combined raw results used for the answer. Shape can vary depending on tools used.
-    raw_search_results: List[Dict[str, Any]] = Field(default_factory=list)
-
-    # Cost and search metadata
-    search_metadata: SearchMetadata
-
-    # If structured_output was provided, this is an object matching that schema; otherwise a string.
     contents: Union[str, Dict[str, Any]]
-
-    # Token usage and AI cost summary
+    data_type: Literal["structured", "unstructured"]
+    search_results: List[SearchResult] = Field(default_factory=list)
+    search_metadata: SearchMetadata
     ai_usage: AIUsage
+    cost: CostBreakdown
 
     def __str__(self) -> str:
         return self.model_dump_json(indent=2)
@@ -256,6 +259,7 @@ __all__ = [
     "AnswerRequest",
     "SearchMetadata",
     "AIUsage",
+    "CostBreakdown",
     "AnswerSuccessResponse",
     "AnswerErrorResponse",
     "AnswerResponse",
