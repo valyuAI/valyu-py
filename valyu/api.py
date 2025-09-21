@@ -9,48 +9,19 @@ from valyu.types.contents import (
     ExtractEffort,
     ContentsResponseLength,
 )
+from valyu.types.answer import (
+    AnswerResponse,
+    AnswerSuccessResponse,
+    AnswerErrorResponse,
+    SearchMetadata,
+    AIUsage,
+    SUPPORTED_COUNTRY_CODES,
+)
+from valyu.validation import validate_sources, format_validation_error
 import os
 
-# Supported country codes for the country_code parameter
-CountryCode = Literal[
-    "ALL",
-    "AR",
-    "AU",
-    "AT",
-    "BE",
-    "BR",
-    "CA",
-    "CL",
-    "DK",
-    "FI",
-    "FR",
-    "DE",
-    "HK",
-    "IN",
-    "ID",
-    "IT",
-    "JP",
-    "KR",
-    "MY",
-    "MX",
-    "NL",
-    "NZ",
-    "NO",
-    "CN",
-    "PL",
-    "PT",
-    "PH",
-    "RU",
-    "SA",
-    "ZA",
-    "ES",
-    "SE",
-    "CH",
-    "TW",
-    "TR",
-    "GB",
-    "US",
-]
+# Supported country codes for the country_code parameter - simplified for typing
+CountryCode = str  # Any of the codes in SUPPORTED_COUNTRY_CODES
 
 # Response length options
 ResponseLength = Union[Literal["short", "medium", "large", "max"], int]
@@ -97,6 +68,7 @@ class Valyu:
         category: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        fast_mode: bool = False,
     ) -> Optional[SearchResponse]:
         """
         Query the Valyu DeepSearch API to give your AI relevant context.
@@ -109,17 +81,75 @@ class Valyu:
             relevance_threshold (Optional[float]): The relevance threshold to not return results below.
             max_price (int): The maximum price (per thousand queries) to spend on the search.
             included_sources (Optional[List[str]]): The data sources to use for the search.
+                Sources must be formatted as one of:
+                • Domain: 'example.com', 'news.ycombinator.com'
+                • URL with path: 'https://arxiv.org/abs/1706.03762'
+                • Dataset name: 'valyu/valyu-arxiv', 'wiley/wiley-finance-books'
             excluded_sources (Optional[List[str]]): The data sources to exclude from the search.
+                Sources must be formatted as one of:
+                • Domain: 'paperswithcode.com', 'wikipedia.org'
+                • URL with path: 'https://example.com/path/to/page'
+                • Dataset name: 'provider/dataset-name'
             country_code (Optional[CountryCode]): Country code filter for search results.
             response_length (Optional[ResponseLength]): Length of response content - "short", "medium", "large", "max", or integer for character count.
             category (Optional[str]): Category filter for search results.
             start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
             end_date (Optional[str]): End date filter in YYYY-MM-DD format.
+            fast_mode (bool): Enable fast mode for faster but shorter results. Good for general purpose queries. Defaults to False.
 
         Returns:
             Optional[SearchResponse]: The search response.
         """
         try:
+            # Validate included_sources if provided
+            if included_sources is not None:
+                is_valid, invalid_sources = validate_sources(included_sources)
+                if not is_valid:
+                    return SearchResponse(
+                        success=False,
+                        error=format_validation_error(invalid_sources),
+                        tx_id="validation-error-included",
+                        query=query,
+                        results=[],
+                        results_by_source=ResultsBySource(web=0, proprietary=0),
+                        total_deduction_pcm=0.0,
+                        total_deduction_dollars=0.0,
+                        total_characters=0,
+                    )
+
+            # Validate excluded_sources if provided
+            if excluded_sources is not None:
+                is_valid, invalid_sources = validate_sources(excluded_sources)
+                if not is_valid:
+                    return SearchResponse(
+                        success=False,
+                        error=format_validation_error(invalid_sources),
+                        tx_id="validation-error-excluded",
+                        query=query,
+                        results=[],
+                        results_by_source=ResultsBySource(web=0, proprietary=0),
+                        total_deduction_pcm=0.0,
+                        total_deduction_dollars=0.0,
+                        total_characters=0,
+                    )
+
+            # Validate country_code if provided
+            if (
+                country_code is not None
+                and country_code.upper() not in SUPPORTED_COUNTRY_CODES
+            ):
+                return SearchResponse(
+                    success=False,
+                    error=f"Invalid country_code. Must be one of: {', '.join(sorted(SUPPORTED_COUNTRY_CODES))}",
+                    tx_id="validation-error-country",
+                    query=query,
+                    results=[],
+                    results_by_source=ResultsBySource(web=0, proprietary=0),
+                    total_deduction_pcm=0.0,
+                    total_deduction_dollars=0.0,
+                    total_characters=0,
+                )
+
             payload = {
                 "query": query,
                 "search_type": search_type,
@@ -127,6 +157,7 @@ class Valyu:
                 "is_tool_call": is_tool_call,
                 "relevance_threshold": relevance_threshold,
                 "max_price": max_price,
+                "fast_mode": fast_mode,
             }
 
             if included_sources is not None:
@@ -136,7 +167,7 @@ class Valyu:
                 payload["excluded_sources"] = excluded_sources
 
             if country_code is not None:
-                payload["country_code"] = country_code
+                payload["country_code"] = country_code.upper()
 
             if response_length is not None:
                 payload["response_length"] = response_length
@@ -219,6 +250,7 @@ class Valyu:
             extract_effort (Optional[ExtractEffort]): Extraction thoroughness:
                 - "normal": Fast extraction (default)
                 - "high": More thorough but slower
+                - "auto": Automatically determine extraction effort but slowest
             response_length (Optional[ContentsResponseLength]): Content length per URL:
                 - "short": 25,000 characters (default)
                 - "medium": 50,000 characters
@@ -292,3 +324,123 @@ class Valyu:
                 total_cost_dollars=0.0,
                 total_characters=0,
             )
+
+    def answer(
+        self,
+        query: str,
+        structured_output: Optional[Dict[str, Any]] = None,
+        system_instructions: Optional[str] = None,
+        search_type: SearchType = "all",
+        data_max_price: float = 30.0,
+        country_code: Optional[str] = None,
+        included_sources: Optional[List[str]] = None,
+        excluded_sources: Optional[List[str]] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        fast_mode: bool = False,
+    ) -> Optional[AnswerResponse]:
+        """
+        Query the Valyu Answer API to get AI-processed answers to your questions.
+
+        Args:
+            query (str): The query string.
+            structured_output (Optional[Dict[str, Any]]): JSON Schema object. When provided,
+                the response 'contents' is structured to this schema.
+            system_instructions (Optional[str]): Custom system-level instructions (<= 2000 chars).
+            search_type (SearchType): The type of search to perform.
+            data_max_price (float): Maximum spend (USD) for data retrieval. Separate from AI costs.
+            country_code (Optional[str]): 2-letter ISO code or 'ALL'.
+            included_sources (Optional[List[str]]): The data sources to use for the search.
+                Sources must be formatted as one of:
+                • Domain: 'example.com', 'news.ycombinator.com'
+                • URL with path: 'https://arxiv.org/abs/1706.03762'
+                • Dataset name: 'valyu/valyu-arxiv', 'wiley/wiley-finance-books'
+            excluded_sources (Optional[List[str]]): The data sources to exclude from the search.
+                Sources must be formatted as one of:
+                • Domain: 'paperswithcode.com', 'wikipedia.org'
+                • URL with path: 'https://example.com/path/to/page'
+                • Dataset name: 'provider/dataset-name'
+            start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
+            end_date (Optional[str]): End date filter in YYYY-MM-DD format.
+            fast_mode (bool): Enable fast mode for faster but shorter results. Good for general purpose queries. Defaults to False.
+
+        Returns:
+            Optional[AnswerResponse]: The answer response.
+        """
+        try:
+            # Validate included_sources if provided
+            if included_sources is not None:
+                is_valid, invalid_sources = validate_sources(included_sources)
+                if not is_valid:
+                    return AnswerErrorResponse(
+                        error=format_validation_error(invalid_sources)
+                    )
+
+            # Validate excluded_sources if provided
+            if excluded_sources is not None:
+                is_valid, invalid_sources = validate_sources(excluded_sources)
+                if not is_valid:
+                    return AnswerErrorResponse(
+                        error=format_validation_error(invalid_sources)
+                    )
+
+            # Validate country_code if provided
+            if (
+                country_code is not None
+                and country_code.upper() not in SUPPORTED_COUNTRY_CODES
+            ):
+                return AnswerErrorResponse(
+                    error=f"Invalid country_code. Must be one of: {', '.join(sorted(SUPPORTED_COUNTRY_CODES))}"
+                )
+
+            # Validate system_instructions length
+            if (
+                system_instructions is not None
+                and len(system_instructions.strip()) > 2000
+            ):
+                return AnswerErrorResponse(
+                    error="system_instructions cannot exceed 2000 characters"
+                )
+
+            payload = {
+                "query": query,
+                "search_type": search_type,
+                "data_max_price": data_max_price,
+                "fast_mode": fast_mode,
+            }
+
+            if structured_output is not None:
+                payload["structured_output"] = structured_output
+
+            if system_instructions is not None:
+                payload["system_instructions"] = system_instructions.strip()
+
+            if country_code is not None:
+                payload["country_code"] = country_code.upper()
+
+            if included_sources is not None:
+                payload["included_sources"] = included_sources
+
+            if excluded_sources is not None:
+                payload["excluded_sources"] = excluded_sources
+
+            if start_date is not None:
+                payload["start_date"] = start_date
+
+            if end_date is not None:
+                payload["end_date"] = end_date
+
+            response = requests.post(
+                f"{self.base_url}/answer", json=payload, headers=self.headers
+            )
+
+            data = response.json()
+
+            if not response.ok:
+                return AnswerErrorResponse(
+                    error=data.get("error", f"HTTP Error: {response.status_code}")
+                )
+
+            return AnswerSuccessResponse(**data)
+        except Exception as e:
+            return AnswerErrorResponse(error=str(e))

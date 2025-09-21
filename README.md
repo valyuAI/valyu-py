@@ -6,14 +6,14 @@ Valyu's Deepsearch API gives AI the context it needs. Integrate trusted, high-qu
 
 Get **$10 free credits** for the Valyu API when you sign up at [Valyu](https://platform.valyu.network)!
 
-*No credit card required.*
+_No credit card required._
 
 ## How does it work?
 
 We do all the heavy lifting for you - one unified API for all data:
 
 - **Academic & Research Content** - Access millions of scholarly papers and textbooks
-- **Real-time Web Search** - Get the latest information from across the internet  
+- **Real-time Web Search** - Get the latest information from across the internet
 - **Structured Financial Data** - Stock prices, market data, and financial metrics
 - **Intelligent Reranking** - Results across all sources are automatically sorted by relevance
 - **Transparent Pricing** - Pay only for what you use with clear CPM pricing
@@ -38,7 +38,8 @@ valyu = Valyu(api_key="your-api-key-here")
 response = valyu.search(
     "Implementation details of agentic search-enhanced large reasoning models",
     max_num_results=5,            # Limit to top 5 results
-    max_price=10                  # Maximum price per thousand queries (CPM)
+    max_price=10,                 # Maximum price per thousand queries (CPM)
+    fast_mode=True                # Enable fast mode for quicker, shorter results
 )
 
 print(response)
@@ -67,26 +68,28 @@ def search(
     category: str = None,                         # Category filter
     start_date: str = None,                       # Start date (YYYY-MM-DD)
     end_date: str = None,                         # End date (YYYY-MM-DD)
+    fast_mode: bool = False,                      # Enable fast mode for faster but shorter results
 ) -> SearchResponse
 ```
 
 ### Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `query` | `str` | *required* | The search query string |
-| `search_type` | `str` | `"all"` | Search scope: `"all"`, `"web"`, or `"proprietary"` |
-| `max_num_results` | `int` | `10` | Maximum number of results to return (1-20) |
-| `is_tool_call` | `bool` | `True` | Whether this is an AI tool call (affects processing) |
-| `relevance_threshold` | `float` | `0.5` | Minimum relevance score for results (0.0-1.0) |
-| `max_price` | `int` | `30` | Maximum price per thousand queries in CPM |
-| `included_sources` | `List[str]` | `None` | Specific data sources or URLs to search |
-| `excluded_sources` | `List[str]` | `None` | Data sources or URLs to exclude from search |
-| `country_code` | `str` | `None` | Country code filter (e.g., "US", "GB", "JP", "ALL") |
-| `response_length` | `Union[str, int]` | `None` | Response length: "short"/"medium"/"large"/"max" or character count |
-| `category` | `str` | `None` | Category filter for results |
-| `start_date` | `str` | `None` | Start date filter in YYYY-MM-DD format |
-| `end_date` | `str` | `None` | End date filter in YYYY-MM-DD format |
+| Parameter             | Type              | Default    | Description                                                                       |
+| --------------------- | ----------------- | ---------- | --------------------------------------------------------------------------------- |
+| `query`               | `str`             | _required_ | The search query string                                                           |
+| `search_type`         | `str`             | `"all"`    | Search scope: `"all"`, `"web"`, or `"proprietary"`                                |
+| `max_num_results`     | `int`             | `10`       | Maximum number of results to return (1-20)                                        |
+| `is_tool_call`        | `bool`            | `True`     | Whether this is an AI tool call (affects processing)                              |
+| `relevance_threshold` | `float`           | `0.5`      | Minimum relevance score for results (0.0-1.0)                                     |
+| `max_price`           | `int`             | `30`       | Maximum price per thousand queries in CPM                                         |
+| `included_sources`    | `List[str]`       | `None`     | Specific data sources or URLs to search                                           |
+| `excluded_sources`    | `List[str]`       | `None`     | Data sources or URLs to exclude from search                                       |
+| `country_code`        | `str`             | `None`     | Country code filter (e.g., "US", "GB", "JP", "ALL")                               |
+| `response_length`     | `Union[str, int]` | `None`     | Response length: "short"/"medium"/"large"/"max" or character count                |
+| `category`            | `str`             | `None`     | Category filter for results                                                       |
+| `start_date`          | `str`             | `None`     | Start date filter in YYYY-MM-DD format                                            |
+| `end_date`            | `str`             | `None`     | End date filter in YYYY-MM-DD format                                              |
+| `fast_mode`           | `bool`            | `False`    | Enable fast mode for faster but shorter results. Good for general purpose queries |
 
 ### Response Format
 
@@ -137,13 +140,13 @@ def contents(
 
 ### Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `urls` | `List[str]` | *required* | List of URLs to process (maximum 10 URLs per request) |
-| `summary` | `Union[bool, str, Dict]` | `None` | AI summary configuration:<br>- `False/None`: No AI processing (raw content)<br>- `True`: Basic automatic summarization<br>- `str`: Custom instructions (max 500 chars)<br>- `dict`: JSON schema for structured extraction |
-| `extract_effort` | `str` | `None` | Extraction thoroughness: `"normal"` (fast) or `"high"` (thorough but slower) |
-| `response_length` | `Union[str, int]` | `None` | Content length per URL:<br>- `"short"`: 25,000 characters<br>- `"medium"`: 50,000 characters<br>- `"large"`: 100,000 characters<br>- `"max"`: No limit<br>- `int`: Custom character limit |
-| `max_price_dollars` | `float` | `None` | Maximum cost limit in USD |
+| Parameter           | Type                     | Default    | Description                                                                                                                                                                                                               |
+| ------------------- | ------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `urls`              | `List[str]`              | _required_ | List of URLs to process (maximum 10 URLs per request)                                                                                                                                                                     |
+| `summary`           | `Union[bool, str, Dict]` | `None`     | AI summary configuration:<br>- `False/None`: No AI processing (raw content)<br>- `True`: Basic automatic summarization<br>- `str`: Custom instructions (max 500 chars)<br>- `dict`: JSON schema for structured extraction |
+| `extract_effort`    | `str`                    | `None`     | Extraction thoroughness: `"normal"` (fast) or `"high"` (thorough but slower)                                                                                                                                              |
+| `response_length`   | `Union[str, int]`        | `None`     | Content length per URL:<br>- `"short"`: 25,000 characters<br>- `"medium"`: 50,000 characters<br>- `"large"`: 100,000 characters<br>- `"max"`: No limit<br>- `int`: Custom character limit                                 |
+| `max_price_dollars` | `float`                  | `None`     | Maximum cost limit in USD                                                                                                                                                                                                 |
 
 ### Response Format
 
@@ -239,7 +242,7 @@ response = valyu.search("climate change solutions")
 if response.success:
     print(f"Search cost: ${response.total_deduction_dollars:.4f}")
     print(f"Sources: Web={response.results_by_source.web}, Proprietary={response.results_by_source.proprietary}")
-    
+
     for i, result in enumerate(response.results, 1):
         print(f"\n{i}. {result.title}")
         print(f"   Source: {result.source}")
@@ -330,6 +333,7 @@ print(f"Cost: ${response.total_cost_dollars:.4f}")
 Set your API key in one of these ways:
 
 1. **Environment variable** (recommended):
+
    ```bash
    export VALYU_API_KEY="your-api-key-here"
    ```
@@ -358,7 +362,7 @@ else:
 ## Getting Started
 
 1. Sign up for a free account at [Valyu](https://platform.valyu.network)
-2. Get your API key from the dashboard  
+2. Get your API key from the dashboard
 3. Install the SDK: `pip install valyu`
 4. Start building with the examples above
 

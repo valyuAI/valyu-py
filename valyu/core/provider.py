@@ -40,6 +40,8 @@ class BaseProvider(ABC, t.Generic[T, U]):
         """Execute a tool by slug"""
         if slug == "valyu_search":
             return self._execute_valyu_search(arguments)
+        elif slug == "valyu_contents":
+            return self._execute_valyu_contents(arguments)
         else:
             return ToolExecutionResponse(output=None, error=f"Unknown tool: {slug}")
 
@@ -65,6 +67,28 @@ class BaseProvider(ABC, t.Generic[T, U]):
         except Exception as e:
             return ToolExecutionResponse(output=None, error=str(e))
 
+    def _execute_valyu_contents(
+        self, arguments: t.Dict[str, t.Any]
+    ) -> ToolExecutionResponse:
+        """Execute Valyu contents"""
+        try:
+            # This will be set by the concrete provider
+            if not hasattr(self, "_valyu_client"):
+                return ToolExecutionResponse(
+                    output=None, error="Valyu client not initialized"
+                )
+
+            # Remove None values for the API call
+            clean_args = {k: v for k, v in arguments.items() if v is not None}
+            print(f"Executing contents with args: {clean_args}")
+            contents_result = self._valyu_client.contents(**clean_args)
+
+            print(f"Contents result: {contents_result}")
+
+            return ToolExecutionResponse(output=contents_result.model_dump())
+        except Exception as e:
+            return ToolExecutionResponse(output=None, error=str(e))
+
     def get_available_tools(self) -> t.List[Tool]:
         """Get available Valyu tools"""
         return [
@@ -84,12 +108,12 @@ class BaseProvider(ABC, t.Generic[T, U]):
                         },
                         "included_sources": {
                             "type": ["array", "null"],
-                            "description": "Search over specific sources, can pass a domain (e.g. news.ycombinator.com), a url (e.g. https://arxiv.org/abs/1706.03762), or a specific valyu dataset (e.g. valyu/valyu-arxiv, wiley/wiley-finance-books). For most cases, do not use unless the user asks for it.",
+                            "description": "Search over specific sources. Sources must be formatted as: (1) Domain: 'example.com', 'news.ycombinator.com' (2) URL with path: 'https://arxiv.org/abs/1706.03762' (3) Dataset name: 'valyu/valyu-arxiv', 'wiley/wiley-finance-books'. For most cases, do not use unless the user asks for it.",
                             "items": {"type": "string"},
                         },
                         "excluded_sources": {
                             "type": ["array", "null"],
-                            "description": "Select specific sources to exclude from the search, can pass a domain (e.g. news.ycombinator.com), a url (e.g. https://arxiv.org/abs/1706.03762), or a specific valyu dataset (e.g. valyu/valyu-arxiv, wiley/wiley-finance-book). For most cases, do not use unless the user asks for it.",
+                            "description": "Select specific sources to exclude from the search. Sources must be formatted as: (1) Domain: 'paperswithcode.com', 'wikipedia.org' (2) URL with path: 'https://example.com/path' (3) Dataset name: 'provider/dataset-name'. For most cases, do not use unless the user asks for it.",
                             "items": {"type": "string"},
                         },
                         "category": {
@@ -116,5 +140,39 @@ class BaseProvider(ABC, t.Generic[T, U]):
                     "required": ["query"],
                     "additionalProperties": False,
                 },
-            )
+            ),
+            Tool(
+                slug="valyu_contents",
+                description="Extract clean, structured content from web pages with optional AI-powered data extraction and summarization using the Valyu Contents API.",
+                input_parameters={
+                    "type": "object",
+                    "properties": {
+                        "urls": {
+                            "type": "array",
+                            "description": "List of URLs to process (maximum 10 URLs per request)",
+                            "items": {"type": "string"},
+                            "maxItems": 10,
+                        },
+                        "summary": {
+                            "type": ["boolean", "string", "object", "null"],
+                            "description": "AI summary configuration: False/None=no AI processing, True=basic summarization, string=custom instructions (max 500 chars), object=JSON schema for structured extraction",
+                        },
+                        "extract_effort": {
+                            "type": ["string", "null"],
+                            "description": "Extraction thoroughness: 'normal' (fast, default), 'high' (thorough but slower), 'auto' (automatic but slowest)",
+                            "enum": ["normal", "high", "auto"],
+                        },
+                        "response_length": {
+                            "type": ["string", "integer", "null"],
+                            "description": "Content length per URL: 'short' (25k chars), 'medium' (50k), 'large' (100k), 'max' (no limit), or integer for custom limit",
+                        },
+                        "max_price_dollars": {
+                            "type": ["number", "null"],
+                            "description": "Maximum cost limit in USD",
+                        },
+                    },
+                    "required": ["urls"],
+                    "additionalProperties": False,
+                },
+            ),
         ]
