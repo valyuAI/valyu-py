@@ -36,7 +36,7 @@ class Valyu:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        base_url: str = "https://api.valyu.network/v1",
+        base_url: str = "https://api.valyu.ai/v1",
     ):
         """
         Initialize the Valyu client.

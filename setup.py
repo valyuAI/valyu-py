@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="valyu",
-    version="2.2.1",
+    version="2.2.2",
     author="Valyu",
     author_email="contact@valyu.network",
     maintainer="Harvey Yorke",
@@ -15,7 +15,7 @@ setup(
     description="Deepsearch API for AI.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://valyu.network",
+    url="https://valyu.ai",
     packages=find_packages(exclude=["tests*", "*.downloads*"]),
     package_data={
         "valyu": ["py.typed"],
