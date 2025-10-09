@@ -4,7 +4,7 @@
 
 Valyu's Deepsearch API gives AI the context it needs. Integrate trusted, high-quality public and proprietary sources, with full-text multimodal retrieval.
 
-Get **$10 free credits** for the Valyu API when you sign up at [Valyu](https://platform.valyu.network)!
+Get **$10 free credits** for the Valyu API when you sign up at [Valyu](https://platform.valyu.ai)!
 
 _No credit card required._
 
@@ -317,9 +317,9 @@ if response.success:
 # Process multiple URLs with a cost limit
 response = valyu.contents(
     urls=[
-        "https://www.valyu.network/",
-        "https://docs.valyu.network/overview",
-        "https://www.valyu.network/blogs/why-ai-agents-and-llms-struggle-with-search-and-data-access"
+        "https://www.valyu.ai/",
+        "https://docs.valyu.ai/overview",
+        "https://www.valyu.ai/blogs/why-ai-agents-and-llms-struggle-with-search-and-data-access"
     ],
     summary="Provide key takeaways in bullet points, and write in very emphasised singaporean english"
 )
@@ -361,14 +361,14 @@ else:
 
 ## Getting Started
 
-1. Sign up for a free account at [Valyu](https://platform.valyu.network)
+1. Sign up for a free account at [Valyu](https://platform.valyu.ai)
 2. Get your API key from the dashboard
 3. Install the SDK: `pip install valyu`
 4. Start building with the examples above
 
 ## Support
 
-- **Documentation**: [docs.valyu.network](https://docs.valyu.network)
+- **Documentation**: [docs.valyu.ai](https://docs.valyu.ai)
 - **API Reference**: Full parameter documentation above
 - **Examples**: Check the `examples/` directory in this repository
 - **Issues**: Report bugs on GitHub
