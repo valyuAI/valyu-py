@@ -15,6 +15,9 @@ class SearchResult(BaseModel):
     image_url: Optional[Dict[str, str]] = None
     relevance_score: float
     data_type: Optional[Literal["structured", "unstructured"]] = None
+    source_type: Optional[str] = None
+    publication_date: Optional[str] = None
+    id: Optional[str] = None
 
 
 class ResultsBySource(BaseModel):
