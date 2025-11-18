@@ -1,7 +1,7 @@
 from typing import List, Optional, Literal, Union, Dict, Any
 from pydantic import BaseModel
 
-SearchType = Literal["web", "proprietary", "all"]
+SearchType = Literal["web", "proprietary", "all", "news"]
 
 
 class SearchResult(BaseModel):
