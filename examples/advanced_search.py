@@ -91,3 +91,18 @@ response = valyu.search(
 )
 
 print(response)
+
+print("\n" + "=" * 50 + "\n")
+
+# News search for recent developments
+print("📰 News Search:")
+query = "latest breakthroughs in quantum computing"
+print(f"Query: {query}")
+response = valyu.search(
+    query,
+    search_type="news",
+    max_num_results=10,
+    start_date="2025-10-01",
+)
+
+print(response)

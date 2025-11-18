@@ -69,14 +69,15 @@ class Valyu:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         fast_mode: bool = False,
+        url_only: bool = False,
     ) -> Optional[SearchResponse]:
         """
         Query the Valyu DeepSearch API to give your AI relevant context.
 
         Args:
             query (str): The query string.
-            search_type (SearchType): The type of search to perform.
-            max_num_results (int): The maximum number of search results to return.
+            search_type (SearchType): The type of search to perform - "all", "web", "proprietary", or "news".
+            max_num_results (int): The maximum number of search results to return (max 100).
             is_tool_call (Optional[bool]): Whether this is a tool call.
             relevance_threshold (Optional[float]): The relevance threshold to not return results below.
             max_price (int): The maximum price (per thousand queries) to spend on the search.
@@ -96,6 +97,7 @@ class Valyu:
             start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
             end_date (Optional[str]): End date filter in YYYY-MM-DD format.
             fast_mode (bool): Enable fast mode for faster but shorter results. Good for general purpose queries. Defaults to False.
+            url_only (bool): Return shortened snippets only. Defaults to False.
 
         Returns:
             Optional[SearchResponse]: The search response.
@@ -158,6 +160,7 @@ class Valyu:
                 "relevance_threshold": relevance_threshold,
                 "max_price": max_price,
                 "fast_mode": fast_mode,
+                "url_only": url_only,
             }
 
             if included_sources is not None:
@@ -338,6 +341,7 @@ class Valyu:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         fast_mode: bool = False,
+        url_only: bool = False,
     ) -> Optional[AnswerResponse]:
         """
         Query the Valyu Answer API to get AI-processed answers to your questions.
@@ -347,7 +351,7 @@ class Valyu:
             structured_output (Optional[Dict[str, Any]]): JSON Schema object. When provided,
                 the response 'contents' is structured to this schema.
             system_instructions (Optional[str]): Custom system-level instructions (<= 2000 chars).
-            search_type (SearchType): The type of search to perform.
+            search_type (SearchType): The type of search to perform - "all", "web", "proprietary", or "news".
             data_max_price (float): Maximum spend (USD) for data retrieval. Separate from AI costs.
             country_code (Optional[str]): 2-letter ISO code or 'ALL'.
             included_sources (Optional[List[str]]): The data sources to use for the search.
@@ -363,6 +367,7 @@ class Valyu:
             start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
             end_date (Optional[str]): End date filter in YYYY-MM-DD format.
             fast_mode (bool): Enable fast mode for faster but shorter results. Good for general purpose queries. Defaults to False.
+            url_only (bool): Return shortened snippets only. Defaults to False.
 
         Returns:
             Optional[AnswerResponse]: The answer response.
@@ -407,6 +412,7 @@ class Valyu:
                 "search_type": search_type,
                 "data_max_price": data_max_price,
                 "fast_mode": fast_mode,
+                "url_only": url_only,
             }
 
             if structured_output is not None:
