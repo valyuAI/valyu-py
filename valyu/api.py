@@ -60,7 +60,7 @@ class Valyu:
         max_num_results: int = 10,
         is_tool_call: Optional[bool] = True,
         relevance_threshold: Optional[float] = 0.5,
-        max_price: int = 30,
+        max_price: Optional[int] = None,
         included_sources: Optional[List[str]] = None,
         excluded_sources: Optional[List[str]] = None,
         country_code: Optional[CountryCode] = None,
@@ -158,10 +158,12 @@ class Valyu:
                 "max_num_results": max_num_results,
                 "is_tool_call": is_tool_call,
                 "relevance_threshold": relevance_threshold,
-                "max_price": max_price,
                 "fast_mode": fast_mode,
                 "url_only": url_only,
             }
+
+            if max_price is not None:
+                payload["max_price"] = max_price
 
             if included_sources is not None:
                 payload["included_sources"] = included_sources
@@ -334,7 +336,7 @@ class Valyu:
         structured_output: Optional[Dict[str, Any]] = None,
         system_instructions: Optional[str] = None,
         search_type: SearchType = "all",
-        data_max_price: float = 30.0,
+        data_max_price: Optional[float] = None,
         country_code: Optional[str] = None,
         included_sources: Optional[List[str]] = None,
         excluded_sources: Optional[List[str]] = None,
@@ -410,10 +412,12 @@ class Valyu:
             payload = {
                 "query": query,
                 "search_type": search_type,
-                "data_max_price": data_max_price,
                 "fast_mode": fast_mode,
                 "url_only": url_only,
             }
+
+            if data_max_price is not None:
+                payload["data_max_price"] = data_max_price
 
             if structured_output is not None:
                 payload["structured_output"] = structured_output
