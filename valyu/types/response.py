@@ -13,7 +13,7 @@ class SearchResult(BaseModel):
     price: float
     length: int
     image_url: Optional[Dict[str, str]] = None
-    relevance_score: float
+    relevance_score: Optional[float] = None
     data_type: Optional[Literal["structured", "unstructured"]] = None
     source_type: Optional[str] = None
     publication_date: Optional[str] = None
