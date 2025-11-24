@@ -1,7 +1,8 @@
 import json
 import requests
+import time
 from pydantic import BaseModel
-from typing import Optional, List, Literal, Union, Dict, Any
+from typing import Optional, List, Literal, Union, Dict, Any, Callable
 from valyu.types.response import SearchResponse, SearchType, ResultsBySource
 from valyu.types.contents import (
     ContentsResponse,
@@ -17,7 +18,22 @@ from valyu.types.answer import (
     AIUsage,
     SUPPORTED_COUNTRY_CODES,
 )
+from valyu.types.deepresearch import (
+    DeepResearchMode,
+    DeepResearchStatus,
+    FileAttachment,
+    MCPServerConfig,
+    SearchConfig,
+    DeepResearchCreateResponse,
+    DeepResearchStatusResponse,
+    DeepResearchListResponse,
+    DeepResearchUpdateResponse,
+    DeepResearchCancelResponse,
+    DeepResearchDeleteResponse,
+    DeepResearchTogglePublicResponse,
+)
 from valyu.validation import validate_sources, format_validation_error
+from valyu.deepresearch_client import DeepResearchClient
 import os
 
 # Supported country codes for the country_code parameter - simplified for typing
@@ -52,6 +68,9 @@ class Valyu:
 
         self.base_url = base_url
         self.headers = {"Content-Type": "application/json", "x-api-key": api_key}
+
+        # Initialize DeepResearch client
+        self.deepresearch = DeepResearchClient(self)
 
     def search(
         self,
