@@ -2,7 +2,7 @@ import json
 import requests
 import time
 from pydantic import BaseModel
-from typing import Optional, List, Literal, Union, Dict, Any, Callable
+from typing import Optional, List, Literal, Union, Dict, Any, Callable, Generator
 from valyu.types.response import SearchResponse, SearchType, ResultsBySource
 from valyu.types.contents import (
     ContentsResponse,
@@ -14,8 +14,12 @@ from valyu.types.answer import (
     AnswerResponse,
     AnswerSuccessResponse,
     AnswerErrorResponse,
+    AnswerStreamChunk,
+    AnswerStreamGenerator,
     SearchMetadata,
+    SearchResult,
     AIUsage,
+    CostBreakdown,
     SUPPORTED_COUNTRY_CODES,
 )
 from valyu.types.deepresearch import (
@@ -362,8 +366,8 @@ class Valyu:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         fast_mode: bool = False,
-        url_only: bool = False,
-    ) -> Optional[AnswerResponse]:
+        streaming: bool = False,
+    ) -> Union[AnswerResponse, AnswerStreamGenerator]:
         """
         Query the Valyu Answer API to get AI-processed answers to your questions.
 
@@ -387,89 +391,291 @@ class Valyu:
                 • Dataset name: 'provider/dataset-name'
             start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
             end_date (Optional[str]): End date filter in YYYY-MM-DD format.
-            fast_mode (bool): Enable fast mode for faster but shorter results. Good for general purpose queries. Defaults to False.
-            url_only (bool): Return shortened snippets only. Defaults to False.
+            fast_mode (bool): Enable fast mode for faster but shorter results. Defaults to False.
+            streaming (bool): Enable streaming mode to receive chunks as they're generated.
+                When False (default), waits for the complete response.
+                When True, returns a generator that yields AnswerStreamChunk objects.
 
         Returns:
-            Optional[AnswerResponse]: The answer response.
+            Union[AnswerResponse, AnswerStreamGenerator]:
+                - If streaming=False: Returns AnswerSuccessResponse or AnswerErrorResponse
+                - If streaming=True: Returns a generator yielding AnswerStreamChunk objects
         """
+        # Validate inputs first
+        validation_error = self._validate_answer_params(
+            included_sources=included_sources,
+            excluded_sources=excluded_sources,
+            country_code=country_code,
+            system_instructions=system_instructions,
+        )
+        if validation_error:
+            if streaming:
+                def error_generator():
+                    yield AnswerStreamChunk(type="error", error=validation_error)
+                return error_generator()
+            return AnswerErrorResponse(error=validation_error)
+
+        payload = self._build_answer_payload(
+            query=query,
+            structured_output=structured_output,
+            system_instructions=system_instructions,
+            search_type=search_type,
+            data_max_price=data_max_price,
+            country_code=country_code,
+            included_sources=included_sources,
+            excluded_sources=excluded_sources,
+            start_date=start_date,
+            end_date=end_date,
+            fast_mode=fast_mode,
+        )
+
+        if streaming:
+            return self._stream_answer(payload)
+        else:
+            return self._fetch_answer(payload)
+
+    def _validate_answer_params(
+        self,
+        included_sources: Optional[List[str]],
+        excluded_sources: Optional[List[str]],
+        country_code: Optional[str],
+        system_instructions: Optional[str],
+    ) -> Optional[str]:
+        """Validate answer parameters and return error message if invalid."""
+        # Validate included_sources if provided
+        if included_sources is not None:
+            is_valid, invalid_sources = validate_sources(included_sources)
+            if not is_valid:
+                return format_validation_error(invalid_sources)
+
+        # Validate excluded_sources if provided
+        if excluded_sources is not None:
+            is_valid, invalid_sources = validate_sources(excluded_sources)
+            if not is_valid:
+                return format_validation_error(invalid_sources)
+
+        # Validate country_code if provided
+        if (
+            country_code is not None
+            and country_code.upper() not in SUPPORTED_COUNTRY_CODES
+        ):
+            return f"Invalid country_code. Must be one of: {', '.join(sorted(SUPPORTED_COUNTRY_CODES))}"
+
+        # Validate system_instructions length
+        if (
+            system_instructions is not None
+            and len(system_instructions.strip()) > 2000
+        ):
+            return "system_instructions cannot exceed 2000 characters"
+
+        return None
+
+    def _build_answer_payload(
+        self,
+        query: str,
+        structured_output: Optional[Dict[str, Any]],
+        system_instructions: Optional[str],
+        search_type: SearchType,
+        data_max_price: Optional[float],
+        country_code: Optional[str],
+        included_sources: Optional[List[str]],
+        excluded_sources: Optional[List[str]],
+        start_date: Optional[str],
+        end_date: Optional[str],
+        fast_mode: bool,
+    ) -> Dict[str, Any]:
+        """Build the request payload for the answer API."""
+        payload: Dict[str, Any] = {
+            "query": query,
+            "search_type": search_type,
+            "fast_mode": fast_mode,
+        }
+
+        if data_max_price is not None:
+            payload["data_max_price"] = data_max_price
+
+        if structured_output is not None:
+            payload["structured_output"] = structured_output
+
+        if system_instructions is not None:
+            payload["system_instructions"] = system_instructions.strip()
+
+        if country_code is not None:
+            payload["country_code"] = country_code.upper()
+
+        if included_sources is not None:
+            payload["included_sources"] = included_sources
+
+        if excluded_sources is not None:
+            payload["excluded_sources"] = excluded_sources
+
+        if start_date is not None:
+            payload["start_date"] = start_date
+
+        if end_date is not None:
+            payload["end_date"] = end_date
+
+        return payload
+
+    def _fetch_answer(self, payload: Dict[str, Any]) -> AnswerResponse:
+        """Fetch the complete answer (non-streaming mode)."""
         try:
-            # Validate included_sources if provided
-            if included_sources is not None:
-                is_valid, invalid_sources = validate_sources(included_sources)
-                if not is_valid:
-                    return AnswerErrorResponse(
-                        error=format_validation_error(invalid_sources)
-                    )
-
-            # Validate excluded_sources if provided
-            if excluded_sources is not None:
-                is_valid, invalid_sources = validate_sources(excluded_sources)
-                if not is_valid:
-                    return AnswerErrorResponse(
-                        error=format_validation_error(invalid_sources)
-                    )
-
-            # Validate country_code if provided
-            if (
-                country_code is not None
-                and country_code.upper() not in SUPPORTED_COUNTRY_CODES
-            ):
-                return AnswerErrorResponse(
-                    error=f"Invalid country_code. Must be one of: {', '.join(sorted(SUPPORTED_COUNTRY_CODES))}"
-                )
-
-            # Validate system_instructions length
-            if (
-                system_instructions is not None
-                and len(system_instructions.strip()) > 2000
-            ):
-                return AnswerErrorResponse(
-                    error="system_instructions cannot exceed 2000 characters"
-                )
-
-            payload = {
-                "query": query,
-                "search_type": search_type,
-                "fast_mode": fast_mode,
-                "url_only": url_only,
-            }
-
-            if data_max_price is not None:
-                payload["data_max_price"] = data_max_price
-
-            if structured_output is not None:
-                payload["structured_output"] = structured_output
-
-            if system_instructions is not None:
-                payload["system_instructions"] = system_instructions.strip()
-
-            if country_code is not None:
-                payload["country_code"] = country_code.upper()
-
-            if included_sources is not None:
-                payload["included_sources"] = included_sources
-
-            if excluded_sources is not None:
-                payload["excluded_sources"] = excluded_sources
-
-            if start_date is not None:
-                payload["start_date"] = start_date
-
-            if end_date is not None:
-                payload["end_date"] = end_date
-
+            # Use streaming internally but collect into final response
+            headers = {**self.headers, "Accept": "text/event-stream"}
             response = requests.post(
-                f"{self.base_url}/answer", json=payload, headers=self.headers
+                f"{self.base_url}/answer",
+                json=payload,
+                headers=headers,
+                stream=True,
             )
 
-            data = response.json()
-
             if not response.ok:
+                try:
+                    data = response.json()
+                    return AnswerErrorResponse(
+                        error=data.get("error", f"HTTP Error: {response.status_code}")
+                    )
+                except:
+                    return AnswerErrorResponse(
+                        error=f"HTTP Error: {response.status_code}"
+                    )
+
+            # Collect streamed data into final response
+            full_content = ""
+            search_results: List[Dict[str, Any]] = []
+            final_metadata: Dict[str, Any] = {}
+
+            for line in response.iter_lines(decode_unicode=True):
+                if not line or not line.startswith("data: "):
+                    continue
+
+                data_str = line[6:]  # Remove "data: " prefix
+
+                if data_str == "[DONE]":
+                    break
+
+                try:
+                    parsed = json.loads(data_str)
+
+                    # Handle search results (streamed first)
+                    if "search_results" in parsed and "success" not in parsed:
+                        search_results.extend(parsed["search_results"])
+
+                    # Handle content chunks
+                    elif "choices" in parsed:
+                        choices = parsed.get("choices", [])
+                        if choices:
+                            delta = choices[0].get("delta", {})
+                            content = delta.get("content", "")
+                            if content:
+                                full_content += content
+
+                    # Handle final metadata
+                    elif "success" in parsed:
+                        final_metadata = parsed
+
+                except json.JSONDecodeError:
+                    continue
+
+            # Build the final response
+            if final_metadata.get("success"):
+                # Use search_results from final metadata if available, otherwise use collected ones
+                final_search_results = final_metadata.get("search_results", search_results)
+
+                return AnswerSuccessResponse(
+                    success=True,
+                    ai_tx_id=final_metadata.get("ai_tx_id", ""),
+                    original_query=final_metadata.get("original_query", payload.get("query", "")),
+                    contents=full_content if full_content else final_metadata.get("contents", ""),
+                    data_type=final_metadata.get("data_type", "unstructured"),
+                    search_results=[SearchResult(**r) for r in final_search_results] if final_search_results else [],
+                    search_metadata=SearchMetadata(**final_metadata.get("search_metadata", {"tx_ids": [], "number_of_results": 0, "total_characters": 0})),
+                    ai_usage=AIUsage(**final_metadata.get("ai_usage", {"input_tokens": 0, "output_tokens": 0})),
+                    cost=CostBreakdown(**final_metadata.get("cost", {"total_deduction_dollars": 0, "search_deduction_dollars": 0, "ai_deduction_dollars": 0})),
+                )
+            else:
                 return AnswerErrorResponse(
-                    error=data.get("error", f"HTTP Error: {response.status_code}")
+                    error=final_metadata.get("error", "Unknown error occurred")
                 )
 
-            return AnswerSuccessResponse(**data)
         except Exception as e:
             return AnswerErrorResponse(error=str(e))
+
+    def _stream_answer(self, payload: Dict[str, Any]) -> AnswerStreamGenerator:
+        """Stream the answer response as chunks."""
+        try:
+            headers = {**self.headers, "Accept": "text/event-stream"}
+            response = requests.post(
+                f"{self.base_url}/answer",
+                json=payload,
+                headers=headers,
+                stream=True,
+            )
+
+            if not response.ok:
+                try:
+                    data = response.json()
+                    yield AnswerStreamChunk(
+                        type="error",
+                        error=data.get("error", f"HTTP Error: {response.status_code}")
+                    )
+                except:
+                    yield AnswerStreamChunk(
+                        type="error",
+                        error=f"HTTP Error: {response.status_code}"
+                    )
+                return
+
+            for line in response.iter_lines(decode_unicode=True):
+                if not line or not line.startswith("data: "):
+                    continue
+
+                data_str = line[6:]  # Remove "data: " prefix
+
+                if data_str == "[DONE]":
+                    yield AnswerStreamChunk(type="done")
+                    break
+
+                try:
+                    parsed = json.loads(data_str)
+
+                    # Handle search results (streamed first)
+                    if "search_results" in parsed and "success" not in parsed:
+                        yield AnswerStreamChunk(
+                            type="search_results",
+                            search_results=[SearchResult(**r) for r in parsed["search_results"]]
+                        )
+
+                    # Handle content chunks
+                    elif "choices" in parsed:
+                        choices = parsed.get("choices", [])
+                        if choices:
+                            delta = choices[0].get("delta", {})
+                            content = delta.get("content", "")
+                            finish_reason = choices[0].get("finish_reason")
+
+                            if content or finish_reason:
+                                yield AnswerStreamChunk(
+                                    type="content",
+                                    content=content,
+                                    finish_reason=finish_reason
+                                )
+
+                    # Handle final metadata
+                    elif "success" in parsed:
+                        yield AnswerStreamChunk(
+                            type="metadata",
+                            ai_tx_id=parsed.get("ai_tx_id"),
+                            original_query=parsed.get("original_query"),
+                            data_type=parsed.get("data_type"),
+                            search_results=[SearchResult(**r) for r in parsed.get("search_results", [])] if parsed.get("search_results") else None,
+                            search_metadata=SearchMetadata(**parsed.get("search_metadata", {})) if parsed.get("search_metadata") else None,
+                            ai_usage=AIUsage(**parsed.get("ai_usage", {})) if parsed.get("ai_usage") else None,
+                            cost=CostBreakdown(**parsed.get("cost", {})) if parsed.get("cost") else None,
+                        )
+
+                except json.JSONDecodeError:
+                    continue
+
+        except Exception as e:
+            yield AnswerStreamChunk(type="error", error=str(e))
