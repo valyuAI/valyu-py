@@ -137,7 +137,7 @@ class DeepResearchStatusResponse(BaseModel):
     status: Optional[DeepResearchStatus] = None
     query: Optional[str] = None
     mode: Optional[DeepResearchMode] = None
-    output_formats: Optional[List[Literal["markdown", "pdf"]]] = None
+    output_formats: Optional[List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]] = None
     created_at: Optional[int] = None
     public: Optional[bool] = None
 
@@ -145,7 +145,8 @@ class DeepResearchStatusResponse(BaseModel):
     progress: Optional[Progress] = None
     messages: Optional[List[Any]] = None
     completed_at: Optional[int] = None
-    output: Optional[str] = None
+    output: Optional[Union[str, Dict[str, Any], Any]] = None
+    output_type: Optional[Literal["markdown", "json"]] = None
     pdf_url: Optional[str] = None
     images: Optional[List[ImageMetadata]] = None
     sources: Optional[List[DeepResearchSource]] = None

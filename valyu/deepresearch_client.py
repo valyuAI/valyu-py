@@ -33,7 +33,7 @@ class DeepResearchClient:
         self,
         input: str,
         model: Literal["lite", "heavy"] = "lite",
-        output_formats: Optional[List[Literal["markdown", "pdf"]]] = None,
+        output_formats: Optional[List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]] = None,
         strategy: Optional[str] = None,
         search: Optional[Union[SearchConfig, Dict[str, Any]]] = None,
         urls: Optional[List[str]] = None,
@@ -50,7 +50,9 @@ class DeepResearchClient:
         Args:
             input: Research query or task description
             model: Research model - "lite" (fast, Haiku) or "heavy" (thorough, Sonnet)
-            output_formats: Output formats - ["markdown"] or ["markdown", "pdf"]
+            output_formats: Output formats - ["markdown"], ["markdown", "pdf"], or a JSON schema object.
+                           When using a JSON schema, the output will be structured JSON instead of markdown.
+                           Cannot mix JSON schema with markdown/pdf - use one or the other.
             strategy: Natural language strategy for the research
             search: Search configuration (type, sources)
             urls: URLs to extract and analyze
