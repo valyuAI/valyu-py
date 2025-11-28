@@ -1,6 +1,7 @@
 """
 Example demonstrating the Valyu Answer API endpoint.
 The Answer API provides AI-processed responses to questions using search data.
+Supports both streaming and non-streaming modes.
 """
 
 import os
@@ -16,11 +17,11 @@ if not VALYU_API_KEY:
 
 valyu = Valyu(VALYU_API_KEY)
 
-print("🧠 Valyu Answer API Examples")
+print("Valyu Answer API Examples")
 print("=" * 50)
 
-# Example 1: Basic Answer
-print("\n📝 Basic Answer Example:")
+# Example 1: Basic Answer (non-streaming - default)
+print("\n1. Basic Answer (non-streaming):")
 query = "What are the latest developments in quantum computing in 2024?"
 print(f"Query: {query}")
 
@@ -35,9 +36,40 @@ else:
 
 print("\n" + "=" * 50)
 
-# Example 2: Answer with System Instructions
-print("\n🎯 Answer with Custom Instructions:")
+# Example 2: Streaming Answer
+print("\n2. Streaming Answer:")
 query = "What is machine learning?"
+print(f"Query: {query}")
+print("Streaming response:")
+
+full_answer = ""
+sources_count = 0
+
+for chunk in valyu.answer(query, streaming=True):
+    if chunk.type == "search_results":
+        sources_count = len(chunk.search_results)
+        print(f"\n[Received {sources_count} sources]")
+
+    elif chunk.type == "content":
+        if chunk.content:
+            print(chunk.content, end="", flush=True)
+            full_answer += chunk.content
+
+    elif chunk.type == "metadata":
+        print(f"\n\n[Metadata] Cost: ${chunk.cost.total_deduction_dollars:.4f}")
+        print(f"[Metadata] Tokens: {chunk.ai_usage.input_tokens} in, {chunk.ai_usage.output_tokens} out")
+
+    elif chunk.type == "done":
+        print("\n[Stream complete]")
+
+    elif chunk.type == "error":
+        print(f"\n[Error] {chunk.error}")
+
+print("\n" + "=" * 50)
+
+# Example 3: Answer with System Instructions
+print("\n3. Answer with Custom Instructions:")
+query = "Explain neural networks"
 system_instructions = "Provide a concise, beginner-friendly explanation suitable for someone with no technical background. Use simple analogies where possible."
 
 print(f"Query: {query}")
@@ -59,8 +91,8 @@ else:
 
 print("\n" + "=" * 50)
 
-# Example 3: Structured Output
-print("\n📊 Structured Output Example:")
+# Example 4: Structured Output
+print("\n4. Structured Output Example:")
 query = "Compare the performance of GPT-4 and Claude-3 models"
 
 # Define a JSON schema for structured output
@@ -112,31 +144,40 @@ else:
 
 print("\n" + "=" * 50)
 
-# Example 4: Answer with Source Filtering
-print("\n🎯 Answer with Source Filtering:")
+# Example 5: Streaming with Source Filtering
+print("\n5. Streaming with Source Filtering:")
 query = "Latest research on protein folding"
 
-response = valyu.answer(
+print(f"Query: {query}")
+print("Streaming with proprietary sources only...")
+
+for chunk in valyu.answer(
     query=query,
-    included_sources=["arxiv.org", "nature.com", "valyu/protein-research"],
+    included_sources=["arxiv.org", "nature.com"],
     excluded_sources=["wikipedia.org", "reddit.com"],
     search_type="proprietary",
     start_date="2024-01-01",
-)
+    streaming=True,
+):
+    if chunk.type == "search_results":
+        print(f"\n[Sources found: {len(chunk.search_results)}]")
+        for i, source in enumerate(chunk.search_results[:3]):
+            print(f"  {i+1}. {source.title[:60]}...")
 
-print(f"Query: {query}")
-print(f"Success: {response.success}")
-if response.success:
-    print(f"Answer: {response.contents[:400]}...")
-    print(f"Search results: {response.search_metadata.number_of_results}")
-    print(f"Total characters: {response.search_metadata.total_characters}")
-else:
-    print(f"Error: {response.error}")
+    elif chunk.type == "content":
+        if chunk.content:
+            print(chunk.content, end="", flush=True)
+
+    elif chunk.type == "metadata":
+        print(f"\n\n[Total characters: {chunk.search_metadata.total_characters}]")
+
+    elif chunk.type == "done":
+        print("\n[Complete]")
 
 print("\n" + "=" * 50)
 
-# Example 5: Error Handling - Invalid Sources
-print("\n❌ Error Handling Example:")
+# Example 6: Error Handling - Invalid Sources
+print("\n6. Error Handling Example:")
 query = "How does photosynthesis work?"
 
 response = valyu.answer(
@@ -149,10 +190,13 @@ print(f"Success: {response.success}")
 if not response.success:
     print(f"Expected error: {response.error}")
 
-print("\n🎉 Answer API examples completed!")
-print("\nKey benefits of the Answer API:")
-print("• Get AI-processed answers instead of raw search results")
-print("• Customize responses with system instructions")
-print("• Structure output with JSON schemas")
-print("• Control data sources and costs")
-print("• Full transparency on token usage and costs")
+print("\n" + "=" * 50)
+
+print("\nAnswer API examples completed!")
+print("\nKey features:")
+print("  - streaming=False (default): Wait for complete response")
+print("  - streaming=True: Stream chunks as they're generated")
+print("  - Customize responses with system instructions")
+print("  - Structure output with JSON schemas")
+print("  - Control data sources and costs")
+print("  - Full transparency on token usage and costs")

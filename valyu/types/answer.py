@@ -1,17 +1,13 @@
 """
-Pydantic schemas for the /answer endpoint (Valyu Answer Lambda).
+Pydantic schemas for the /answer endpoint (Valyu Answer API).
 
-These models describe the public request/response contract for the endpoint
-based on the implemented validation in `query/validator.py` and the response
-shape produced by `ai/groq_tool_agent.py`.
-
-Note: The Answer Lambda runs behind API Gateway (not FastAPI), but these
-schemas are useful for documentation, typing, and validation in tests/tools.
+These models describe the public request/response contract for the endpoint.
+Supports both streaming (SSE) and non-streaming modes.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union, Generator
 from datetime import date
 import re
 
@@ -92,11 +88,11 @@ class AnswerRequest(BaseModel):
 
     # Search parameters
     query: str = Field(description="Search query text.")
-    search_type: Literal["all", "web", "proprietary"] = Field(
+    search_type: Literal["all", "web", "proprietary", "news"] = Field(
         default="all", description="Search scope selector."
     )
     data_max_price: float = Field(
-        default=30.0,
+        default=1.0,
         gt=0,
         description="Maximum spend (USD) for data retrieval. Separate from AI costs.",
     )
@@ -109,11 +105,11 @@ class AnswerRequest(BaseModel):
     )
     included_sources: List[str] = Field(
         default_factory=list,
-        description="Domains or URLs to include (e.g., 'example.com' or 'https://example.com').",
+        description="Domains, URLs, dataset identifiers, or presets to include.",
     )
     excluded_sources: List[str] = Field(
         default_factory=list,
-        description="Domains or URLs to exclude (e.g., 'example.com' or 'https://example.com').",
+        description="Domains, URLs, or dataset identifiers to exclude.",
     )
     start_date: Optional[date] = Field(
         default=None, description="Start date filter (YYYY-MM-DD)."
@@ -175,8 +171,7 @@ class AnswerRequest(BaseModel):
     def _validate_date_order(
         cls, end: Optional[date], info
     ) -> Optional[date]:  # type: ignore[override]
-        # Pydantic v2 passes ValidationInfo via 'info'; we need both values present
-        start: Optional[date] = info.data.get("start_date")  # type: ignore[attr-defined]
+        start: Optional[date] = info.data.get("start_date")
         if start and end and start > end:
             raise ValueError("start_date must be before end_date")
         return end
@@ -213,19 +208,32 @@ class CostBreakdown(BaseModel):
         description="Cost of data retrieval in dollars."
     )
     ai_deduction_dollars: float = Field(description="AI processing cost in dollars.")
+    contents_deduction_dollars: float = Field(
+        default=0.0, description="Cost of content extraction in dollars."
+    )
 
 
 class SearchResult(BaseModel):
+    """Search result from the Answer API.
+
+    Note: `content` can be a string for text content, or a list/dict for structured
+    data (e.g., stock prices, financial data).
+    """
     title: str
     url: str
-    content: Union[str, List[Dict[str, Any]]]
+    content: Union[str, List[Dict[str, Any]], Dict[str, Any]]
     description: Optional[str] = None
     source: str
-    price: float
+    source_type: Optional[str] = Field(
+        default=None, description="Type of source: 'website', 'data', 'forum'"
+    )
+    data_type: Optional[Literal["structured", "unstructured"]] = None
+    date: Optional[str] = Field(
+        default=None, description="Publication date in YYYY-MM-DD format"
+    )
     length: int
     image_url: Optional[Dict[str, str]] = None
     relevance_score: Optional[float] = None
-    data_type: Optional[Literal["structured", "unstructured"]] = None
 
 
 class AnswerSuccessResponse(BaseModel):
@@ -255,13 +263,49 @@ class AnswerErrorResponse(BaseModel):
 AnswerResponse = Union[AnswerSuccessResponse, AnswerErrorResponse]
 
 
+# --------------------------
+# Streaming Types
+# --------------------------
+
+
+class AnswerStreamChunk(BaseModel):
+    """A chunk from the streaming response."""
+
+    type: Literal["search_results", "content", "metadata", "done", "error"]
+
+    # For type="search_results"
+    search_results: Optional[List[SearchResult]] = None
+
+    # For type="content"
+    content: Optional[str] = None
+    finish_reason: Optional[str] = None
+
+    # For type="metadata" (final metadata after streaming completes)
+    ai_tx_id: Optional[str] = None
+    original_query: Optional[str] = None
+    data_type: Optional[Literal["structured", "unstructured"]] = None
+    search_metadata: Optional[SearchMetadata] = None
+    ai_usage: Optional[AIUsage] = None
+    cost: Optional[CostBreakdown] = None
+
+    # For type="error"
+    error: Optional[str] = None
+
+
+# Type alias for streaming generator
+AnswerStreamGenerator = Generator[AnswerStreamChunk, None, None]
+
+
 __all__ = [
     "AnswerRequest",
     "SearchMetadata",
     "AIUsage",
     "CostBreakdown",
+    "SearchResult",
     "AnswerSuccessResponse",
     "AnswerErrorResponse",
     "AnswerResponse",
+    "AnswerStreamChunk",
+    "AnswerStreamGenerator",
     "SUPPORTED_COUNTRY_CODES",
 ]
