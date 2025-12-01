@@ -13,6 +13,7 @@ from .answer import (
     SearchMetadata,
     AIUsage,
     CostBreakdown,
+    ExtractionMetadata,
     SUPPORTED_COUNTRY_CODES,
 )
 from .deepresearch import (
@@ -59,6 +60,7 @@ __all__ = [
     "SearchMetadata",
     "AIUsage",
     "CostBreakdown",
+    "ExtractionMetadata",
     "SUPPORTED_COUNTRY_CODES",
     "SourceFormat",
     "ValidatedSource",

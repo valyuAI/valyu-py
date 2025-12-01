@@ -213,6 +213,17 @@ class CostBreakdown(BaseModel):
     )
 
 
+class ExtractionMetadata(BaseModel):
+    """Metadata about content extraction, only populated when contents_api tool was used."""
+
+    urls_requested: int = Field(default=0, description="Number of URLs requested for extraction.")
+    urls_processed: int = Field(default=0, description="Number of URLs successfully processed.")
+    urls_failed: int = Field(default=0, description="Number of URLs that failed extraction.")
+    total_characters: int = Field(default=0, description="Total characters extracted.")
+    response_length: Optional[str] = Field(default=None, description="Response length setting used.")
+    extract_effort: Optional[str] = Field(default=None, description="Extraction effort level used.")
+
+
 class SearchResult(BaseModel):
     """Search result from the Answer API.
 
@@ -238,7 +249,7 @@ class SearchResult(BaseModel):
 
 class AnswerSuccessResponse(BaseModel):
     success: Literal[True] = True
-    ai_tx_id: str
+    tx_id: str = Field(description="The AI transaction ID for this request.")
     original_query: str
     contents: Union[str, Dict[str, Any]]
     data_type: Literal["structured", "unstructured"]
@@ -246,6 +257,10 @@ class AnswerSuccessResponse(BaseModel):
     search_metadata: SearchMetadata
     ai_usage: AIUsage
     cost: CostBreakdown
+    extraction_metadata: Optional[ExtractionMetadata] = Field(
+        default=None,
+        description="Metadata about content extraction, only populated when contents_api tool was used.",
+    )
 
     def __str__(self) -> str:
         return self.model_dump_json(indent=2)
@@ -281,12 +296,13 @@ class AnswerStreamChunk(BaseModel):
     finish_reason: Optional[str] = None
 
     # For type="metadata" (final metadata after streaming completes)
-    ai_tx_id: Optional[str] = None
+    tx_id: Optional[str] = None
     original_query: Optional[str] = None
     data_type: Optional[Literal["structured", "unstructured"]] = None
     search_metadata: Optional[SearchMetadata] = None
     ai_usage: Optional[AIUsage] = None
     cost: Optional[CostBreakdown] = None
+    extraction_metadata: Optional[ExtractionMetadata] = None
 
     # For type="error"
     error: Optional[str] = None
@@ -301,6 +317,7 @@ __all__ = [
     "SearchMetadata",
     "AIUsage",
     "CostBreakdown",
+    "ExtractionMetadata",
     "SearchResult",
     "AnswerSuccessResponse",
     "AnswerErrorResponse",
