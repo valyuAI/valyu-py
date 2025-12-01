@@ -20,6 +20,7 @@ from valyu.types.answer import (
     SearchResult,
     AIUsage,
     CostBreakdown,
+    ExtractionMetadata,
     SUPPORTED_COUNTRY_CODES,
 )
 from valyu.types.deepresearch import (
@@ -582,9 +583,14 @@ class Valyu:
                 # Use search_results from final metadata if available, otherwise use collected ones
                 final_search_results = final_metadata.get("search_results", search_results)
 
+                # Handle extraction_metadata if present
+                extraction_meta = None
+                if final_metadata.get("extraction_metadata"):
+                    extraction_meta = ExtractionMetadata(**final_metadata["extraction_metadata"])
+
                 return AnswerSuccessResponse(
                     success=True,
-                    ai_tx_id=final_metadata.get("ai_tx_id", ""),
+                    tx_id=final_metadata.get("tx_id", ""),
                     original_query=final_metadata.get("original_query", payload.get("query", "")),
                     contents=full_content if full_content else final_metadata.get("contents", ""),
                     data_type=final_metadata.get("data_type", "unstructured"),
@@ -592,6 +598,7 @@ class Valyu:
                     search_metadata=SearchMetadata(**final_metadata.get("search_metadata", {"tx_ids": [], "number_of_results": 0, "total_characters": 0})),
                     ai_usage=AIUsage(**final_metadata.get("ai_usage", {"input_tokens": 0, "output_tokens": 0})),
                     cost=CostBreakdown(**final_metadata.get("cost", {"total_deduction_dollars": 0, "search_deduction_dollars": 0, "ai_deduction_dollars": 0})),
+                    extraction_metadata=extraction_meta,
                 )
             else:
                 return AnswerErrorResponse(
@@ -665,13 +672,14 @@ class Valyu:
                     elif "success" in parsed:
                         yield AnswerStreamChunk(
                             type="metadata",
-                            ai_tx_id=parsed.get("ai_tx_id"),
+                            tx_id=parsed.get("tx_id"),
                             original_query=parsed.get("original_query"),
                             data_type=parsed.get("data_type"),
                             search_results=[SearchResult(**r) for r in parsed.get("search_results", [])] if parsed.get("search_results") else None,
                             search_metadata=SearchMetadata(**parsed.get("search_metadata", {})) if parsed.get("search_metadata") else None,
                             ai_usage=AIUsage(**parsed.get("ai_usage", {})) if parsed.get("ai_usage") else None,
                             cost=CostBreakdown(**parsed.get("cost", {})) if parsed.get("cost") else None,
+                            extraction_metadata=ExtractionMetadata(**parsed.get("extraction_metadata", {})) if parsed.get("extraction_metadata") else None,
                         )
 
                 except json.JSONDecodeError:
