@@ -299,7 +299,7 @@ class DeepResearchClient:
         """
         try:
             response = requests.get(
-                f"{self._base_url}/deepresearch/listtasks?api_key_id={api_key_id}&limit={limit}",
+                f"{self._base_url}/deepresearch/list?api_key_id={api_key_id}&limit={limit}",
                 headers=self._headers,
             )
 
