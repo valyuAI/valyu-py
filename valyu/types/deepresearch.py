@@ -6,6 +6,7 @@ from enum import Enum
 class DeepResearchMode(str, Enum):
     """Research mode options."""
 
+    FAST = "fast"
     LITE = "lite"
     HEAVY = "heavy"
 
