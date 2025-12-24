@@ -57,7 +57,7 @@ The `deepresearch` namespace provides access to Valyu's AI-powered research agen
 # Create a research task
 task = valyu.deepresearch.create(
     input="What are the latest developments in quantum computing?",
-    model="lite",                      # "lite" (fast, Haiku) or "heavy" (thorough, Sonnet)
+    model="standard",                  # "standard" (fast) or "heavy" (thorough)
     output_formats=["markdown", "pdf"] # Output formats
 )
 
@@ -74,42 +74,43 @@ print(result.pdf_url) # PDF download URL
 
 #### DeepResearch Methods
 
-| Method | Description |
-|--------|-------------|
-| `create(...)` | Create a new research task |
-| `status(task_id)` | Get current status of a task |
-| `wait(task_id, ...)` | Wait for task completion with polling |
-| `stream(task_id, ...)` | Stream real-time updates |
-| `list(api_key_id, limit)` | List all your research tasks |
-| `update(task_id, instruction)` | Add follow-up instruction to running task |
-| `cancel(task_id)` | Cancel a running task |
-| `delete(task_id)` | Delete a task |
-| `toggle_public(task_id, is_public)` | Make task publicly accessible |
+| Method                              | Description                               |
+| ----------------------------------- | ----------------------------------------- |
+| `create(...)`                       | Create a new research task                |
+| `status(task_id)`                   | Get current status of a task              |
+| `wait(task_id, ...)`                | Wait for task completion with polling     |
+| `stream(task_id, ...)`              | Stream real-time updates                  |
+| `list(api_key_id, limit)`           | List all your research tasks              |
+| `update(task_id, instruction)`      | Add follow-up instruction to running task |
+| `cancel(task_id)`                   | Cancel a running task                     |
+| `delete(task_id)`                   | Delete a task                             |
+| `toggle_public(task_id, is_public)` | Make task publicly accessible             |
 
 #### DeepResearch Create Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `input` | `str` | *required* | Research query or task description |
-| `model` | `str` | `"lite"` | Research model - "lite" (fast) or "heavy" (thorough) |
-| `output_formats` | `List[str]` | `["markdown"]` | Output formats for the report |
-| `strategy` | `str` | `None` | Natural language research strategy |
-| `search` | `dict` | `None` | Search configuration (type, sources) |
-| `urls` | `List[str]` | `None` | URLs to extract and analyze |
-| `files` | `List[dict]` | `None` | PDF/image files to analyze |
-| `mcp_servers` | `List[dict]` | `None` | MCP tool server configurations |
-| `code_execution` | `bool` | `True` | Enable/disable code execution |
-| `previous_reports` | `List[str]` | `None` | Previous report IDs for context (max 3) |
-| `webhook_url` | `str` | `None` | HTTPS webhook URL for completion notification |
-| `metadata` | `dict` | `None` | Custom metadata key-value pairs |
+| Parameter          | Type         | Default        | Description                                              |
+| ------------------ | ------------ | -------------- | -------------------------------------------------------- |
+| `input`            | `str`        | _required_     | Research query or task description                       |
+| `model`            | `str`        | `"standard"`   | Research model - "standard" (fast) or "heavy" (thorough) |
+| `output_formats`   | `List[str]`  | `["markdown"]` | Output formats for the report                            |
+| `strategy`         | `str`        | `None`         | Natural language research strategy                       |
+| `search`           | `dict`       | `None`         | Search configuration (type, sources)                     |
+| `urls`             | `List[str]`  | `None`         | URLs to extract and analyze                              |
+| `files`            | `List[dict]` | `None`         | PDF/image files to analyze                               |
+| `mcp_servers`      | `List[dict]` | `None`         | MCP tool server configurations                           |
+| `code_execution`   | `bool`       | `True`         | Enable/disable code execution                            |
+| `previous_reports` | `List[str]`  | `None`         | Previous report IDs for context (max 3)                  |
+| `webhook_url`      | `str`        | `None`         | HTTPS webhook URL for completion notification            |
+| `metadata`         | `dict`       | `None`         | Custom metadata key-value pairs                          |
 
 #### DeepResearch Examples
 
 **Basic Research:**
+
 ```python
 task = valyu.deepresearch.create(
     input="Summarize recent AI safety research",
-    model="lite"
+    model="standard"
 )
 
 result = valyu.deepresearch.wait(task.deepresearch_id)
@@ -117,6 +118,7 @@ print(result.output)
 ```
 
 **With Custom Sources:**
+
 ```python
 task = valyu.deepresearch.create(
     input="Latest transformer architecture improvements",
@@ -130,12 +132,13 @@ task = valyu.deepresearch.create(
 ```
 
 **Streaming Updates:**
+
 ```python
 def on_progress(current, total):
     print(f"Progress: {current}/{total}")
 
 def on_complete(result):
-    print("Complete! Cost:", result.usage.total_cost)
+    print("Complete! Cost:", result.cost)
 
 valyu.deepresearch.stream(
     task.deepresearch_id,
@@ -145,6 +148,7 @@ valyu.deepresearch.stream(
 ```
 
 **With File Analysis:**
+
 ```python
 task = valyu.deepresearch.create(
     input="Analyze these research papers and provide key insights",

@@ -1,6 +1,7 @@
 """
 DeepResearch Client for Valyu SDK
 """
+
 import time
 import requests
 from typing import Optional, List, Literal, Union, Dict, Any, Callable
@@ -32,8 +33,10 @@ class DeepResearchClient:
     def create(
         self,
         input: str,
-        model: Literal["lite", "heavy"] = "lite",
-        output_formats: Optional[List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]] = None,
+        model: Literal["standard", "heavy"] = "standard",
+        output_formats: Optional[
+            List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
+        ] = None,
         strategy: Optional[str] = None,
         search: Optional[Union[SearchConfig, Dict[str, Any]]] = None,
         urls: Optional[List[str]] = None,
@@ -49,7 +52,7 @@ class DeepResearchClient:
 
         Args:
             input: Research query or task description
-            model: Research model - "lite" (fast, Haiku) or "heavy" (thorough, Sonnet)
+            model: Research model - "standard" (fast) or "heavy" (thorough)
             output_formats: Output formats - ["markdown"], ["markdown", "pdf"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with markdown/pdf - use one or the other.
