@@ -9,6 +9,7 @@ from valyu.types.deepresearch import (
     DeepResearchStatus,
     FileAttachment,
     MCPServerConfig,
+    Deliverable,
     SearchConfig,
     DeepResearchCreateResponse,
     DeepResearchStatusResponse,
@@ -38,6 +39,8 @@ class DeepResearchClient:
         search: Optional[Union[SearchConfig, Dict[str, Any]]] = None,
         urls: Optional[List[str]] = None,
         files: Optional[List[Union[FileAttachment, Dict[str, Any]]]] = None,
+        deliverables: Optional[List[Union[str, Deliverable, Dict[str, Any]]]] = None,
+        brand_collection_id: Optional[str] = None,
         mcp_servers: Optional[List[Union[MCPServerConfig, Dict[str, Any]]]] = None,
         code_execution: bool = True,
         previous_reports: Optional[List[str]] = None,
@@ -57,6 +60,9 @@ class DeepResearchClient:
             search: Search configuration (type, sources)
             urls: URLs to extract and analyze
             files: File attachments (PDFs, images)
+            deliverables: Additional file outputs to generate (CSV, Excel, PowerPoint, Word, PDF). Max 10.
+                         Can be simple strings or Deliverable objects with detailed configuration.
+            brand_collection_id: Brand collection ID to apply to all deliverables (logos, fonts, colors)
             mcp_servers: MCP server configurations for custom tools
             code_execution: Enable/disable code execution (default: True)
             previous_reports: Previous report IDs for context (max 3)
@@ -97,6 +103,13 @@ class DeepResearchClient:
                 payload["files"] = [
                     f.dict() if isinstance(f, FileAttachment) else f for f in files
                 ]
+            if deliverables:
+                payload["deliverables"] = [
+                    d.dict(exclude_none=True) if isinstance(d, Deliverable) else d
+                    for d in deliverables
+                ]
+            if brand_collection_id:
+                payload["brand_collection_id"] = brand_collection_id
             if mcp_servers:
                 payload["mcp_servers"] = [
                     s.dict(exclude_none=True) if isinstance(s, MCPServerConfig) else s

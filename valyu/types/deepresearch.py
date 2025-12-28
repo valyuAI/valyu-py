@@ -42,6 +42,48 @@ class MCPServerConfig(BaseModel):
     )
 
 
+class Deliverable(BaseModel):
+    """Deliverable file configuration."""
+
+    type: Literal["csv", "xlsx", "pptx", "docx", "pdf"] = Field(
+        ..., description="File type"
+    )
+    description: str = Field(
+        ..., max_length=500, description="What data to extract or content to generate"
+    )
+    columns: Optional[List[str]] = Field(
+        None, description="Suggested column names (for CSV/XLSX)"
+    )
+    include_headers: Optional[bool] = Field(
+        True, description="Include column headers (for CSV/XLSX)"
+    )
+    sheet_name: Optional[str] = Field(None, description="Sheet name (for XLSX only)")
+    slides: Optional[int] = Field(None, description="Number of slides (for PPTX only)")
+    template: Optional[str] = Field(None, description="Template name to use")
+    brand_collection_id: Optional[str] = Field(
+        None, description="Override brand collection for this specific deliverable"
+    )
+
+
+class DeliverableResult(BaseModel):
+    """Deliverable generation result."""
+
+    id: str = Field(..., description="Unique deliverable ID")
+    request: str = Field(..., description="Original request description")
+    type: Literal["csv", "xlsx", "pptx", "docx", "pdf", "unknown"] = Field(
+        ..., description="Deliverable file type"
+    )
+    status: Literal["completed", "failed"] = Field(..., description="Generation status")
+    title: str = Field(..., description="Generated filename/title")
+    description: Optional[str] = Field(None, description="Deliverable content description")
+    url: str = Field(..., description="Token-signed authenticated URL to download the file")
+    s3_key: str = Field(..., description="S3 storage key")
+    row_count: Optional[int] = Field(None, description="Number of rows (for CSV/XLSX)")
+    column_count: Optional[int] = Field(None, description="Number of columns (for CSV/XLSX)")
+    error: Optional[str] = Field(None, description="Error message if status is failed")
+    created_at: int = Field(..., description="Unix timestamp of creation")
+
+
 class SearchConfig(BaseModel):
     """Search configuration."""
 
@@ -150,6 +192,7 @@ class DeepResearchStatusResponse(BaseModel):
     output_type: Optional[Literal["markdown", "json"]] = None
     pdf_url: Optional[str] = None
     images: Optional[List[ImageMetadata]] = None
+    deliverables: Optional[List[DeliverableResult]] = None
     sources: Optional[List[DeepResearchSource]] = None
     usage: Optional[Usage] = None
     error: Optional[str] = None
