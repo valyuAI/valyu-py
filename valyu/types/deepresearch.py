@@ -60,9 +60,6 @@ class Deliverable(BaseModel):
     sheet_name: Optional[str] = Field(None, description="Sheet name (for XLSX only)")
     slides: Optional[int] = Field(None, description="Number of slides (for PPTX only)")
     template: Optional[str] = Field(None, description="Template name to use")
-    brand_collection_id: Optional[str] = Field(
-        None, description="Override brand collection for this specific deliverable"
-    )
 
 
 class DeliverableResult(BaseModel):
