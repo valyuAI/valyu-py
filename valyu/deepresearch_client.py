@@ -176,7 +176,7 @@ class DeepResearchClient:
         self,
         task_id: str,
         poll_interval: int = 5,
-        max_wait_time: int = 3600,
+        max_wait_time: int = 7200,
         on_progress: Optional[Callable[[DeepResearchStatusResponse], None]] = None,
     ) -> DeepResearchStatusResponse:
         """
@@ -185,7 +185,7 @@ class DeepResearchClient:
         Args:
             task_id: Task ID to wait for
             poll_interval: Seconds between polls (default: 5)
-            max_wait_time: Maximum wait time in seconds (default: 3600)
+            max_wait_time: Maximum wait time in seconds (default: 7200)
             on_progress: Callback for progress updates
 
         Returns:
