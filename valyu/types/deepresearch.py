@@ -7,7 +7,8 @@ class DeepResearchMode(str, Enum):
     """Research mode options."""
 
     FAST = "fast"
-    LITE = "lite"
+    STANDARD = "standard"
+    LITE = "lite"  # Deprecated: use STANDARD instead (kept for backward compatibility)
     HEAVY = "heavy"
 
 
