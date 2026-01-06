@@ -249,3 +249,149 @@ class DeepResearchTogglePublicResponse(BaseModel):
     deepresearch_id: Optional[str] = None
     public: Optional[bool] = None
     error: Optional[str] = None
+
+
+# =============================================================================
+# Batch Types
+# =============================================================================
+
+
+class BatchStatus(str, Enum):
+    """Batch status options."""
+
+    OPEN = "open"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    COMPLETED_WITH_ERRORS = "completed_with_errors"
+    CANCELLED = "cancelled"
+
+
+class BatchCounts(BaseModel):
+    """Task counts within a batch."""
+
+    total: int = Field(..., description="Total number of tasks")
+    queued: int = Field(..., description="Number of queued tasks")
+    running: int = Field(..., description="Number of running tasks")
+    completed: int = Field(..., description="Number of completed tasks")
+    failed: int = Field(..., description="Number of failed tasks")
+    cancelled: int = Field(..., description="Number of cancelled tasks")
+
+
+class BatchUsage(BaseModel):
+    """Aggregated usage for a batch."""
+
+    search_cost: float = Field(..., description="Total search cost")
+    contents_cost: float = Field(..., description="Total contents cost")
+    ai_cost: float = Field(..., description="Total AI cost")
+    total_cost: float = Field(..., description="Total cost")
+
+
+class BatchTaskInput(BaseModel):
+    """Input for a batch task."""
+
+    id: Optional[str] = Field(None, description="User-provided task ID")
+    input: str = Field(..., description="Research query or task description")
+    strategy: Optional[str] = Field(None, description="Natural language strategy")
+    urls: Optional[List[str]] = Field(None, description="URLs to extract and analyze")
+    metadata: Optional[Dict[str, Union[str, int, bool]]] = Field(
+        None, description="Custom metadata"
+    )
+
+
+class DeepResearchBatch(BaseModel):
+    """Batch of deep research tasks."""
+
+    batch_id: str = Field(..., description="Unique batch ID")
+    organisation_id: Optional[str] = Field(None, description="Organization ID")
+    api_key_id: Optional[str] = Field(None, description="API key ID")
+    credit_id: Optional[str] = Field(None, description="Credit ID")
+    name: Optional[str] = Field(None, description="Batch name")
+    status: BatchStatus = Field(..., description="Current batch status")
+    model: DeepResearchMode = Field(..., description="Default model for tasks")
+    output_formats: Optional[List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]] = Field(
+        None, description="Default output formats"
+    )
+    search_params: Optional[Dict[str, Any]] = Field(
+        None, description="Default search parameters"
+    )
+    counts: BatchCounts = Field(..., description="Task counts")
+    usage: Optional[BatchUsage] = Field(None, description="Aggregated usage")
+    webhook_url: Optional[str] = Field(None, description="Webhook URL for notifications")
+    webhook_secret: Optional[str] = Field(None, description="Webhook secret")
+    created_at: Union[int, str] = Field(..., description="Creation timestamp")
+    updated_at: Optional[Union[int, str]] = Field(None, description="Last update timestamp")
+    completed_at: Optional[Union[int, str]] = Field(None, description="Completion timestamp")
+    metadata: Optional[Dict[str, Union[str, int, bool]]] = Field(
+        None, description="Custom metadata"
+    )
+
+
+class BatchCreateResponse(BaseModel):
+    """Response from creating a batch."""
+
+    success: bool
+    batch_id: Optional[str] = None
+    status: Optional[BatchStatus] = None
+    model: Optional[DeepResearchMode] = None
+    counts: Optional[BatchCounts] = None
+    created_at: Optional[Union[int, str]] = None
+    webhook_secret: Optional[str] = None
+    message: Optional[str] = None
+    error: Optional[str] = None
+
+
+class BatchAddTasksResponse(BaseModel):
+    """Response from adding tasks to a batch."""
+
+    success: bool
+    batch_id: Optional[str] = None
+    added: Optional[int] = None
+    task_ids: Optional[List[str]] = None
+    message: Optional[str] = None
+    error: Optional[str] = None
+
+
+class BatchStatusResponse(BaseModel):
+    """Response from getting batch status."""
+
+    success: bool
+    batch: Optional[DeepResearchBatch] = None
+    error: Optional[str] = None
+
+
+class BatchTaskListItem(BaseModel):
+    """Minimal task info in batch list."""
+
+    deepresearch_id: str
+    batch_task_id: Optional[str] = None
+    query: str
+    status: DeepResearchStatus
+    created_at: Union[int, str]
+    completed_at: Optional[Union[int, str]] = None
+    error: Optional[str] = None
+
+
+class BatchTasksListResponse(BaseModel):
+    """Response from listing tasks in a batch."""
+
+    success: bool
+    batch_id: Optional[str] = None
+    tasks: Optional[List[BatchTaskListItem]] = None
+    error: Optional[str] = None
+
+
+class BatchCancelResponse(BaseModel):
+    """Response from cancelling a batch."""
+
+    success: bool
+    batch_id: Optional[str] = None
+    message: Optional[str] = None
+    error: Optional[str] = None
+
+
+class BatchListResponse(BaseModel):
+    """Response from listing batches."""
+
+    success: bool
+    batches: Optional[List[DeepResearchBatch]] = None
+    error: Optional[str] = None

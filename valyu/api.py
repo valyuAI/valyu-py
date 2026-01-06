@@ -39,6 +39,7 @@ from valyu.types.deepresearch import (
 )
 from valyu.validation import validate_sources, format_validation_error
 from valyu.deepresearch_client import DeepResearchClient
+from valyu.batch_client import BatchClient
 import os
 
 # Supported country codes for the country_code parameter - simplified for typing
@@ -76,6 +77,9 @@ class Valyu:
 
         # Initialize DeepResearch client
         self.deepresearch = DeepResearchClient(self)
+
+        # Initialize Batch client
+        self.batch = BatchClient(self)
 
     def search(
         self,
