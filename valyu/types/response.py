@@ -7,7 +7,7 @@ SearchType = Literal["web", "proprietary", "all", "news"]
 class SearchResult(BaseModel):
     title: str
     url: str
-    content: Union[str, List[Dict[str, Any]]]
+    content: Union[str, List[Dict[str, Any]], Dict[str, Any]]
     description: Optional[str] = None
     source: str
     price: float
