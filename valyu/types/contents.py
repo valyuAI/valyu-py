@@ -8,6 +8,7 @@ ContentsResponseLength = Union[Literal["short", "medium", "large", "max"], int]
 class ContentsResult(BaseModel):
     url: str
     title: str
+    description: Optional[str] = None  # Brief description of the content
     content: Union[str, int, float]
     length: int
     source: str

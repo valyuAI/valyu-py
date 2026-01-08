@@ -285,6 +285,7 @@ Each `ContentsResult` contains:
 class ContentsResult:
     url: str                              # Source URL
     title: str                            # Page/document title
+    description: Optional[str]            # Brief description of the content
     content: Union[str, int, float]       # Extracted content
     length: int                           # Content length in characters
     source: str                           # Data source identifier
