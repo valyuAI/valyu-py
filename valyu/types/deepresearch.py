@@ -192,7 +192,7 @@ class DeepResearchStatusResponse(BaseModel):
     images: Optional[List[ImageMetadata]] = None
     deliverables: Optional[List[DeliverableResult]] = None
     sources: Optional[List[DeepResearchSource]] = None
-    usage: Optional[Usage] = None
+    cost: Optional[float] = None
     error: Optional[str] = None
 
 
