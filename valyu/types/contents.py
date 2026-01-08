@@ -11,10 +11,12 @@ class ContentsResult(BaseModel):
     content: Union[str, int, float]
     length: int
     source: str
+    price: float  # Cost for processing this URL
     summary: Optional[Union[str, Dict[str, Any]]] = None
     summary_success: Optional[bool] = None
     data_type: Optional[str] = None
     image_url: Optional[Dict[str, str]] = None
+    screenshot_url: Optional[str] = None  # Screenshot URL if requested
     citation: Optional[str] = None
 
 

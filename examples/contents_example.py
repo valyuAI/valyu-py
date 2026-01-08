@@ -38,7 +38,7 @@ print("-" * 30)
 response = valyu.contents(
     urls=["https://docs.python.org/3/tutorial/introduction.html"],
     summary=True,
-    response_length="medium"
+    response_length="medium",
 )
 
 if response.success:
@@ -59,7 +59,7 @@ response = valyu.contents(
     urls=["https://en.wikipedia.org/wiki/Machine_learning"],
     summary="Summarize the key concepts in bullet points, focusing on practical applications",
     extract_effort="high",
-    response_length="large"
+    response_length="large",
 )
 
 if response.success:
@@ -82,22 +82,18 @@ company_schema = {
         "founded_year": {"type": "integer"},
         "industry": {
             "type": "string",
-            "enum": ["tech", "finance", "healthcare", "retail", "other"]
+            "enum": ["tech", "finance", "healthcare", "retail", "other"],
         },
-        "key_products": {
-            "type": "array",
-            "items": {"type": "string"},
-            "maxItems": 3
-        },
-        "headquarters": {"type": "string"}
+        "key_products": {"type": "array", "items": {"type": "string"}, "maxItems": 3},
+        "headquarters": {"type": "string"},
     },
-    "required": ["company_name"]
+    "required": ["company_name"],
 }
 
 response = valyu.contents(
     urls=["https://en.wikipedia.org/wiki/OpenAI"],
     summary=company_schema,
-    extract_effort="high"
+    extract_effort="high",
 )
 
 if response.success:
@@ -116,14 +112,14 @@ print("-" * 30)
 urls = [
     "https://en.wikipedia.org/wiki/Deep_learning",
     "https://en.wikipedia.org/wiki/Natural_language_processing",
-    "https://en.wikipedia.org/wiki/Computer_vision"
+    "https://en.wikipedia.org/wiki/Computer_vision",
 ]
 
 response = valyu.contents(
     urls=urls,
     summary=True,
     response_length="short",
-    max_price_dollars=0.05  # Limit cost to 5 cents
+    max_price_dollars=0.05,  # Limit cost to 5 cents
 )
 
 if response.success:
@@ -132,7 +128,7 @@ if response.success:
     print(f"Failed: {response.urls_failed} URLs")
     print(f"Total characters: {response.total_characters}")
     print(f"Total cost: ${response.total_cost_dollars:.4f}")
-    
+
     for i, result in enumerate(response.results, 1):
         print(f"\n{i}. {result.title}")
         if result.summary:
@@ -147,7 +143,7 @@ print("-" * 30)
 response = valyu.contents(
     urls=["https://example.com"],
     summary=False,  # Explicitly disable AI processing
-    response_length="short"
+    response_length="short",
 )
 
 if response.success:
@@ -156,6 +152,27 @@ if response.success:
         print(f"Raw content ({result.length} chars):")
         print(result.content[:500])
         print(f"Cost: ${response.total_cost_dollars:.4f}")
+else:
+    print(f"Error: {response.error}")
+
+# Example 7: Content extraction with screenshot
+print("\n\n7. Content Extraction with Screenshot")
+print("-" * 30)
+
+response = valyu.contents(
+    urls=["https://www.valyu.ai/"],
+    screenshot=True,  # Request page screenshots
+    response_length="short",
+)
+
+if response.success:
+    for result in response.results:
+        print(f"\nTitle: {result.title}")
+        print(f"URL: {result.url}")
+        print(f"Price: ${result.price:.4f}")
+        if result.screenshot_url:
+            print(f"Screenshot URL: {result.screenshot_url}")
+        print(f"Content length: {result.length} characters")
 else:
     print(f"Error: {response.error}")
 
