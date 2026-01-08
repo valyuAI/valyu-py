@@ -10,6 +10,7 @@ from valyu.types.deepresearch import (
     DeepResearchStatus,
     FileAttachment,
     MCPServerConfig,
+    Deliverable,
     SearchConfig,
     DeepResearchCreateResponse,
     DeepResearchStatusResponse,
@@ -41,6 +42,7 @@ class DeepResearchClient:
         search: Optional[Union[SearchConfig, Dict[str, Any]]] = None,
         urls: Optional[List[str]] = None,
         files: Optional[List[Union[FileAttachment, Dict[str, Any]]]] = None,
+        deliverables: Optional[List[Union[str, Deliverable, Dict[str, Any]]]] = None,
         mcp_servers: Optional[List[Union[MCPServerConfig, Dict[str, Any]]]] = None,
         code_execution: bool = True,
         previous_reports: Optional[List[str]] = None,
@@ -60,6 +62,8 @@ class DeepResearchClient:
             search: Search configuration (type, sources)
             urls: URLs to extract and analyze
             files: File attachments (PDFs, images)
+            deliverables: Additional file outputs to generate (CSV, Excel, PowerPoint, Word, PDF). Max 10.
+                         Can be simple strings or Deliverable objects with detailed configuration.
             mcp_servers: MCP server configurations for custom tools
             code_execution: Enable/disable code execution (default: True)
             previous_reports: Previous report IDs for context (max 3)
@@ -99,6 +103,11 @@ class DeepResearchClient:
             if files:
                 payload["files"] = [
                     f.dict() if isinstance(f, FileAttachment) else f for f in files
+                ]
+            if deliverables:
+                payload["deliverables"] = [
+                    d.dict(exclude_none=True) if isinstance(d, Deliverable) else d
+                    for d in deliverables
                 ]
             if mcp_servers:
                 payload["mcp_servers"] = [
@@ -170,7 +179,7 @@ class DeepResearchClient:
         self,
         task_id: str,
         poll_interval: int = 5,
-        max_wait_time: int = 3600,
+        max_wait_time: int = 7200,
         on_progress: Optional[Callable[[DeepResearchStatusResponse], None]] = None,
     ) -> DeepResearchStatusResponse:
         """
@@ -179,7 +188,7 @@ class DeepResearchClient:
         Args:
             task_id: Task ID to wait for
             poll_interval: Seconds between polls (default: 5)
-            max_wait_time: Maximum wait time in seconds (default: 3600)
+            max_wait_time: Maximum wait time in seconds (default: 7200)
             on_progress: Callback for progress updates
 
         Returns:
