@@ -46,7 +46,7 @@ class BatchClient:
         Args:
             name: Optional name for the batch
             model: Default research model - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
-                   "fast" (lower cost, faster completion), or "lite" (deprecated, normalized to "standard")
+                   "fast" (lower cost, faster completion), or "lite" (deprecated, use "fast" instead)
             output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with "markdown"/"pdf". "toon" requires a JSON schema.
@@ -392,7 +392,7 @@ class BatchClient:
             tasks: List of task inputs
             name: Optional name for the batch
             model: Default research model - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
-                   "fast" (lower cost, faster completion), or "lite" (deprecated, normalized to "standard")
+                   "fast" (lower cost, faster completion), or "lite" (deprecated, use "fast" instead)
             output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with "markdown"/"pdf". "toon" requires a JSON schema.
