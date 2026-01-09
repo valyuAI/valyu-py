@@ -59,7 +59,15 @@ class DeepResearchClient:
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with markdown/pdf - use one or the other.
             strategy: Natural language strategy for the research
-            search: Search configuration (type, sources)
+            search: Search configuration (type, sources, dates, category).
+                   Can be a SearchConfig object or dict with search parameters:
+                   - search_type: "all" (default), "web", or "proprietary"
+                   - included_sources: List of source types to include ("web", "academic", "finance",
+                     "patent", "transportation", "politics", "legal")
+                   - excluded_sources: List of source types to exclude
+                   - start_date: Start date filter in ISO format (YYYY-MM-DD), e.g., "2024-01-01"
+                   - end_date: End date filter in ISO format (YYYY-MM-DD), e.g., "2024-12-31"
+                   - category: Category filter for results
             urls: URLs to extract and analyze
             files: File attachments (PDFs, images)
             deliverables: Additional file outputs to generate (CSV, Excel, PowerPoint, Word, PDF). Max 10.

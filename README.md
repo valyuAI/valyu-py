@@ -124,10 +124,43 @@ task = valyu.deepresearch.create(
     input="Latest transformer architecture improvements",
     search={
         "search_type": "proprietary",
-        "included_sources": ["valyu/valyu-arxiv"]
+        "included_sources": ["academic"]
     },
     model="heavy",
     output_formats=["markdown", "pdf"]
+)
+```
+
+**With Date Filters and Source Restrictions:**
+
+```python
+from valyu.types.deepresearch import SearchConfig
+
+# Using SearchConfig object
+search_config = SearchConfig(
+    search_type="all",
+    included_sources=["academic", "web"],
+    start_date="2024-01-01",
+    end_date="2024-12-31"
+)
+
+task = valyu.deepresearch.create(
+    input="Recent advances in quantum computing",
+    search=search_config,
+    model="standard"
+)
+
+# Or using a dict
+task = valyu.deepresearch.create(
+    input="Financial analysis Q1 2024",
+    search={
+        "search_type": "all",
+        "included_sources": ["finance", "web"],
+        "start_date": "2024-01-01",
+        "end_date": "2024-03-31",
+        "excluded_sources": ["patent"]
+    },
+    model="standard"
 )
 ```
 

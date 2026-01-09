@@ -1,6 +1,7 @@
 """
 Batch Client for Valyu SDK
 """
+
 import time
 import requests
 from typing import Optional, List, Literal, Union, Dict, Any, Callable
@@ -15,6 +16,7 @@ from valyu.types.deepresearch import (
     BatchTasksListResponse,
     BatchCancelResponse,
     BatchListResponse,
+    SearchConfig,
 )
 
 
@@ -30,9 +32,11 @@ class BatchClient:
     def create(
         self,
         name: Optional[str] = None,
-        model: Literal["lite", "heavy"] = "lite",
-        output_formats: Optional[List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]] = None,
-        search: Optional[Dict[str, Any]] = None,
+        model: Literal["lite", "standard", "heavy", "fast"] = "standard",
+        output_formats: Optional[
+            List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
+        ] = None,
+        search: Optional[Union[SearchConfig, Dict[str, Any]]] = None,
         webhook_url: Optional[str] = None,
         metadata: Optional[Dict[str, Union[str, int, bool]]] = None,
     ) -> BatchCreateResponse:
@@ -41,9 +45,20 @@ class BatchClient:
 
         Args:
             name: Optional name for the batch
-            model: Default research model - "lite" (fast, Haiku) or "heavy" (thorough, Sonnet)
-            output_formats: Default output formats - ["markdown"], ["pdf"], or JSON schema
-            search: Default search configuration (type, sources)
+            model: Default research model - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
+                   "fast" (lower cost, faster completion), or "lite" (deprecated, use "fast" instead)
+            output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
+                           When using a JSON schema, the output will be structured JSON instead of markdown.
+                           Cannot mix JSON schema with "markdown"/"pdf". "toon" requires a JSON schema.
+            search: Default search configuration (type, sources, dates, category).
+                   Can be a SearchConfig object or dict with search parameters:
+                   - search_type: "all" (default), "web", or "proprietary"
+                   - included_sources: List of source types to include ("web", "academic", "finance",
+                     "patent", "transportation", "politics", "legal")
+                   - excluded_sources: List of source types to exclude
+                   - start_date: Start date filter in ISO format (YYYY-MM-DD), e.g., "2024-01-01"
+                   - end_date: End date filter in ISO format (YYYY-MM-DD), e.g., "2024-12-31"
+                   - category: Category filter for results
             webhook_url: HTTPS webhook URL for completion notification
             metadata: Custom metadata (key-value pairs)
 
@@ -62,7 +77,11 @@ class BatchClient:
             if output_formats:
                 payload["output_formats"] = output_formats
             if search:
-                payload["search"] = search
+                if isinstance(search, SearchConfig):
+                    search_dict = search.dict(exclude_none=True)
+                else:
+                    search_dict = search
+                payload["search"] = search_dict
             if webhook_url:
                 payload["webhook_url"] = webhook_url
             if metadata:
@@ -354,9 +373,11 @@ class BatchClient:
         self,
         tasks: List[Union[BatchTaskInput, Dict[str, Any]]],
         name: Optional[str] = None,
-        model: Literal["lite", "heavy"] = "lite",
-        output_formats: Optional[List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]] = None,
-        search: Optional[Dict[str, Any]] = None,
+        model: Literal["lite", "standard", "heavy", "fast"] = "standard",
+        output_formats: Optional[
+            List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
+        ] = None,
+        search: Optional[Union[SearchConfig, Dict[str, Any]]] = None,
         webhook_url: Optional[str] = None,
         metadata: Optional[Dict[str, Union[str, int, bool]]] = None,
         wait: bool = False,
@@ -370,11 +391,22 @@ class BatchClient:
         Args:
             tasks: List of task inputs
             name: Optional name for the batch
-            model: Default research model - "lite" or "heavy"
-            output_formats: Default output formats
-            search: Default search configuration
+            model: Default research model - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
+                   "fast" (lower cost, faster completion), or "lite" (deprecated, use "fast" instead)
+            output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
+                           When using a JSON schema, the output will be structured JSON instead of markdown.
+                           Cannot mix JSON schema with "markdown"/"pdf". "toon" requires a JSON schema.
+            search: Default search configuration (type, sources, dates, category).
+                   Can be a SearchConfig object or dict with search parameters:
+                   - search_type: "all" (default), "web", or "proprietary"
+                   - included_sources: List of source types to include ("web", "academic", "finance",
+                     "patent", "transportation", "politics", "legal")
+                   - excluded_sources: List of source types to exclude
+                   - start_date: Start date filter in ISO format (YYYY-MM-DD), e.g., "2024-01-01"
+                   - end_date: End date filter in ISO format (YYYY-MM-DD), e.g., "2024-12-31"
+                   - category: Category filter for results
             webhook_url: HTTPS webhook URL for completion notification
-            metadata: Custom metadata
+            metadata: Custom metadata (key-value pairs)
             wait: If True, wait for batch to complete before returning
             poll_interval: Seconds between polls when waiting
             max_wait_time: Maximum wait time in seconds
