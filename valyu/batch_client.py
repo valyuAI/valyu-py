@@ -32,9 +32,9 @@ class BatchClient:
     def create(
         self,
         name: Optional[str] = None,
-        model: Literal["lite", "heavy"] = "lite",
+        model: Literal["lite", "standard", "heavy", "fast"] = "standard",
         output_formats: Optional[
-            List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
+            List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
         ] = None,
         search: Optional[Union[SearchConfig, Dict[str, Any]]] = None,
         webhook_url: Optional[str] = None,
@@ -45,16 +45,20 @@ class BatchClient:
 
         Args:
             name: Optional name for the batch
-            model: Default research model - "lite" (fast, Haiku) or "heavy" (thorough, Sonnet)
-            output_formats: Default output formats - ["markdown"], ["pdf"], or JSON schema
+            model: Default research model - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
+                   "fast" (lower cost, faster completion), or "lite" (deprecated, normalized to "standard")
+            output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
+                           When using a JSON schema, the output will be structured JSON instead of markdown.
+                           Cannot mix JSON schema with "markdown"/"pdf". "toon" requires a JSON schema.
             search: Default search configuration (type, sources, dates, category).
                    Can be a SearchConfig object or dict with search parameters:
-                   - search_type: "all", "web", or "proprietary"
-                   - included_sources: List of source types to include
+                   - search_type: "all" (default), "web", or "proprietary"
+                   - included_sources: List of source types to include ("web", "academic", "finance",
+                     "patent", "transportation", "politics", "legal")
                    - excluded_sources: List of source types to exclude
-                   - start_date: Start date filter (YYYY-MM-DD)
-                   - end_date: End date filter (YYYY-MM-DD)
-                   - category: Category filter
+                   - start_date: Start date filter in ISO format (YYYY-MM-DD), e.g., "2024-01-01"
+                   - end_date: End date filter in ISO format (YYYY-MM-DD), e.g., "2024-12-31"
+                   - category: Category filter for results
             webhook_url: HTTPS webhook URL for completion notification
             metadata: Custom metadata (key-value pairs)
 
@@ -369,9 +373,9 @@ class BatchClient:
         self,
         tasks: List[Union[BatchTaskInput, Dict[str, Any]]],
         name: Optional[str] = None,
-        model: Literal["lite", "heavy"] = "lite",
+        model: Literal["lite", "standard", "heavy", "fast"] = "standard",
         output_formats: Optional[
-            List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
+            List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
         ] = None,
         search: Optional[Union[SearchConfig, Dict[str, Any]]] = None,
         webhook_url: Optional[str] = None,
@@ -387,12 +391,22 @@ class BatchClient:
         Args:
             tasks: List of task inputs
             name: Optional name for the batch
-            model: Default research model - "lite" or "heavy"
-            output_formats: Default output formats
+            model: Default research model - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
+                   "fast" (lower cost, faster completion), or "lite" (deprecated, normalized to "standard")
+            output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
+                           When using a JSON schema, the output will be structured JSON instead of markdown.
+                           Cannot mix JSON schema with "markdown"/"pdf". "toon" requires a JSON schema.
             search: Default search configuration (type, sources, dates, category).
-                   Can be a SearchConfig object or dict with search parameters.
+                   Can be a SearchConfig object or dict with search parameters:
+                   - search_type: "all" (default), "web", or "proprietary"
+                   - included_sources: List of source types to include ("web", "academic", "finance",
+                     "patent", "transportation", "politics", "legal")
+                   - excluded_sources: List of source types to exclude
+                   - start_date: Start date filter in ISO format (YYYY-MM-DD), e.g., "2024-01-01"
+                   - end_date: End date filter in ISO format (YYYY-MM-DD), e.g., "2024-12-31"
+                   - category: Category filter for results
             webhook_url: HTTPS webhook URL for completion notification
-            metadata: Custom metadata
+            metadata: Custom metadata (key-value pairs)
             wait: If True, wait for batch to complete before returning
             poll_interval: Seconds between polls when waiting
             max_wait_time: Maximum wait time in seconds
