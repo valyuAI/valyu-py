@@ -1,6 +1,7 @@
 """
 Batch Client for Valyu SDK
 """
+
 import time
 import requests
 from typing import Optional, List, Literal, Union, Dict, Any, Callable
@@ -15,6 +16,7 @@ from valyu.types.deepresearch import (
     BatchTasksListResponse,
     BatchCancelResponse,
     BatchListResponse,
+    SearchConfig,
 )
 
 
@@ -31,8 +33,10 @@ class BatchClient:
         self,
         name: Optional[str] = None,
         model: Literal["lite", "heavy"] = "lite",
-        output_formats: Optional[List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]] = None,
-        search: Optional[Dict[str, Any]] = None,
+        output_formats: Optional[
+            List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
+        ] = None,
+        search: Optional[Union[SearchConfig, Dict[str, Any]]] = None,
         webhook_url: Optional[str] = None,
         metadata: Optional[Dict[str, Union[str, int, bool]]] = None,
     ) -> BatchCreateResponse:
@@ -43,7 +47,14 @@ class BatchClient:
             name: Optional name for the batch
             model: Default research model - "lite" (fast, Haiku) or "heavy" (thorough, Sonnet)
             output_formats: Default output formats - ["markdown"], ["pdf"], or JSON schema
-            search: Default search configuration (type, sources)
+            search: Default search configuration (type, sources, dates, category).
+                   Can be a SearchConfig object or dict with search parameters:
+                   - search_type: "all", "web", or "proprietary"
+                   - included_sources: List of source types to include
+                   - excluded_sources: List of source types to exclude
+                   - start_date: Start date filter (YYYY-MM-DD)
+                   - end_date: End date filter (YYYY-MM-DD)
+                   - category: Category filter
             webhook_url: HTTPS webhook URL for completion notification
             metadata: Custom metadata (key-value pairs)
 
@@ -62,7 +73,11 @@ class BatchClient:
             if output_formats:
                 payload["output_formats"] = output_formats
             if search:
-                payload["search"] = search
+                if isinstance(search, SearchConfig):
+                    search_dict = search.dict(exclude_none=True)
+                else:
+                    search_dict = search
+                payload["search"] = search_dict
             if webhook_url:
                 payload["webhook_url"] = webhook_url
             if metadata:
@@ -355,8 +370,10 @@ class BatchClient:
         tasks: List[Union[BatchTaskInput, Dict[str, Any]]],
         name: Optional[str] = None,
         model: Literal["lite", "heavy"] = "lite",
-        output_formats: Optional[List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]] = None,
-        search: Optional[Dict[str, Any]] = None,
+        output_formats: Optional[
+            List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
+        ] = None,
+        search: Optional[Union[SearchConfig, Dict[str, Any]]] = None,
         webhook_url: Optional[str] = None,
         metadata: Optional[Dict[str, Union[str, int, bool]]] = None,
         wait: bool = False,
@@ -372,7 +389,8 @@ class BatchClient:
             name: Optional name for the batch
             model: Default research model - "lite" or "heavy"
             output_formats: Default output formats
-            search: Default search configuration
+            search: Default search configuration (type, sources, dates, category).
+                   Can be a SearchConfig object or dict with search parameters.
             webhook_url: HTTPS webhook URL for completion notification
             metadata: Custom metadata
             wait: If True, wait for batch to complete before returning

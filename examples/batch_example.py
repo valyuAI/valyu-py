@@ -6,7 +6,7 @@ deep research tasks in parallel with efficient resource management.
 """
 
 from valyu import Valyu
-from valyu.types.deepresearch import BatchTaskInput
+from valyu.types.deepresearch import BatchTaskInput, SearchConfig
 import os
 from dotenv import load_dotenv
 
@@ -67,13 +67,18 @@ def advanced_batch_example():
     """Create batch with custom task configurations."""
     print("=== Advanced Batch Example ===\n")
 
-    # Create batch with custom settings
+    # Create batch with custom settings and search parameters
     print("Creating batch with custom settings...")
     batch = client.batch.create(
         name="Competitor Analysis",
         model="heavy",
         output_formats=["markdown", "pdf"],
-        search={"search_type": "web", "included_sources": ["techcrunch.com", "theverge.com"]},
+        search={
+            "search_type": "all",
+            "included_sources": ["web", "finance"],
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31",
+        },
         metadata={"project": "Q4-2024", "team": "research"},
     )
 
@@ -112,6 +117,44 @@ def advanced_batch_example():
         print(f"Added {add_response.added} tasks\n")
     else:
         print(f"Error: {add_response.error}\n")
+
+
+def batch_with_search_config_example():
+    """Create batch with SearchConfig object for type safety."""
+    print("=== Batch with SearchConfig Example ===\n")
+
+    # Using SearchConfig for type safety and autocomplete
+    search_config = SearchConfig(
+        search_type="all",
+        included_sources=["academic", "web"],
+        start_date="2024-01-01",
+        end_date="2024-12-31",
+        excluded_sources=["patent"],
+    )
+
+    batch = client.batch.create(
+        name="Academic Research Q4 2024",
+        model="heavy",
+        search=search_config,
+        output_formats=["markdown"],
+    )
+
+    if not batch.success:
+        print(f"Error: {batch.error}")
+        return
+
+    print(f"Batch created: {batch.batch_id}")
+    print(f"Search config: {search_config.dict(exclude_none=True)}\n")
+
+    # Add tasks
+    tasks = [
+        {"input": "Recent advances in quantum computing"},
+        {"input": "Latest developments in AI safety research"},
+    ]
+
+    add_response = client.batch.add_tasks(batch.batch_id, tasks)
+    if add_response.success:
+        print(f"Added {add_response.added} tasks\n")
 
 
 def create_and_run_example():
@@ -228,7 +271,9 @@ def list_batches_example():
             print(f"  - {batch.batch_id}")
             print(f"    Name: {batch.name or 'Unnamed'}")
             print(f"    Status: {batch.status}")
-            print(f"    Tasks: {batch.counts.total} total, {batch.counts.completed} completed")
+            print(
+                f"    Tasks: {batch.counts.total} total, {batch.counts.completed} completed"
+            )
             print(f"    Cost: ${batch.usage.total_cost:.4f}")
             print()
     else:

@@ -38,9 +38,7 @@ class MCPServerConfig(BaseModel):
     name: Optional[str] = Field(None, description="Server name")
     tool_prefix: Optional[str] = Field(None, description="Custom tool prefix")
     auth: Optional[Dict[str, Any]] = Field(None, description="Authentication config")
-    allowed_tools: Optional[List[str]] = Field(
-        None, description="Allowed tools"
-    )
+    allowed_tools: Optional[List[str]] = Field(None, description="Allowed tools")
 
 
 class Deliverable(BaseModel):
@@ -73,20 +71,63 @@ class DeliverableResult(BaseModel):
     )
     status: Literal["completed", "failed"] = Field(..., description="Generation status")
     title: str = Field(..., description="Generated filename/title")
-    description: Optional[str] = Field(None, description="Deliverable content description")
-    url: str = Field(..., description="Token-signed authenticated URL to download the file")
+    description: Optional[str] = Field(
+        None, description="Deliverable content description"
+    )
+    url: str = Field(
+        ..., description="Token-signed authenticated URL to download the file"
+    )
     s3_key: str = Field(..., description="S3 storage key")
     row_count: Optional[int] = Field(None, description="Number of rows (for CSV/XLSX)")
-    column_count: Optional[int] = Field(None, description="Number of columns (for CSV/XLSX)")
+    column_count: Optional[int] = Field(
+        None, description="Number of columns (for CSV/XLSX)"
+    )
     error: Optional[str] = Field(None, description="Error message if status is failed")
     created_at: int = Field(..., description="Unix timestamp of creation")
 
 
 class SearchConfig(BaseModel):
-    """Search configuration."""
+    """Search configuration for Deep Research tasks and batches.
 
-    search_type: Optional[Literal["all", "web", "proprietary"]] = None
-    included_sources: Optional[List[str]] = None
+    Controls which data sources are queried, what content is included/excluded,
+    and how results are filtered by date or category.
+
+    Attributes:
+        search_type: Controls which backend search systems are queried.
+            - "all" (default): Searches both web and proprietary data sources
+            - "web": Searches only web sources (general web search, news, articles)
+            - "proprietary": Searches only proprietary/internal data sources
+        included_sources: Restricts search to only the specified source types.
+            Available types: "web", "academic", "finance", "patent",
+            "transportation", "politics", "legal"
+        excluded_sources: Excludes specific source types from search results.
+            Uses the same source type values as included_sources.
+            Cannot be used simultaneously with included_sources.
+        start_date: Filters results to content published on or after this date.
+            Format: ISO date (YYYY-MM-DD), e.g., "2024-01-01"
+        end_date: Filters results to content published on or before this date.
+            Format: ISO date (YYYY-MM-DD), e.g., "2024-12-31"
+        category: Filters results by a specific category.
+            Category values are source-dependent.
+    """
+
+    search_type: Optional[Literal["all", "web", "proprietary"]] = Field(
+        None, description="Search scope: 'all', 'web', or 'proprietary'"
+    )
+    included_sources: Optional[List[str]] = Field(
+        None,
+        description="Source types to include: 'web', 'academic', 'finance', 'patent', 'transportation', 'politics', 'legal'",
+    )
+    excluded_sources: Optional[List[str]] = Field(
+        None, description="Source types to exclude from search"
+    )
+    start_date: Optional[str] = Field(
+        None, description="Start date filter in ISO format (YYYY-MM-DD)"
+    )
+    end_date: Optional[str] = Field(
+        None, description="End date filter in ISO format (YYYY-MM-DD)"
+    )
+    category: Optional[str] = Field(None, description="Category filter for results")
 
 
 class Progress(BaseModel):
@@ -178,7 +219,9 @@ class DeepResearchStatusResponse(BaseModel):
     status: Optional[DeepResearchStatus] = None
     query: Optional[str] = None
     mode: Optional[DeepResearchMode] = None
-    output_formats: Optional[List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]] = None
+    output_formats: Optional[
+        List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
+    ] = None
     created_at: Optional[int] = None
     public: Optional[bool] = None
 
@@ -308,19 +351,25 @@ class DeepResearchBatch(BaseModel):
     name: Optional[str] = Field(None, description="Batch name")
     status: BatchStatus = Field(..., description="Current batch status")
     model: DeepResearchMode = Field(..., description="Default model for tasks")
-    output_formats: Optional[List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]] = Field(
-        None, description="Default output formats"
-    )
+    output_formats: Optional[
+        List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
+    ] = Field(None, description="Default output formats")
     search_params: Optional[Dict[str, Any]] = Field(
         None, description="Default search parameters"
     )
     counts: BatchCounts = Field(..., description="Task counts")
     usage: Optional[BatchUsage] = Field(None, description="Aggregated usage")
-    webhook_url: Optional[str] = Field(None, description="Webhook URL for notifications")
+    webhook_url: Optional[str] = Field(
+        None, description="Webhook URL for notifications"
+    )
     webhook_secret: Optional[str] = Field(None, description="Webhook secret")
     created_at: Union[int, str] = Field(..., description="Creation timestamp")
-    updated_at: Optional[Union[int, str]] = Field(None, description="Last update timestamp")
-    completed_at: Optional[Union[int, str]] = Field(None, description="Completion timestamp")
+    updated_at: Optional[Union[int, str]] = Field(
+        None, description="Last update timestamp"
+    )
+    completed_at: Optional[Union[int, str]] = Field(
+        None, description="Completion timestamp"
+    )
     metadata: Optional[Dict[str, Union[str, int, bool]]] = Field(
         None, description="Custom metadata"
     )
