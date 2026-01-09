@@ -244,9 +244,10 @@ The `contents()` method extracts clean, structured content from web pages with o
 def contents(
     urls: List[str],                                      # List of URLs to process (max 10)
     summary: Union[bool, str, Dict] = None,              # AI summary configuration
-    extract_effort: str = None,                          # "normal" or "high"
+    extract_effort: str = None,                          # "normal", "high", or "auto"
     response_length: Union[str, int] = None,             # Content length configuration
     max_price_dollars: float = None,                     # Maximum cost limit in USD
+    screenshot: bool = False,                            # Request page screenshots
 ) -> ContentsResponse
 ```
 
@@ -256,9 +257,10 @@ def contents(
 | ------------------- | ------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `urls`              | `List[str]`              | _required_ | List of URLs to process (maximum 10 URLs per request)                                                                                                                                                                     |
 | `summary`           | `Union[bool, str, Dict]` | `None`     | AI summary configuration:<br>- `False/None`: No AI processing (raw content)<br>- `True`: Basic automatic summarization<br>- `str`: Custom instructions (max 500 chars)<br>- `dict`: JSON schema for structured extraction |
-| `extract_effort`    | `str`                    | `None`     | Extraction thoroughness: `"normal"` (fast) or `"high"` (thorough but slower)                                                                                                                                              |
+| `extract_effort`    | `str`                    | `None`     | Extraction thoroughness: `"normal"` (fast), `"high"` (thorough but slower), or `"auto"` (automatically determine)                                                                                                         |
 | `response_length`   | `Union[str, int]`        | `None`     | Content length per URL:<br>- `"short"`: 25,000 characters<br>- `"medium"`: 50,000 characters<br>- `"large"`: 100,000 characters<br>- `"max"`: No limit<br>- `int`: Custom character limit                                 |
 | `max_price_dollars` | `float`                  | `None`     | Maximum cost limit in USD                                                                                                                                                                                                 |
+| `screenshot`        | `bool`                   | `False`    | Request page screenshots. When `True`, each result includes a `screenshot_url` field with a pre-signed URL to a screenshot image                                                                                          |
 
 ### Response Format
 
@@ -283,13 +285,16 @@ Each `ContentsResult` contains:
 class ContentsResult:
     url: str                              # Source URL
     title: str                            # Page/document title
+    description: Optional[str]            # Brief description of the content
     content: Union[str, int, float]       # Extracted content
     length: int                           # Content length in characters
     source: str                           # Data source identifier
+    price: float                          # Cost for processing this URL
     summary: Optional[Union[str, Dict]]   # AI-generated summary or structured data
     summary_success: Optional[bool]       # Whether summary generation succeeded
     data_type: Optional[str]              # Type of data extracted
     image_url: Optional[Dict[str, str]]   # Extracted images
+    screenshot_url: Optional[str]         # Screenshot URL if requested
     citation: Optional[str]               # APA-style citation
 ```
 
@@ -438,6 +443,24 @@ response = valyu.contents(
 
 print(f"Processed {response.urls_processed}/{response.urls_requested} URLs")
 print(f"Cost: ${response.total_cost_dollars:.4f}")
+```
+
+#### Content Extraction with Screenshots
+
+```python
+# Extract content with page screenshots
+response = valyu.contents(
+    urls=["https://www.valyu.ai/"],
+    screenshot=True,  # Request page screenshots
+    response_length="short"
+)
+
+if response.success:
+    for result in response.results:
+        print(f"Title: {result.title}")
+        print(f"Price: ${result.price:.4f}")
+        if result.screenshot_url:
+            print(f"Screenshot: {result.screenshot_url}")
 ```
 
 ## Authentication

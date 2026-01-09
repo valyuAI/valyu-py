@@ -1,5 +1,5 @@
 from .types.response import SearchResponse
-from .types.contents import ContentsResponse
+from .types.contents import ContentsResponse, ContentsResult
 from .types.answer import AnswerResponse, AnswerSuccessResponse, AnswerErrorResponse
 from .api import Valyu
 from .providers.openai import OpenAIProvider
@@ -9,6 +9,7 @@ from .validation import validate_source, validate_sources, get_source_format_exa
 __all__ = [
     "SearchResponse",
     "ContentsResponse",
+    "ContentsResult",
     "AnswerResponse",
     "AnswerSuccessResponse",
     "AnswerErrorResponse",

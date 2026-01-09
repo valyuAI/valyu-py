@@ -269,6 +269,7 @@ class Valyu:
         extract_effort: Optional[ExtractEffort] = None,
         response_length: Optional[ContentsResponseLength] = None,
         max_price_dollars: Optional[float] = None,
+        screenshot: bool = False,
     ) -> Optional[ContentsResponse]:
         """
         Extract clean, structured content from web pages with optional AI-powered data extraction and summarization.
@@ -291,6 +292,9 @@ class Valyu:
                 - "max": No limit
                 - int: Custom character limit
             max_price_dollars (Optional[float]): Maximum cost limit in USD.
+            screenshot (bool): Request page screenshots (default: False).
+                When True, each result will include a screenshot_url field
+                with a pre-signed URL to a screenshot image of the page.
 
         Returns:
             Optional[ContentsResponse]: The contents extraction response.
@@ -324,6 +328,9 @@ class Valyu:
 
             if max_price_dollars is not None:
                 payload["max_price_dollars"] = max_price_dollars
+
+            if screenshot:
+                payload["screenshot"] = screenshot
 
             response = requests.post(
                 f"{self.base_url}/contents", json=payload, headers=self.headers
@@ -415,8 +422,10 @@ class Valyu:
         )
         if validation_error:
             if streaming:
+
                 def error_generator():
                     yield AnswerStreamChunk(type="error", error=validation_error)
+
                 return error_generator()
             return AnswerErrorResponse(error=validation_error)
 
@@ -467,10 +476,7 @@ class Valyu:
             return f"Invalid country_code. Must be one of: {', '.join(sorted(SUPPORTED_COUNTRY_CODES))}"
 
         # Validate system_instructions length
-        if (
-            system_instructions is not None
-            and len(system_instructions.strip()) > 2000
-        ):
+        if system_instructions is not None and len(system_instructions.strip()) > 2000:
             return "system_instructions cannot exceed 2000 characters"
 
         return None
@@ -585,23 +591,59 @@ class Valyu:
             # Build the final response
             if final_metadata.get("success"):
                 # Use search_results from final metadata if available, otherwise use collected ones
-                final_search_results = final_metadata.get("search_results", search_results)
+                final_search_results = final_metadata.get(
+                    "search_results", search_results
+                )
 
                 # Handle extraction_metadata if present
                 extraction_meta = None
                 if final_metadata.get("extraction_metadata"):
-                    extraction_meta = ExtractionMetadata(**final_metadata["extraction_metadata"])
+                    extraction_meta = ExtractionMetadata(
+                        **final_metadata["extraction_metadata"]
+                    )
 
                 return AnswerSuccessResponse(
                     success=True,
                     tx_id=final_metadata.get("tx_id", ""),
-                    original_query=final_metadata.get("original_query", payload.get("query", "")),
-                    contents=full_content if full_content else final_metadata.get("contents", ""),
+                    original_query=final_metadata.get(
+                        "original_query", payload.get("query", "")
+                    ),
+                    contents=(
+                        full_content
+                        if full_content
+                        else final_metadata.get("contents", "")
+                    ),
                     data_type=final_metadata.get("data_type", "unstructured"),
-                    search_results=[SearchResult(**r) for r in final_search_results] if final_search_results else [],
-                    search_metadata=SearchMetadata(**final_metadata.get("search_metadata", {"tx_ids": [], "number_of_results": 0, "total_characters": 0})),
-                    ai_usage=AIUsage(**final_metadata.get("ai_usage", {"input_tokens": 0, "output_tokens": 0})),
-                    cost=CostBreakdown(**final_metadata.get("cost", {"total_deduction_dollars": 0, "search_deduction_dollars": 0, "ai_deduction_dollars": 0})),
+                    search_results=(
+                        [SearchResult(**r) for r in final_search_results]
+                        if final_search_results
+                        else []
+                    ),
+                    search_metadata=SearchMetadata(
+                        **final_metadata.get(
+                            "search_metadata",
+                            {
+                                "tx_ids": [],
+                                "number_of_results": 0,
+                                "total_characters": 0,
+                            },
+                        )
+                    ),
+                    ai_usage=AIUsage(
+                        **final_metadata.get(
+                            "ai_usage", {"input_tokens": 0, "output_tokens": 0}
+                        )
+                    ),
+                    cost=CostBreakdown(
+                        **final_metadata.get(
+                            "cost",
+                            {
+                                "total_deduction_dollars": 0,
+                                "search_deduction_dollars": 0,
+                                "ai_deduction_dollars": 0,
+                            },
+                        )
+                    ),
                     extraction_metadata=extraction_meta,
                 )
             else:
@@ -628,12 +670,11 @@ class Valyu:
                     data = response.json()
                     yield AnswerStreamChunk(
                         type="error",
-                        error=data.get("error", f"HTTP Error: {response.status_code}")
+                        error=data.get("error", f"HTTP Error: {response.status_code}"),
                     )
                 except:
                     yield AnswerStreamChunk(
-                        type="error",
-                        error=f"HTTP Error: {response.status_code}"
+                        type="error", error=f"HTTP Error: {response.status_code}"
                     )
                 return
 
@@ -654,7 +695,9 @@ class Valyu:
                     if "search_results" in parsed and "success" not in parsed:
                         yield AnswerStreamChunk(
                             type="search_results",
-                            search_results=[SearchResult(**r) for r in parsed["search_results"]]
+                            search_results=[
+                                SearchResult(**r) for r in parsed["search_results"]
+                            ],
                         )
 
                     # Handle content chunks
@@ -669,7 +712,7 @@ class Valyu:
                                 yield AnswerStreamChunk(
                                     type="content",
                                     content=content,
-                                    finish_reason=finish_reason
+                                    finish_reason=finish_reason,
                                 )
 
                     # Handle final metadata
@@ -679,11 +722,36 @@ class Valyu:
                             tx_id=parsed.get("tx_id"),
                             original_query=parsed.get("original_query"),
                             data_type=parsed.get("data_type"),
-                            search_results=[SearchResult(**r) for r in parsed.get("search_results", [])] if parsed.get("search_results") else None,
-                            search_metadata=SearchMetadata(**parsed.get("search_metadata", {})) if parsed.get("search_metadata") else None,
-                            ai_usage=AIUsage(**parsed.get("ai_usage", {})) if parsed.get("ai_usage") else None,
-                            cost=CostBreakdown(**parsed.get("cost", {})) if parsed.get("cost") else None,
-                            extraction_metadata=ExtractionMetadata(**parsed.get("extraction_metadata", {})) if parsed.get("extraction_metadata") else None,
+                            search_results=(
+                                [
+                                    SearchResult(**r)
+                                    for r in parsed.get("search_results", [])
+                                ]
+                                if parsed.get("search_results")
+                                else None
+                            ),
+                            search_metadata=(
+                                SearchMetadata(**parsed.get("search_metadata", {}))
+                                if parsed.get("search_metadata")
+                                else None
+                            ),
+                            ai_usage=(
+                                AIUsage(**parsed.get("ai_usage", {}))
+                                if parsed.get("ai_usage")
+                                else None
+                            ),
+                            cost=(
+                                CostBreakdown(**parsed.get("cost", {}))
+                                if parsed.get("cost")
+                                else None
+                            ),
+                            extraction_metadata=(
+                                ExtractionMetadata(
+                                    **parsed.get("extraction_metadata", {})
+                                )
+                                if parsed.get("extraction_metadata")
+                                else None
+                            ),
                         )
 
                 except json.JSONDecodeError:
