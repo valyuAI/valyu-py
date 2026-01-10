@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, ConfigDict
 from typing import Optional, List, Literal, Union, Dict, Any, Callable
 from enum import Enum
 
@@ -25,9 +25,11 @@ class DeepResearchStatus(str, Enum):
 class FileAttachment(BaseModel):
     """File attachment for research."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     data: str = Field(..., description="Data URL (base64 encoded)")
     filename: str = Field(..., description="Original filename")
-    media_type: str = Field(..., description="MIME type")
+    media_type: str = Field(..., description="MIME type", alias="mediaType")
     context: Optional[str] = Field(None, description="Context about the file")
 
 
@@ -202,12 +204,14 @@ class DeepResearchCreateResponse(BaseModel):
     success: bool
     deepresearch_id: Optional[str] = None
     status: Optional[DeepResearchStatus] = None
+    mode: Optional[DeepResearchMode] = None
     model: Optional[DeepResearchMode] = None
     created_at: Optional[str] = None
     metadata: Optional[Dict[str, Union[str, int, bool]]] = None
     public: Optional[bool] = None
     webhook_secret: Optional[str] = None
     message: Optional[str] = None
+    brand_collection_id: Optional[str] = None
     error: Optional[str] = None
 
 
@@ -220,22 +224,24 @@ class DeepResearchStatusResponse(BaseModel):
     query: Optional[str] = None
     mode: Optional[DeepResearchMode] = None
     output_formats: Optional[
-        List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
+        List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
     ] = None
-    created_at: Optional[int] = None
+    created_at: Optional[str] = None
     public: Optional[bool] = None
 
     # Optional fields based on status
     progress: Optional[Progress] = None
     messages: Optional[List[Any]] = None
-    completed_at: Optional[int] = None
+    completed_at: Optional[str] = None
     output: Optional[Union[str, Dict[str, Any], Any]] = None
-    output_type: Optional[Literal["markdown", "json"]] = None
+    output_type: Optional[Literal["markdown", "json", "toon"]] = None
     pdf_url: Optional[str] = None
     images: Optional[List[ImageMetadata]] = None
     deliverables: Optional[List[DeliverableResult]] = None
     sources: Optional[List[DeepResearchSource]] = None
     cost: Optional[float] = None
+    batch_id: Optional[str] = None
+    batch_task_id: Optional[str] = None
     error: Optional[str] = None
 
 
@@ -245,7 +251,7 @@ class DeepResearchTaskListItem(BaseModel):
     deepresearch_id: str
     query: str
     status: DeepResearchStatus
-    created_at: int
+    created_at: str
     public: Optional[bool] = None
 
 
@@ -401,11 +407,13 @@ class DeepResearchBatch(BaseModel):
         None, description="Webhook URL for notifications"
     )
     webhook_secret: Optional[str] = Field(None, description="Webhook secret")
-    created_at: Union[int, str] = Field(
-        ..., description="Creation timestamp (ISO 8601 string)"
+    created_at: str = Field(
+        ...,
+        description="Creation timestamp (ISO 8601 string, e.g., '2025-01-15T10:30:00.000Z')",
     )
-    completed_at: Optional[Union[int, str]] = Field(
-        None, description="Completion timestamp (ISO 8601 string)"
+    completed_at: Optional[str] = Field(
+        None,
+        description="Completion timestamp (ISO 8601 string, e.g., '2025-01-15T10:35:00.000Z')",
     )
     metadata: Optional[Dict[str, Union[str, int, bool]]] = Field(
         None, description="Custom metadata"
@@ -419,9 +427,9 @@ class DeepResearchBatch(BaseModel):
         None,
         description="Aggregated usage (backward compatibility - use 'cost' instead)",
     )
-    updated_at: Optional[Union[int, str]] = Field(
+    updated_at: Optional[str] = Field(
         None,
-        description="Last update timestamp (backward compatibility - field removed from API)",
+        description="Last update timestamp (backward compatibility - field removed from API, ISO 8601 string)",
     )
 
     @model_validator(mode="before")
@@ -442,6 +450,17 @@ class DeepResearchBatch(BaseModel):
                     data["cost"] = usage_obj["total_cost"]
                 elif isinstance(usage_obj, BatchUsage):
                     data["cost"] = usage_obj.total_cost
+            # Handle cost -> usage backward compatibility (for code that accesses usage.total_cost)
+            if "cost" in data and "usage" not in data:
+                cost_value = data.get("cost")
+                if cost_value is not None:
+                    # Create a usage object from cost for backward compatibility
+                    data["usage"] = {
+                        "search_cost": 0.0,
+                        "contents_cost": 0.0,
+                        "ai_cost": 0.0,
+                        "total_cost": float(cost_value),
+                    }
         return data
 
 
@@ -454,14 +473,15 @@ class BatchCreateResponse(BaseModel):
     mode: Optional[DeepResearchMode] = None
     name: Optional[str] = None
     output_formats: Optional[
-        List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
+        List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
     ] = None
     search_params: Optional[Dict[str, Any]] = None
     counts: Optional[BatchCounts] = None
     cost: Optional[float] = None
-    created_at: Optional[Union[int, str]] = None
+    created_at: Optional[str] = None
     webhook_secret: Optional[str] = None
     message: Optional[str] = None
+    brand_collection_id: Optional[str] = None
     error: Optional[str] = None
 
     # Backward compatibility fields - populated by validator
@@ -519,8 +539,8 @@ class BatchTaskListItem(BaseModel):
     task_id: Optional[str] = None
     query: str
     status: DeepResearchStatus
-    created_at: Union[int, str]
-    completed_at: Optional[Union[int, str]] = None
+    created_at: str
+    completed_at: Optional[str] = None
 
 
 class BatchPagination(BaseModel):
@@ -546,6 +566,8 @@ class BatchCancelResponse(BaseModel):
 
     success: bool
     batch_id: Optional[str] = None
+    status: Optional[BatchStatus] = None
+    cancelled_count: Optional[int] = None
     message: Optional[str] = None
     error: Optional[str] = None
 

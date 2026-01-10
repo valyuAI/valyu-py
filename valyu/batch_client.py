@@ -39,6 +39,7 @@ class BatchClient:
         ] = None,
         search: Optional[Union[SearchConfig, Dict[str, Any]]] = None,
         webhook_url: Optional[str] = None,
+        brand_collection_id: Optional[str] = None,
         metadata: Optional[Dict[str, Union[str, int, bool]]] = None,
     ) -> BatchCreateResponse:
         """
@@ -62,6 +63,7 @@ class BatchClient:
                    - end_date: End date filter in ISO format (YYYY-MM-DD), e.g., "2024-12-31"
                    - category: Category filter for results
             webhook_url: HTTPS webhook URL for completion notification
+            brand_collection_id: Brand collection to apply to all deliverables
             metadata: Custom metadata (key-value pairs)
 
         Returns:
@@ -96,6 +98,8 @@ class BatchClient:
                 payload["search"] = search_dict
             if webhook_url:
                 payload["webhook_url"] = webhook_url
+            if brand_collection_id:
+                payload["brand_collection_id"] = brand_collection_id
             if metadata:
                 payload["metadata"] = metadata
 
@@ -212,20 +216,39 @@ class BatchClient:
                 error=str(e),
             )
 
-    def list_tasks(self, batch_id: str) -> BatchTasksListResponse:
+    def list_tasks(
+        self,
+        batch_id: str,
+        status: Optional[str] = None,
+        limit: Optional[int] = None,
+        last_key: Optional[str] = None,
+    ) -> BatchTasksListResponse:
         """
-        List all tasks in a batch.
+        List all tasks in a batch with optional filtering and pagination.
 
         Args:
             batch_id: Batch ID to list tasks for
+            status: Filter by status: "queued", "running", "completed", "failed", or "cancelled"
+            limit: Maximum number of tasks to return
+            last_key: Pagination token from previous response
 
         Returns:
             BatchTasksListResponse with list of tasks
         """
         try:
+            # Build query parameters
+            params = {}
+            if status:
+                params["status"] = status
+            if limit is not None:
+                params["limit"] = limit
+            if last_key:
+                params["last_key"] = last_key
+
             response = requests.get(
                 f"{self._base_url}/deepresearch/batches/{batch_id}/tasks",
                 headers=self._headers,
+                params=params if params else None,
             )
 
             data = response.json()
@@ -279,20 +302,26 @@ class BatchClient:
 
     def list(
         self,
-        limit: int = 10,
+        limit: Optional[int] = None,
     ) -> BatchListResponse:
         """
         List all batches.
 
         Args:
-            limit: Maximum number of batches to return (default: 10, max: 100)
+            limit: Maximum number of batches to return (optional, no limit if not specified)
 
         Returns:
             BatchListResponse with list of batches
         """
         try:
+            # Build query parameters
+            params = {}
+            if limit is not None:
+                params["limit"] = limit
+
             response = requests.get(
-                f"{self._base_url}/deepresearch/batches?limit={limit}",
+                f"{self._base_url}/deepresearch/batches",
+                params=params if params else None,
                 headers=self._headers,
             )
 
@@ -392,6 +421,7 @@ class BatchClient:
         ] = None,
         search: Optional[Union[SearchConfig, Dict[str, Any]]] = None,
         webhook_url: Optional[str] = None,
+        brand_collection_id: Optional[str] = None,
         metadata: Optional[Dict[str, Union[str, int, bool]]] = None,
         wait: bool = False,
         poll_interval: int = 10,
@@ -420,6 +450,7 @@ class BatchClient:
                    - end_date: End date filter in ISO format (YYYY-MM-DD), e.g., "2024-12-31"
                    - category: Category filter for results
             webhook_url: HTTPS webhook URL for completion notification
+            brand_collection_id: Brand collection to apply to all deliverables
             metadata: Custom metadata (key-value pairs)
             wait: If True, wait for batch to complete before returning
             poll_interval: Seconds between polls when waiting
@@ -437,6 +468,7 @@ class BatchClient:
             output_formats=output_formats,
             search=search,
             webhook_url=webhook_url,
+            brand_collection_id=brand_collection_id,
             metadata=metadata,
         )
 
