@@ -32,7 +32,8 @@ class BatchClient:
     def create(
         self,
         name: Optional[str] = None,
-        model: Literal["lite", "standard", "heavy", "fast"] = "standard",
+        mode: Optional[Literal["lite", "standard", "heavy", "fast"]] = None,
+        model: Optional[Literal["lite", "standard", "heavy", "fast"]] = None,
         output_formats: Optional[
             List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
         ] = None,
@@ -45,8 +46,9 @@ class BatchClient:
 
         Args:
             name: Optional name for the batch
-            model: Default research model - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
-                   "fast" (lower cost, faster completion), or "lite" (deprecated, use "fast" instead)
+            mode: Research mode - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
+                  "fast" (lower cost, faster completion), or "lite" (deprecated, use "fast" instead)
+            model: Research mode (backward compatibility - use 'mode' instead) - "standard" (default), "heavy", "fast", or "lite"
             output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with "markdown"/"pdf". "toon" requires a JSON schema.
@@ -66,10 +68,20 @@ class BatchClient:
             BatchCreateResponse with batch ID and status
         """
         try:
-            # Build payload
+            # Determine which field to use (prefer mode over model)
+            research_mode = (
+                mode
+                if mode is not None
+                else (model if model is not None else "standard")
+            )
+
+            # Build payload - prefer mode, but send model if only model was provided
             payload = {
-                "model": model,
+                "mode": research_mode,  # Always send mode (preferred)
             }
+            # Also send model if it was explicitly provided and mode was not (for backward compatibility)
+            if model is not None and mode is None:
+                payload["model"] = model
 
             # Add optional fields
             if name:
@@ -373,7 +385,8 @@ class BatchClient:
         self,
         tasks: List[Union[BatchTaskInput, Dict[str, Any]]],
         name: Optional[str] = None,
-        model: Literal["lite", "standard", "heavy", "fast"] = "standard",
+        mode: Optional[Literal["lite", "standard", "heavy", "fast"]] = None,
+        model: Optional[Literal["lite", "standard", "heavy", "fast"]] = None,
         output_formats: Optional[
             List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
         ] = None,
@@ -391,8 +404,9 @@ class BatchClient:
         Args:
             tasks: List of task inputs
             name: Optional name for the batch
-            model: Default research model - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
-                   "fast" (lower cost, faster completion), or "lite" (deprecated, use "fast" instead)
+            mode: Research mode - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
+                  "fast" (lower cost, faster completion $0.10 per task), or "lite" (deprecated, use "fast" instead)
+            model: Research mode (backward compatibility - use 'mode' instead) - "standard" (default), "heavy", "fast", or "lite"
             output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with "markdown"/"pdf". "toon" requires a JSON schema.
@@ -418,6 +432,7 @@ class BatchClient:
         # Create batch
         batch_response = self.create(
             name=name,
+            mode=mode,
             model=model,
             output_formats=output_formats,
             search=search,

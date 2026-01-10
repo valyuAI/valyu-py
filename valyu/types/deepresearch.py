@@ -384,9 +384,11 @@ class DeepResearchBatch(BaseModel):
     organisation_id: Optional[str] = Field(None, description="Organization ID")
     api_key_id: Optional[str] = Field(None, description="API key ID")
     credit_id: Optional[str] = Field(None, description="Credit ID")
-    name: Optional[str] = Field(None, description="Batch name")
     status: BatchStatus = Field(..., description="Current batch status")
-    model: DeepResearchMode = Field(..., description="Default model for tasks")
+    mode: DeepResearchMode = Field(
+        ..., description="Research mode (preferred field name)"
+    )
+    name: Optional[str] = Field(None, description="Batch name")
     output_formats: Optional[
         List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
     ] = Field(None, description="Default output formats")
@@ -394,21 +396,53 @@ class DeepResearchBatch(BaseModel):
         None, description="Default search parameters"
     )
     counts: BatchCounts = Field(..., description="Task counts")
-    usage: Optional[BatchUsage] = Field(None, description="Aggregated usage")
+    cost: float = Field(..., description="Total cost (replaces usage object)")
     webhook_url: Optional[str] = Field(
         None, description="Webhook URL for notifications"
     )
     webhook_secret: Optional[str] = Field(None, description="Webhook secret")
-    created_at: Union[int, str] = Field(..., description="Creation timestamp")
-    updated_at: Optional[Union[int, str]] = Field(
-        None, description="Last update timestamp"
+    created_at: Union[int, str] = Field(
+        ..., description="Creation timestamp (ISO 8601 string)"
     )
     completed_at: Optional[Union[int, str]] = Field(
-        None, description="Completion timestamp"
+        None, description="Completion timestamp (ISO 8601 string)"
     )
     metadata: Optional[Dict[str, Union[str, int, bool]]] = Field(
         None, description="Custom metadata"
     )
+
+    # Backward compatibility fields
+    model: Optional[DeepResearchMode] = Field(
+        None, description="Research mode (backward compatibility - use 'mode' instead)"
+    )
+    usage: Optional[BatchUsage] = Field(
+        None,
+        description="Aggregated usage (backward compatibility - use 'cost' instead)",
+    )
+    updated_at: Optional[Union[int, str]] = Field(
+        None,
+        description="Last update timestamp (backward compatibility - field removed from API)",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def sync_mode_and_model(cls, data):
+        """Sync mode and model fields for backward compatibility."""
+        if isinstance(data, dict):
+            # If model is provided but mode is not, copy model to mode
+            if "model" in data and "mode" not in data:
+                data["mode"] = data["model"]
+            # If mode is provided but model is not, copy mode to model for backward compatibility
+            elif "mode" in data and "model" not in data:
+                data["model"] = data["mode"]
+            # Handle usage -> cost migration
+            if "usage" in data and "cost" not in data:
+                usage_obj = data.get("usage")
+                if isinstance(usage_obj, dict) and "total_cost" in usage_obj:
+                    data["cost"] = usage_obj["total_cost"]
+                elif isinstance(usage_obj, BatchUsage):
+                    data["cost"] = usage_obj.total_cost
+        return data
 
 
 class BatchCreateResponse(BaseModel):
@@ -416,14 +450,37 @@ class BatchCreateResponse(BaseModel):
 
     success: bool
     batch_id: Optional[str] = None
-    name: Optional[str] = None
     status: Optional[BatchStatus] = None
-    model: Optional[DeepResearchMode] = None
+    mode: Optional[DeepResearchMode] = None
+    name: Optional[str] = None
+    output_formats: Optional[
+        List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
+    ] = None
+    search_params: Optional[Dict[str, Any]] = None
     counts: Optional[BatchCounts] = None
+    cost: Optional[float] = None
     created_at: Optional[Union[int, str]] = None
     webhook_secret: Optional[str] = None
     message: Optional[str] = None
     error: Optional[str] = None
+
+    # Backward compatibility fields - populated by validator
+    model: Optional[DeepResearchMode] = Field(
+        None, description="Research mode (backward compatibility - use 'mode' instead)"
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def sync_mode_and_model(cls, data):
+        """Sync mode and model fields for backward compatibility."""
+        if isinstance(data, dict):
+            # If model is provided but mode is not, copy model to mode
+            if "model" in data and "mode" not in data:
+                data["mode"] = data["model"]
+            # If mode is provided but model is not, copy mode to model for backward compatibility
+            elif "mode" in data and "model" not in data:
+                data["model"] = data["mode"]
+        return data
 
 
 class BatchTaskCreated(BaseModel):
