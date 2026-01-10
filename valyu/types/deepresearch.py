@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import Optional, List, Literal, Union, Dict, Any, Callable
 from enum import Enum
 
@@ -333,12 +333,48 @@ class BatchTaskInput(BaseModel):
     """Input for a batch task."""
 
     id: Optional[str] = Field(None, description="User-provided task ID")
-    input: str = Field(..., description="Research query or task description")
+    query: Optional[str] = Field(
+        None, description="Research query or task description (preferred)"
+    )
+    input: Optional[str] = Field(
+        None,
+        description="Research query or task description (deprecated, use query instead)",
+    )
     strategy: Optional[str] = Field(None, description="Natural language strategy")
     urls: Optional[List[str]] = Field(None, description="URLs to extract and analyze")
     metadata: Optional[Dict[str, Union[str, int, bool]]] = Field(
         None, description="Custom metadata"
     )
+
+    @model_validator(mode="after")
+    def ensure_query_or_input(self):
+        """Ensure at least one of query or input is provided, and sync them."""
+        # If input is provided but query is not, copy input to query
+        if self.input and not self.query:
+            self.query = self.input
+        # If query is provided but input is not, copy query to input for backward compatibility
+        elif self.query and not self.input:
+            self.input = self.query
+        # Ensure at least one is provided
+        if not self.query and not self.input:
+            raise ValueError("Either 'query' or 'input' must be provided")
+        return self
+
+    def model_dump(self, **kwargs):
+        """Override model_dump to prefer query when sending to API."""
+        data = super().model_dump(**kwargs)
+        # Ensure query is set for API calls
+        if (
+            "input" in data
+            and data["input"]
+            and ("query" not in data or not data["query"])
+        ):
+            data["query"] = data["input"]
+        return data
+
+    def dict(self, **kwargs):
+        """Backward compatibility alias for model_dump."""
+        return self.model_dump(**kwargs)
 
 
 class DeepResearchBatch(BaseModel):
@@ -380,6 +416,7 @@ class BatchCreateResponse(BaseModel):
 
     success: bool
     batch_id: Optional[str] = None
+    name: Optional[str] = None
     status: Optional[BatchStatus] = None
     model: Optional[DeepResearchMode] = None
     counts: Optional[BatchCounts] = None
@@ -389,13 +426,23 @@ class BatchCreateResponse(BaseModel):
     error: Optional[str] = None
 
 
+class BatchTaskCreated(BaseModel):
+    """Task created in batch."""
+
+    task_id: Optional[str] = None
+    deepresearch_id: str
+    status: str
+
+
 class BatchAddTasksResponse(BaseModel):
     """Response from adding tasks to a batch."""
 
     success: bool
     batch_id: Optional[str] = None
     added: Optional[int] = None
-    task_ids: Optional[List[str]] = None
+    tasks: Optional[List[BatchTaskCreated]] = None
+    task_ids: Optional[List[str]] = None  # Kept for backward compatibility
+    counts: Optional[BatchCounts] = None
     message: Optional[str] = None
     error: Optional[str] = None
 
@@ -412,12 +459,19 @@ class BatchTaskListItem(BaseModel):
     """Minimal task info in batch list."""
 
     deepresearch_id: str
-    batch_task_id: Optional[str] = None
+    task_id: Optional[str] = None
     query: str
     status: DeepResearchStatus
     created_at: Union[int, str]
     completed_at: Optional[Union[int, str]] = None
-    error: Optional[str] = None
+
+
+class BatchPagination(BaseModel):
+    """Pagination information for batch task lists."""
+
+    count: int
+    last_key: Optional[str] = None
+    has_more: bool
 
 
 class BatchTasksListResponse(BaseModel):
@@ -426,6 +480,7 @@ class BatchTasksListResponse(BaseModel):
     success: bool
     batch_id: Optional[str] = None
     tasks: Optional[List[BatchTaskListItem]] = None
+    pagination: Optional[BatchPagination] = None
     error: Optional[str] = None
 
 

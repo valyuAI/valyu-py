@@ -33,7 +33,8 @@ class DeepResearchClient:
 
     def create(
         self,
-        input: str,
+        query: Optional[str] = None,
+        input: Optional[str] = None,
         model: Literal["standard", "heavy"] = "standard",
         output_formats: Optional[
             List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
@@ -53,7 +54,8 @@ class DeepResearchClient:
         Create a new deep research task.
 
         Args:
-            input: Research query or task description
+            query: Research query or task description (preferred)
+            input: Research query or task description (deprecated, use query instead)
             model: Research model - "standard" (fast) or "heavy" (thorough)
             output_formats: Output formats - ["markdown"], ["markdown", "pdf"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
@@ -82,20 +84,27 @@ class DeepResearchClient:
             DeepResearchCreateResponse with task ID and status
         """
         try:
+            # Determine which field to use (prefer query over input)
+            research_query = query if query else input
+
             # Validation
-            if not input or not input.strip():
+            if not research_query or not research_query.strip():
                 return DeepResearchCreateResponse(
                     success=False,
-                    error="input is required and cannot be empty",
+                    error="'query' is required and cannot be empty",
                 )
 
-            # Build payload
+            # Build payload - always send query (preferred), but also send input for backward compatibility
+            # Infrastructure accepts both, but we prefer query
             payload = {
-                "input": input,
+                "query": research_query,  # Always send query (preferred field)
                 "model": model,
                 "output_formats": output_formats or ["markdown"],
                 "code_execution": code_execution,
             }
+            # Also send input if it was provided (for backward compatibility with older API versions)
+            if input:
+                payload["input"] = input
 
             # Add optional fields
             if strategy:
