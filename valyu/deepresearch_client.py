@@ -33,10 +33,12 @@ class DeepResearchClient:
 
     def create(
         self,
-        input: str,
-        model: Literal["standard", "heavy"] = "standard",
+        query: Optional[str] = None,
+        input: Optional[str] = None,
+        mode: Optional[DeepResearchMode] = None,
+        model: Optional[DeepResearchMode] = None,
         output_formats: Optional[
-            List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
+            List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
         ] = None,
         strategy: Optional[str] = None,
         search: Optional[Union[SearchConfig, Dict[str, Any]]] = None,
@@ -47,14 +49,19 @@ class DeepResearchClient:
         code_execution: bool = True,
         previous_reports: Optional[List[str]] = None,
         webhook_url: Optional[str] = None,
+        brand_collection_id: Optional[str] = None,
         metadata: Optional[Dict[str, Union[str, int, bool]]] = None,
     ) -> DeepResearchCreateResponse:
         """
         Create a new deep research task.
 
         Args:
-            input: Research query or task description
-            model: Research model - "standard" (fast) or "heavy" (thorough)
+            query: Research query or task description (preferred)
+            input: Research query or task description (deprecated, use query instead)
+            mode: Research mode - "standard" (default, $0.50 per task), "heavy" ($1.50 per task),
+                  or "fast" ($0.10 per task, preferred). Preferred over model parameter.
+            model: Research mode (backward compatibility - use 'mode' instead) - "standard" (default),
+                  "heavy", "fast", or "lite" (deprecated, maps to "standard")
             output_formats: Output formats - ["markdown"], ["markdown", "pdf"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with markdown/pdf - use one or the other.
@@ -76,26 +83,47 @@ class DeepResearchClient:
             code_execution: Enable/disable code execution (default: True)
             previous_reports: Previous report IDs for context (max 3)
             webhook_url: HTTPS webhook URL for completion notification
+            brand_collection_id: Brand collection to apply to all deliverables
             metadata: Custom metadata (key-value pairs)
 
         Returns:
             DeepResearchCreateResponse with task ID and status
         """
         try:
+            # Determine which field to use (prefer query over input)
+            research_query = query if query else input
+
             # Validation
-            if not input or not input.strip():
+            if not research_query or not research_query.strip():
                 return DeepResearchCreateResponse(
                     success=False,
-                    error="input is required and cannot be empty",
+                    error="'query' is required and cannot be empty",
                 )
 
-            # Build payload
+            # Determine which mode to use (prefer mode over model)
+            research_mode = (
+                mode
+                if mode is not None
+                else (model if model is not None else "standard")
+            )
+            # Map "lite" to "standard" for backward compatibility
+            if research_mode == "lite":
+                research_mode = "standard"
+
+            # Build payload - always send query (preferred), but also send input for backward compatibility
+            # Infrastructure accepts both, but we prefer query
             payload = {
-                "input": input,
-                "model": model,
+                "query": research_query,  # Always send query (preferred field)
+                "mode": research_mode,  # Always send mode (preferred field)
                 "output_formats": output_formats or ["markdown"],
                 "code_execution": code_execution,
             }
+            # Also send input if it was provided (for backward compatibility with older API versions)
+            if input:
+                payload["input"] = input
+            # Also send model if it was explicitly provided (for backward compatibility)
+            if model is not None:
+                payload["model"] = model if model != "lite" else "standard"
 
             # Add optional fields
             if strategy:
@@ -110,7 +138,12 @@ class DeepResearchClient:
                 payload["urls"] = urls
             if files:
                 payload["files"] = [
-                    f.dict() if isinstance(f, FileAttachment) else f for f in files
+                    (
+                        f.model_dump(by_alias=True, exclude_none=True)
+                        if isinstance(f, FileAttachment)
+                        else f
+                    )
+                    for f in files
                 ]
             if deliverables:
                 payload["deliverables"] = [
@@ -126,6 +159,8 @@ class DeepResearchClient:
                 payload["previous_reports"] = previous_reports
             if webhook_url:
                 payload["webhook_url"] = webhook_url
+            if brand_collection_id:
+                payload["brand_collection_id"] = brand_collection_id
             if metadata:
                 payload["metadata"] = metadata
 
@@ -305,21 +340,27 @@ class DeepResearchClient:
     def list(
         self,
         api_key_id: str,
-        limit: int = 10,
+        limit: Optional[int] = None,
     ) -> DeepResearchListResponse:
         """
         List all deep research tasks.
 
         Args:
             api_key_id: API key ID for filtering tasks
-            limit: Maximum number of tasks to return (default: 10, max: 100)
+            limit: Maximum number of tasks to return (1-100, default: all if not specified)
 
         Returns:
             DeepResearchListResponse with list of tasks
         """
         try:
+            # Build query parameters
+            params = {"api_key_id": api_key_id}
+            if limit is not None:
+                params["limit"] = limit
+
             response = requests.get(
-                f"{self._base_url}/deepresearch/list?api_key_id={api_key_id}&limit={limit}",
+                f"{self._base_url}/deepresearch/list",
+                params=params,
                 headers=self._headers,
             )
 
@@ -443,6 +484,57 @@ class DeepResearchClient:
                 success=False,
                 error=str(e),
             )
+
+    def get_assets(
+        self, task_id: str, asset_id: str, token: Optional[str] = None
+    ) -> bytes:
+        """
+        Get authenticated assets (images, charts, deliverables, PDFs) for a task.
+
+        Args:
+            task_id: The deepresearch_id of the task
+            asset_id: The asset ID (image_id, deliverable id, or pdf_id)
+            token: Optional asset access token (alternative to API key)
+
+        Returns:
+            Binary asset data (bytes)
+
+        Raises:
+            requests.HTTPError: If the request fails
+            ValueError: If neither token nor API key is available
+        """
+        try:
+            url = f"{self._base_url}/deepresearch/tasks/{task_id}/assets/{asset_id}"
+
+            # Build headers - use API key if no token provided
+            headers = {}
+            if token:
+                # Token is passed as query parameter, not header
+                url += f"?token={token}"
+            else:
+                # Use API key from headers
+                headers = self._headers.copy()
+
+            response = requests.get(url, headers=headers)
+
+            if not response.ok:
+                error_data = (
+                    response.json()
+                    if response.headers.get("content-type", "").startswith(
+                        "application/json"
+                    )
+                    else {}
+                )
+                raise requests.HTTPError(
+                    f"HTTP {response.status_code}: {error_data.get('error', response.text)}"
+                )
+
+            return response.content
+
+        except requests.HTTPError:
+            raise
+        except Exception as e:
+            raise ValueError(f"Failed to get asset: {str(e)}")
 
     def toggle_public(
         self, task_id: str, is_public: bool
