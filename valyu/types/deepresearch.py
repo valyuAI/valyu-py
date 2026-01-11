@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator, ConfigDict
 from typing import Optional, List, Literal, Union, Dict, Any, Callable
 from enum import Enum
 
@@ -25,9 +25,11 @@ class DeepResearchStatus(str, Enum):
 class FileAttachment(BaseModel):
     """File attachment for research."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     data: str = Field(..., description="Data URL (base64 encoded)")
     filename: str = Field(..., description="Original filename")
-    media_type: str = Field(..., description="MIME type")
+    media_type: str = Field(..., description="MIME type", alias="mediaType")
     context: Optional[str] = Field(None, description="Context about the file")
 
 
@@ -202,12 +204,14 @@ class DeepResearchCreateResponse(BaseModel):
     success: bool
     deepresearch_id: Optional[str] = None
     status: Optional[DeepResearchStatus] = None
+    mode: Optional[DeepResearchMode] = None
     model: Optional[DeepResearchMode] = None
     created_at: Optional[str] = None
     metadata: Optional[Dict[str, Union[str, int, bool]]] = None
     public: Optional[bool] = None
     webhook_secret: Optional[str] = None
     message: Optional[str] = None
+    brand_collection_id: Optional[str] = None
     error: Optional[str] = None
 
 
@@ -220,22 +224,24 @@ class DeepResearchStatusResponse(BaseModel):
     query: Optional[str] = None
     mode: Optional[DeepResearchMode] = None
     output_formats: Optional[
-        List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
+        List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
     ] = None
-    created_at: Optional[int] = None
+    created_at: Optional[str] = None
     public: Optional[bool] = None
 
     # Optional fields based on status
     progress: Optional[Progress] = None
     messages: Optional[List[Any]] = None
-    completed_at: Optional[int] = None
+    completed_at: Optional[str] = None
     output: Optional[Union[str, Dict[str, Any], Any]] = None
-    output_type: Optional[Literal["markdown", "json"]] = None
+    output_type: Optional[Literal["markdown", "json", "toon"]] = None
     pdf_url: Optional[str] = None
     images: Optional[List[ImageMetadata]] = None
     deliverables: Optional[List[DeliverableResult]] = None
     sources: Optional[List[DeepResearchSource]] = None
     cost: Optional[float] = None
+    batch_id: Optional[str] = None
+    batch_task_id: Optional[str] = None
     error: Optional[str] = None
 
 
@@ -245,7 +251,7 @@ class DeepResearchTaskListItem(BaseModel):
     deepresearch_id: str
     query: str
     status: DeepResearchStatus
-    created_at: int
+    created_at: str
     public: Optional[bool] = None
 
 
@@ -333,12 +339,48 @@ class BatchTaskInput(BaseModel):
     """Input for a batch task."""
 
     id: Optional[str] = Field(None, description="User-provided task ID")
-    input: str = Field(..., description="Research query or task description")
+    query: Optional[str] = Field(
+        None, description="Research query or task description (preferred)"
+    )
+    input: Optional[str] = Field(
+        None,
+        description="Research query or task description (deprecated, use query instead)",
+    )
     strategy: Optional[str] = Field(None, description="Natural language strategy")
     urls: Optional[List[str]] = Field(None, description="URLs to extract and analyze")
     metadata: Optional[Dict[str, Union[str, int, bool]]] = Field(
         None, description="Custom metadata"
     )
+
+    @model_validator(mode="after")
+    def ensure_query_or_input(self):
+        """Ensure at least one of query or input is provided, and sync them."""
+        # If input is provided but query is not, copy input to query
+        if self.input and not self.query:
+            self.query = self.input
+        # If query is provided but input is not, copy query to input for backward compatibility
+        elif self.query and not self.input:
+            self.input = self.query
+        # Ensure at least one is provided
+        if not self.query and not self.input:
+            raise ValueError("Either 'query' or 'input' must be provided")
+        return self
+
+    def model_dump(self, **kwargs):
+        """Override model_dump to prefer query when sending to API."""
+        data = super().model_dump(**kwargs)
+        # Ensure query is set for API calls
+        if (
+            "input" in data
+            and data["input"]
+            and ("query" not in data or not data["query"])
+        ):
+            data["query"] = data["input"]
+        return data
+
+    def dict(self, **kwargs):
+        """Backward compatibility alias for model_dump."""
+        return self.model_dump(**kwargs)
 
 
 class DeepResearchBatch(BaseModel):
@@ -348,9 +390,11 @@ class DeepResearchBatch(BaseModel):
     organisation_id: Optional[str] = Field(None, description="Organization ID")
     api_key_id: Optional[str] = Field(None, description="API key ID")
     credit_id: Optional[str] = Field(None, description="Credit ID")
-    name: Optional[str] = Field(None, description="Batch name")
     status: BatchStatus = Field(..., description="Current batch status")
-    model: DeepResearchMode = Field(..., description="Default model for tasks")
+    mode: DeepResearchMode = Field(
+        ..., description="Research mode (preferred field name)"
+    )
+    name: Optional[str] = Field(None, description="Batch name")
     output_formats: Optional[
         List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
     ] = Field(None, description="Default output formats")
@@ -358,21 +402,66 @@ class DeepResearchBatch(BaseModel):
         None, description="Default search parameters"
     )
     counts: BatchCounts = Field(..., description="Task counts")
-    usage: Optional[BatchUsage] = Field(None, description="Aggregated usage")
+    cost: float = Field(..., description="Total cost (replaces usage object)")
     webhook_url: Optional[str] = Field(
         None, description="Webhook URL for notifications"
     )
     webhook_secret: Optional[str] = Field(None, description="Webhook secret")
-    created_at: Union[int, str] = Field(..., description="Creation timestamp")
-    updated_at: Optional[Union[int, str]] = Field(
-        None, description="Last update timestamp"
+    created_at: str = Field(
+        ...,
+        description="Creation timestamp (ISO 8601 string, e.g., '2025-01-15T10:30:00.000Z')",
     )
-    completed_at: Optional[Union[int, str]] = Field(
-        None, description="Completion timestamp"
+    completed_at: Optional[str] = Field(
+        None,
+        description="Completion timestamp (ISO 8601 string, e.g., '2025-01-15T10:35:00.000Z')",
     )
     metadata: Optional[Dict[str, Union[str, int, bool]]] = Field(
         None, description="Custom metadata"
     )
+
+    # Backward compatibility fields
+    model: Optional[DeepResearchMode] = Field(
+        None, description="Research mode (backward compatibility - use 'mode' instead)"
+    )
+    usage: Optional[BatchUsage] = Field(
+        None,
+        description="Aggregated usage (backward compatibility - use 'cost' instead)",
+    )
+    updated_at: Optional[str] = Field(
+        None,
+        description="Last update timestamp (backward compatibility - field removed from API, ISO 8601 string)",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def sync_mode_and_model(cls, data):
+        """Sync mode and model fields for backward compatibility."""
+        if isinstance(data, dict):
+            # If model is provided but mode is not, copy model to mode
+            if "model" in data and "mode" not in data:
+                data["mode"] = data["model"]
+            # If mode is provided but model is not, copy mode to model for backward compatibility
+            elif "mode" in data and "model" not in data:
+                data["model"] = data["mode"]
+            # Handle usage -> cost migration
+            if "usage" in data and "cost" not in data:
+                usage_obj = data.get("usage")
+                if isinstance(usage_obj, dict) and "total_cost" in usage_obj:
+                    data["cost"] = usage_obj["total_cost"]
+                elif isinstance(usage_obj, BatchUsage):
+                    data["cost"] = usage_obj.total_cost
+            # Handle cost -> usage backward compatibility (for code that accesses usage.total_cost)
+            if "cost" in data and "usage" not in data:
+                cost_value = data.get("cost")
+                if cost_value is not None:
+                    # Create a usage object from cost for backward compatibility
+                    data["usage"] = {
+                        "search_cost": 0.0,
+                        "contents_cost": 0.0,
+                        "ai_cost": 0.0,
+                        "total_cost": float(cost_value),
+                    }
+        return data
 
 
 class BatchCreateResponse(BaseModel):
@@ -381,12 +470,45 @@ class BatchCreateResponse(BaseModel):
     success: bool
     batch_id: Optional[str] = None
     status: Optional[BatchStatus] = None
-    model: Optional[DeepResearchMode] = None
+    mode: Optional[DeepResearchMode] = None
+    name: Optional[str] = None
+    output_formats: Optional[
+        List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
+    ] = None
+    search_params: Optional[Dict[str, Any]] = None
     counts: Optional[BatchCounts] = None
-    created_at: Optional[Union[int, str]] = None
+    cost: Optional[float] = None
+    created_at: Optional[str] = None
     webhook_secret: Optional[str] = None
     message: Optional[str] = None
+    brand_collection_id: Optional[str] = None
     error: Optional[str] = None
+
+    # Backward compatibility fields - populated by validator
+    model: Optional[DeepResearchMode] = Field(
+        None, description="Research mode (backward compatibility - use 'mode' instead)"
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def sync_mode_and_model(cls, data):
+        """Sync mode and model fields for backward compatibility."""
+        if isinstance(data, dict):
+            # If model is provided but mode is not, copy model to mode
+            if "model" in data and "mode" not in data:
+                data["mode"] = data["model"]
+            # If mode is provided but model is not, copy mode to model for backward compatibility
+            elif "mode" in data and "model" not in data:
+                data["model"] = data["mode"]
+        return data
+
+
+class BatchTaskCreated(BaseModel):
+    """Task created in batch."""
+
+    task_id: Optional[str] = None
+    deepresearch_id: str
+    status: str
 
 
 class BatchAddTasksResponse(BaseModel):
@@ -395,7 +517,9 @@ class BatchAddTasksResponse(BaseModel):
     success: bool
     batch_id: Optional[str] = None
     added: Optional[int] = None
-    task_ids: Optional[List[str]] = None
+    tasks: Optional[List[BatchTaskCreated]] = None
+    task_ids: Optional[List[str]] = None  # Kept for backward compatibility
+    counts: Optional[BatchCounts] = None
     message: Optional[str] = None
     error: Optional[str] = None
 
@@ -412,12 +536,19 @@ class BatchTaskListItem(BaseModel):
     """Minimal task info in batch list."""
 
     deepresearch_id: str
-    batch_task_id: Optional[str] = None
+    task_id: Optional[str] = None
     query: str
     status: DeepResearchStatus
-    created_at: Union[int, str]
-    completed_at: Optional[Union[int, str]] = None
-    error: Optional[str] = None
+    created_at: str
+    completed_at: Optional[str] = None
+
+
+class BatchPagination(BaseModel):
+    """Pagination information for batch task lists."""
+
+    count: int
+    last_key: Optional[str] = None
+    has_more: bool
 
 
 class BatchTasksListResponse(BaseModel):
@@ -426,6 +557,7 @@ class BatchTasksListResponse(BaseModel):
     success: bool
     batch_id: Optional[str] = None
     tasks: Optional[List[BatchTaskListItem]] = None
+    pagination: Optional[BatchPagination] = None
     error: Optional[str] = None
 
 
@@ -434,6 +566,8 @@ class BatchCancelResponse(BaseModel):
 
     success: bool
     batch_id: Optional[str] = None
+    status: Optional[BatchStatus] = None
+    cancelled_count: Optional[int] = None
     message: Optional[str] = None
     error: Optional[str] = None
 

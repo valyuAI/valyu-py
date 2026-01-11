@@ -20,8 +20,8 @@ def main():
         # Example 1: Basic research task
         print("1. Creating a basic research task...")
         task = valyu.deepresearch.create(
-            input="What are the key differences between RAG and fine-tuning for LLMs?",
-            model="standard",
+            query="What are the key differences between RAG and fine-tuning for LLMs?",
+            mode="standard",
             output_formats=["markdown"],
         )
 
@@ -31,7 +31,7 @@ def main():
 
         print(f"✓ Task created: {task.deepresearch_id}")
         print(f"  Status: {task.status}")
-        print(f"  Model: {task.model}\n")
+        print(f"  Mode: {task.mode or task.model}\n")
 
         # Example 2: Wait for completion with progress updates
         print("2. Waiting for task completion...")
@@ -60,10 +60,13 @@ def main():
             from datetime import datetime
 
             try:
-                print(
-                    f"  Completed at: {datetime.fromtimestamp(result.completed_at).strftime('%Y-%m-%d %H:%M:%S')}"
-                )
-            except:
+                # Handle ISO 8601 timestamp format
+                # Remove 'Z' and replace with '+00:00' for fromisoformat compatibility
+                iso_str = result.completed_at.replace('Z', '+00:00')
+                dt = datetime.fromisoformat(iso_str)
+                print(f"  Completed at: {dt.strftime('%Y-%m-%d %H:%M:%S')}")
+            except Exception:
+                # Fallback: just print the raw timestamp
                 print(f"  Completed at: {result.completed_at}")
 
         # Display output
@@ -91,6 +94,19 @@ def main():
         if result.pdf_url:
             print("\n=== PDF Report ===")
             print(f"  Download: {result.pdf_url}")
+
+        # Example: Get assets (images, deliverables)
+        if result.images and len(result.images) > 0:
+            print("\n=== Downloading Assets ===")
+            for img in result.images[:2]:  # Download first 2 images as example
+                try:
+                    image_data = valyu.deepresearch.get_assets(
+                        task_id=result.deepresearch_id,
+                        asset_id=img.image_id
+                    )
+                    print(f"  Downloaded {img.title}: {len(image_data)} bytes")
+                except Exception as e:
+                    print(f"  Error downloading {img.title}: {e}")
 
         print("\n=== Example completed successfully! ===")
 
