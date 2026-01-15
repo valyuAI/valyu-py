@@ -5,6 +5,14 @@ from .contents import (
     ExtractEffort,
     ContentsResponseLength,
 )
+from .datasources import (
+    Datasource,
+    DatasourcePricing,
+    DatasourcesResponse,
+    DatasourceCategory,
+    DatasourceCategoriesResponse,
+    DatasourceCategoryType,
+)
 from .answer import (
     AnswerResponse,
     AnswerSuccessResponse,
@@ -55,6 +63,12 @@ __all__ = [
     "ContentsResult",
     "ExtractEffort",
     "ContentsResponseLength",
+    "Datasource",
+    "DatasourcePricing",
+    "DatasourcesResponse",
+    "DatasourceCategory",
+    "DatasourceCategoriesResponse",
+    "DatasourceCategoryType",
     "AnswerResponse",
     "AnswerSuccessResponse",
     "AnswerErrorResponse",
