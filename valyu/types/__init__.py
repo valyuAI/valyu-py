@@ -8,6 +8,7 @@ from .contents import (
 from .datasources import (
     Datasource,
     DatasourcePricing,
+    DatasourceCoverage,
     DatasourcesResponse,
     DatasourceCategory,
     DatasourceCategoriesResponse,
@@ -65,6 +66,7 @@ __all__ = [
     "ContentsResponseLength",
     "Datasource",
     "DatasourcePricing",
+    "DatasourceCoverage",
     "DatasourcesResponse",
     "DatasourceCategory",
     "DatasourceCategoriesResponse",
