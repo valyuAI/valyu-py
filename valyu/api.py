@@ -10,6 +10,13 @@ from valyu.types.contents import (
     ExtractEffort,
     ContentsResponseLength,
 )
+from valyu.types.datasources import (
+    Datasource,
+    DatasourcesResponse,
+    DatasourceCategory,
+    DatasourceCategoriesResponse,
+    DatasourceCategoryType,
+)
 from valyu.types.answer import (
     AnswerResponse,
     AnswerSuccessResponse,
@@ -759,3 +766,103 @@ class Valyu:
 
         except Exception as e:
             yield AnswerStreamChunk(type="error", error=str(e))
+
+    def datasources(
+        self,
+        category: Optional[DatasourceCategoryType] = None,
+    ) -> DatasourcesResponse:
+        """
+        List all available datasources.
+
+        This API provides a tool manifest for AI agents to discover available
+        data sources. Use this to understand what datasources are available
+        before making search requests with included_sources or excluded_sources.
+
+        Args:
+            category (Optional[DatasourceCategoryType]): Filter by category.
+                Valid values: "research", "healthcare", "markets", "company",
+                "economic", "predictions", "transportation", "legal",
+                "politics", "patents"
+
+        Returns:
+            DatasourcesResponse: List of available datasources with their
+                metadata including id, name, description, pricing, and
+                example_queries for few-shot prompting.
+        """
+        try:
+            params = {}
+            if category is not None:
+                params["category"] = category
+
+            response = requests.get(
+                f"{self.base_url}/datasources",
+                params=params if params else None,
+                headers=self.headers,
+            )
+
+            data = response.json()
+
+            if not response.ok:
+                return DatasourcesResponse(
+                    success=False,
+                    error=data.get("error", f"HTTP Error: {response.status_code}"),
+                    datasources=[],
+                )
+
+            # Parse datasources from response
+            datasources = []
+            for ds in data.get("datasources", []):
+                datasources.append(Datasource(**ds))
+
+            return DatasourcesResponse(
+                success=True,
+                datasources=datasources,
+            )
+        except Exception as e:
+            return DatasourcesResponse(
+                success=False,
+                error=str(e),
+                datasources=[],
+            )
+
+    def datasources_categories(self) -> DatasourceCategoriesResponse:
+        """
+        List all available datasource categories.
+
+        Use this to understand the landscape of available data before
+        filtering with the datasources() method.
+
+        Returns:
+            DatasourceCategoriesResponse: List of categories with their
+                names and dataset counts.
+        """
+        try:
+            response = requests.get(
+                f"{self.base_url}/datasources/categories",
+                headers=self.headers,
+            )
+
+            data = response.json()
+
+            if not response.ok:
+                return DatasourceCategoriesResponse(
+                    success=False,
+                    error=data.get("error", f"HTTP Error: {response.status_code}"),
+                    categories=[],
+                )
+
+            # Parse categories from response
+            categories = []
+            for cat in data.get("categories", []):
+                categories.append(DatasourceCategory(**cat))
+
+            return DatasourceCategoriesResponse(
+                success=True,
+                categories=categories,
+            )
+        except Exception as e:
+            return DatasourceCategoriesResponse(
+                success=False,
+                error=str(e),
+                categories=[],
+            )

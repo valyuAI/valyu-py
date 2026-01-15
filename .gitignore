@@ -12,3 +12,4 @@ dist/
 */.venv]
 .DS_Store
 .venv/
+.claude/
