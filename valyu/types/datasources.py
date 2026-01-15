@@ -7,10 +7,10 @@ class DatasourcePricing(BaseModel):
   cpm: float  # Cost per million tokens
 
 
-class DatasourceResponseSchema(BaseModel):
-  """Schema definition for datasource responses."""
-  # This is flexible as different datasources have different schemas
-  pass
+class DatasourceCoverage(BaseModel):
+  """Coverage information for a datasource."""
+  start_date: Optional[str] = None
+  end_date: Optional[str] = None
 
 
 class Datasource(BaseModel):
@@ -22,11 +22,14 @@ class Datasource(BaseModel):
   type: Optional[str] = None
   modality: Optional[List[str]] = None
   topics: Optional[List[str]] = None
+  languages: Optional[List[str]] = None
+  source: Optional[str] = None
   example_queries: Optional[List[str]] = None
   pricing: Optional[DatasourcePricing] = None
   response_schema: Optional[Dict[str, Any]] = None
   update_frequency: Optional[str] = None
   size: Optional[int] = None
+  coverage: Optional[DatasourceCoverage] = None
 
 
 class DatasourcesResponse(BaseModel):
@@ -43,6 +46,7 @@ class DatasourceCategory(BaseModel):
   """A category of datasources."""
   id: str
   name: str
+  description: Optional[str] = None
   dataset_count: int
 
 
