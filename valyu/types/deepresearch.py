@@ -92,7 +92,7 @@ class SearchConfig(BaseModel):
     """Search configuration for Deep Research tasks and batches.
 
     Controls which data sources are queried, what content is included/excluded,
-    and how results are filtered by date or category.
+    and how results are filtered by date, category, or country.
 
     Attributes:
         search_type: Controls which backend search systems are queried.
@@ -111,6 +111,8 @@ class SearchConfig(BaseModel):
             Format: ISO date (YYYY-MM-DD), e.g., "2024-12-31"
         category: Filters results by a specific category.
             Category values are source-dependent.
+        country_code: ISO country code for location-filtered searches.
+            E.g., "US", "GB", "DE". Only applies to web search results.
     """
 
     search_type: Optional[Literal["all", "web", "proprietary"]] = Field(
@@ -130,6 +132,9 @@ class SearchConfig(BaseModel):
         None, description="End date filter in ISO format (YYYY-MM-DD)"
     )
     category: Optional[str] = Field(None, description="Category filter for results")
+    country_code: Optional[str] = Field(
+        None, description="ISO country code for location-filtered searches (e.g., 'US', 'GB')"
+    )
 
 
 class Progress(BaseModel):
