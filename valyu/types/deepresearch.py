@@ -10,6 +10,7 @@ class DeepResearchMode(str, Enum):
     STANDARD = "standard"
     LITE = "lite"  # Deprecated: use STANDARD instead (kept for backward compatibility)
     HEAVY = "heavy"
+    MAX = "max"
 
 
 class DeepResearchStatus(str, Enum):

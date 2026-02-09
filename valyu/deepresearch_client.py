@@ -58,10 +58,10 @@ class DeepResearchClient:
         Args:
             query: Research query or task description (preferred)
             input: Research query or task description (deprecated, use query instead)
-            mode: Research mode - "standard" (default, $0.50 per task), "heavy" ($1.50 per task),
-                  or "fast" ($0.10 per task, preferred). Preferred over model parameter.
+            mode: Research mode - "fast", "standard" (default), "heavy", or "max".
+                  Preferred over model parameter.
             model: Research mode (backward compatibility - use 'mode' instead) - "standard" (default),
-                  "heavy", "fast", or "lite" (deprecated, maps to "standard")
+                  "heavy", "fast", "max", or "lite" (deprecated, maps to "standard")
             output_formats: Output formats - ["markdown"], ["markdown", "pdf"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with markdown/pdf - use one or the other.
