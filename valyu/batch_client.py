@@ -32,8 +32,8 @@ class BatchClient:
     def create(
         self,
         name: Optional[str] = None,
-        mode: Optional[Literal["lite", "standard", "heavy", "fast"]] = None,
-        model: Optional[Literal["lite", "standard", "heavy", "fast"]] = None,
+        mode: Optional[Literal["lite", "standard", "heavy", "fast", "max"]] = None,
+        model: Optional[Literal["lite", "standard", "heavy", "fast", "max"]] = None,
         output_formats: Optional[
             List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
         ] = None,
@@ -414,8 +414,8 @@ class BatchClient:
         self,
         tasks: List[Union[BatchTaskInput, Dict[str, Any]]],
         name: Optional[str] = None,
-        mode: Optional[Literal["lite", "standard", "heavy", "fast"]] = None,
-        model: Optional[Literal["lite", "standard", "heavy", "fast"]] = None,
+        mode: Optional[Literal["lite", "standard", "heavy", "fast", "max"]] = None,
+        model: Optional[Literal["lite", "standard", "heavy", "fast", "max"]] = None,
         output_formats: Optional[
             List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
         ] = None,
