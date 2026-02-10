@@ -7,6 +7,8 @@ from valyu.types.response import SearchResponse, SearchType, ResultsBySource
 from valyu.types.contents import (
     ContentsResponse,
     ContentsResult,
+    ContentsJobCreateResponse,
+    ContentsJobStatus,
     ExtractEffort,
     ContentsResponseLength,
 )
@@ -277,12 +279,19 @@ class Valyu:
         response_length: Optional[ContentsResponseLength] = None,
         max_price_dollars: Optional[float] = None,
         screenshot: bool = False,
-    ) -> Optional[ContentsResponse]:
+        async_mode: bool = False,
+        webhook_url: Optional[str] = None,
+        wait: bool = False,
+        poll_interval: int = 5,
+        max_wait_time: int = 3600,
+    ) -> Optional[
+        Union[ContentsResponse, ContentsJobCreateResponse, ContentsJobStatus]
+    ]:
         """
         Extract clean, structured content from web pages with optional AI-powered data extraction and summarization.
 
         Args:
-            urls (List[str]): List of URLs to process (maximum 10 URLs per request).
+            urls (List[str]): List of URLs to process (1-10 for sync, 1-50 for async).
             summary (Optional[Union[bool, str, Dict[str, Any]]]): AI summary configuration:
                 - False/None: No AI processing (raw content)
                 - True: Basic automatic summarization
@@ -302,15 +311,21 @@ class Valyu:
             screenshot (bool): Request page screenshots (default: False).
                 When True, each result will include a screenshot_url field
                 with a pre-signed URL to a screenshot image of the page.
+            async_mode (bool): Use async processing (required for >10 URLs). Default: False.
+            webhook_url (Optional[str]): HTTPS URL for completion notification (async only).
+            wait (bool): When async_mode=True, poll until complete and return final results. Default: False.
+            poll_interval (int): Seconds between polls when wait=True. Default: 5.
+            max_wait_time (int): Max seconds to wait when wait=True. Default: 3600.
 
         Returns:
-            Optional[ContentsResponse]: The contents extraction response.
+            ContentsResponse (sync), ContentsJobCreateResponse (async, wait=False),
+            or ContentsJobStatus (async, wait=True with terminal results).
         """
         try:
-            if len(urls) > 10:
+            if len(urls) > 50:
                 return ContentsResponse(
                     success=False,
-                    error="Maximum 10 URLs allowed per request",
+                    error="Maximum 50 URLs allowed per request",
                     tx_id="error-max-urls",
                     urls_requested=len(urls),
                     urls_processed=0,
@@ -320,9 +335,26 @@ class Valyu:
                     total_characters=0,
                 )
 
-            payload = {
+            if len(urls) > 10 and not async_mode:
+                return ContentsResponse(
+                    success=False,
+                    error="Requests with more than 10 URLs require async_mode=True",
+                    tx_id="error-async-required",
+                    urls_requested=len(urls),
+                    urls_processed=0,
+                    urls_failed=len(urls),
+                    results=[],
+                    total_cost_dollars=0.0,
+                    total_characters=0,
+                )
+
+            use_async = len(urls) > 10 or async_mode
+
+            payload: Dict[str, Any] = {
                 "urls": urls,
             }
+            if use_async:
+                payload["async"] = True
 
             if summary is not None:
                 payload["summary"] = summary
@@ -338,6 +370,9 @@ class Valyu:
 
             if screenshot:
                 payload["screenshot"] = screenshot
+
+            if webhook_url:
+                payload["webhook_url"] = webhook_url
 
             response = requests.post(
                 f"{self.base_url}/contents", json=payload, headers=self.headers
@@ -358,6 +393,16 @@ class Valyu:
                     total_characters=0,
                 )
 
+            if response.status_code == 202:
+                job = ContentsJobCreateResponse(**data)
+                if wait and job.success:
+                    return self.wait_for_contents_job(
+                        job.job_id,
+                        poll_interval=poll_interval,
+                        max_wait_time=max_wait_time,
+                    )
+                return job
+
             return ContentsResponse(**data)
         except Exception as e:
             return ContentsResponse(
@@ -371,6 +416,81 @@ class Valyu:
                 total_cost_dollars=0.0,
                 total_characters=0,
             )
+
+    def get_contents_job(self, job_id: str) -> ContentsJobStatus:
+        """
+        Get the status of an async contents job.
+
+        Args:
+            job_id: Job ID from async contents response.
+
+        Returns:
+            ContentsJobStatus with current status and results when terminal.
+        """
+        response = requests.get(
+            f"{self.base_url}/contents/jobs/{job_id}",
+            headers=self.headers,
+        )
+        data = response.json()
+
+        if not response.ok:
+            return ContentsJobStatus(
+                success=False,
+                job_id=job_id,
+                status="failed",
+                urls_total=0,
+                urls_processed=0,
+                urls_failed=0,
+                error=data.get("error", f"HTTP Error: {response.status_code}"),
+            )
+
+        return ContentsJobStatus(**data)
+
+    def wait_for_contents_job(
+        self,
+        job_id: str,
+        poll_interval: int = 5,
+        max_wait_time: int = 3600,
+        on_progress: Optional[Callable[[ContentsJobStatus], None]] = None,
+    ) -> ContentsJobStatus:
+        """
+        Poll until an async contents job reaches a terminal state.
+
+        Args:
+            job_id: Job ID to wait for.
+            poll_interval: Seconds between polls. Default: 5.
+            max_wait_time: Max seconds to wait. Default: 3600.
+            on_progress: Optional callback for progress updates.
+
+        Returns:
+            Final ContentsJobStatus with results when terminal.
+
+        Raises:
+            TimeoutError: If max_wait_time exceeded.
+            ValueError: If job fails.
+        """
+        start_time = time.time()
+        terminal_statuses = ("completed", "partial", "failed")
+
+        while True:
+            status = self.get_contents_job(job_id)
+
+            if not status.success:
+                raise ValueError(f"Failed to get job status: {status.error}")
+
+            if on_progress:
+                on_progress(status)
+
+            if status.status in terminal_statuses:
+                return status
+
+            elapsed = time.time() - start_time
+            if elapsed > max_wait_time:
+                raise TimeoutError(
+                    f"Job did not complete within {max_wait_time} seconds"
+                )
+
+            time.sleep(poll_interval)
 
     def answer(
         self,
