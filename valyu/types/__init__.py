@@ -2,6 +2,10 @@ from .response import SearchResponse, SearchResult, SearchType, ResultsBySource
 from .contents import (
     ContentsResponse,
     ContentsResult,
+    ContentsResultSuccess,
+    ContentsResultFailed,
+    ContentsJobCreateResponse,
+    ContentsJobStatus,
     ExtractEffort,
     ContentsResponseLength,
 )
@@ -63,6 +67,10 @@ __all__ = [
     "ResultsBySource",
     "ContentsResponse",
     "ContentsResult",
+    "ContentsResultSuccess",
+    "ContentsResultFailed",
+    "ContentsJobCreateResponse",
+    "ContentsJobStatus",
     "ExtractEffort",
     "ContentsResponseLength",
     "Datasource",
