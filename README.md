@@ -270,29 +270,35 @@ class SearchResult:
 
 ### Contents Method
 
-The `contents()` method extracts clean, structured content from web pages with optional AI-powered data extraction and summarization.
+The `contents()` method extracts clean, structured content from web pages with optional AI-powered data extraction and summarization. Supports sync (1-10 URLs) and async mode (1-50 URLs).
 
 ```python
 def contents(
-    urls: List[str],                                      # List of URLs to process (max 10)
-    summary: Union[bool, str, Dict] = None,              # AI summary configuration
-    extract_effort: str = None,                          # "normal", "high", or "auto"
-    response_length: Union[str, int] = None,             # Content length configuration
-    max_price_dollars: float = None,                     # Maximum cost limit in USD
-    screenshot: bool = False,                            # Request page screenshots
-) -> ContentsResponse
+    urls: List[str],                                      # List of URLs (1-10 sync, 1-50 async)
+    summary: Union[bool, str, Dict] = None,                # AI summary configuration
+    extract_effort: str = None,                            # "normal", "high", or "auto"
+    response_length: Union[str, int] = None,              # Content length configuration
+    max_price_dollars: float = None,                      # Maximum cost limit in USD
+    screenshot: bool = False,                              # Request page screenshots
+    async_mode: bool = False,                              # Use async processing (required for >10 URLs)
+    webhook_url: Optional[str] = None,                     # HTTPS webhook URL (async only)
+    wait: bool = False,                                   # When async, poll until complete
+) -> Union[ContentsResponse, ContentsJobCreateResponse, ContentsJobStatus]
 ```
 
 ### Parameters
 
 | Parameter           | Type                     | Default    | Description                                                                                                                                                                                                               |
 | ------------------- | ------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `urls`              | `List[str]`              | _required_ | List of URLs to process (maximum 10 URLs per request)                                                                                                                                                                     |
+| `urls`              | `List[str]`              | _required_ | List of URLs to process (1-10 sync, 1-50 with `async_mode=True`)                                                                                                                                                         |
 | `summary`           | `Union[bool, str, Dict]` | `None`     | AI summary configuration:<br>- `False/None`: No AI processing (raw content)<br>- `True`: Basic automatic summarization<br>- `str`: Custom instructions (max 500 chars)<br>- `dict`: JSON schema for structured extraction |
 | `extract_effort`    | `str`                    | `None`     | Extraction thoroughness: `"normal"` (fast), `"high"` (thorough but slower), or `"auto"` (automatically determine)                                                                                                         |
 | `response_length`   | `Union[str, int]`        | `None`     | Content length per URL:<br>- `"short"`: 25,000 characters<br>- `"medium"`: 50,000 characters<br>- `"large"`: 100,000 characters<br>- `"max"`: No limit<br>- `int`: Custom character limit                                 |
 | `max_price_dollars` | `float`                  | `None`     | Maximum cost limit in USD                                                                                                                                                                                                 |
 | `screenshot`        | `bool`                   | `False`    | Request page screenshots. When `True`, each result includes a `screenshot_url` field with a pre-signed URL to a screenshot image                                                                                          |
+| `async_mode`        | `bool`                   | `False`    | Use async processing. **Required** for >10 URLs. Returns job ID for polling or final results when `wait=True`.                                                                                                          |
+| `webhook_url`       | `str`                    | `None`     | HTTPS URL for completion notification (async only). Store the returned `webhook_secret` for signature verification.                                                                                                       |
+| `wait`              | `bool`                   | `False`    | When `async_mode=True`, poll until complete and return final results. Default: return job immediately.                                                                                                                     |
 
 ### Response Format
 
@@ -311,23 +317,44 @@ class ContentsResponse:
     total_characters: int                 # Total characters extracted
 ```
 
-Each `ContentsResult` contains:
+Each result has a `status` field: `"success"` or `"failed"`. Check before accessing content fields:
 
 ```python
-class ContentsResult:
-    url: str                              # Source URL
-    title: str                            # Page/document title
-    description: Optional[str]            # Brief description of the content
-    content: Union[str, int, float]       # Extracted content
-    length: int                           # Content length in characters
-    source: str                           # Data source identifier
-    price: float                          # Cost for processing this URL
-    summary: Optional[Union[str, Dict]]   # AI-generated summary or structured data
-    summary_success: Optional[bool]       # Whether summary generation succeeded
-    data_type: Optional[str]              # Type of data extracted
-    image_url: Optional[Dict[str, str]]   # Extracted images
-    screenshot_url: Optional[str]         # Screenshot URL if requested
-    citation: Optional[str]               # APA-style citation
+for result in response.results:
+    if result.status == "success":
+        print(result.title)
+        print(result.content[:500])
+    else:
+        print(f"Failed: {result.url} - {result.error}")
+```
+
+**Successful result** (`status == "success"`): `url`, `title`, `content`, `length`, `source`, `summary`, `screenshot_url`, etc.
+
+**Failed result** (`status == "failed"`): `url`, `status`, `error`
+
+### Async Contents Methods
+
+| Method                          | Description                                              |
+| ------------------------------- | -------------------------------------------------------- |
+| `get_contents_job(job_id)`      | Get status of an async contents job                       |
+| `wait_for_contents_job(job_id, poll_interval, max_wait_time, on_progress)` | Poll until job completes, returns final results |
+
+### Webhook Verification
+
+When using `webhook_url`, verify incoming requests with the `webhook_secret` from job creation:
+
+```python
+from valyu import verify_contents_webhook
+
+# In your webhook handler
+def handle_webhook(request):
+    payload = request.body  # Raw bytes or str
+    signature = request.headers.get("X-Webhook-Signature")
+    timestamp = request.headers.get("X-Webhook-Timestamp")
+
+    if not verify_contents_webhook(payload, signature, timestamp, WEBHOOK_SECRET):
+        return 401  # Invalid signature
+    # Process webhook data...
 ```
 
 ## Examples
@@ -413,8 +440,9 @@ response = valyu.contents(
 
 if response.success:
     for result in response.results:
-        print(f"Title: {result.title}")
-        print(f"Content: {result.content[:500]}...")
+        if result.status == "success":
+            print(f"Title: {result.title}")
+            print(f"Content: {result.content[:500]}...")
 ```
 
 #### Content with AI Summary
@@ -428,7 +456,8 @@ response = valyu.contents(
 )
 
 for result in response.results:
-    print(f"Summary: {result.summary}")
+    if result.status == "success" and result.summary:
+        print(f"Summary: {result.summary}")
 ```
 
 #### Structured Data Extraction
@@ -456,7 +485,7 @@ response = valyu.contents(
 
 if response.success:
     for result in response.results:
-        if result.summary:
+        if result.status == "success" and result.summary:
             print(f"Structured data: {json.dumps(result.summary, indent=2)}")
 ```
 
@@ -477,6 +506,31 @@ print(f"Processed {response.urls_processed}/{response.urls_requested} URLs")
 print(f"Cost: ${response.total_cost_dollars:.4f}")
 ```
 
+#### Async Mode (11-50 URLs)
+
+```python
+# For >10 URLs, async_mode is required
+job = valyu.contents(
+    urls=[...],  # 11-50 URLs
+    async_mode=True,
+    webhook_url="https://yourserver.com/webhook"  # Optional
+)
+print(f"Job ID: {job.job_id}")
+
+# Option A: Poll manually
+status = valyu.get_contents_job(job.job_id)
+while status.status not in ("completed", "partial", "failed"):
+    time.sleep(5)
+    status = valyu.get_contents_job(job.job_id)
+
+# Option B: Wait until complete (blocks)
+result = valyu.contents(urls=[...], async_mode=True, wait=True)
+if result.results:
+    for r in result.results:
+        if r.status == "success":
+            print(r.title)
+```
+
 #### Content Extraction with Screenshots
 
 ```python
@@ -489,10 +543,13 @@ response = valyu.contents(
 
 if response.success:
     for result in response.results:
-        print(f"Title: {result.title}")
-        print(f"Price: ${result.price:.4f}")
-        if result.screenshot_url:
-            print(f"Screenshot: {result.screenshot_url}")
+        if result.status == "success":
+            print(f"Title: {result.title}")
+            price = getattr(result, "price", None)
+            if price is not None:
+                print(f"Price: ${price:.4f}")
+            if result.screenshot_url:
+                print(f"Screenshot: {result.screenshot_url}")
 ```
 
 ## Authentication

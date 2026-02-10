@@ -24,10 +24,13 @@ response = valyu.contents(
 if response.success:
     print(f"Processed {response.urls_processed} URLs")
     for result in response.results:
-        print(f"\nTitle: {result.title}")
-        print(f"URL: {result.url}")
-        print(f"Content length: {result.length} characters")
-        print(f"First 200 chars: {result.content[:200]}...")
+        if result.status == "success":
+            print(f"\nTitle: {result.title}")
+            print(f"URL: {result.url}")
+            print(f"Content length: {result.length} characters")
+            print(f"First 200 chars: {result.content[:200]}...")
+        else:
+            print(f"Failed: {result.url} - {result.error}")
 else:
     print(f"Error: {response.error}")
 
@@ -43,11 +46,14 @@ response = valyu.contents(
 
 if response.success:
     for result in response.results:
-        print(f"\nTitle: {result.title}")
-        print(f"URL: {result.url}")
-        if result.summary:
-            print(f"Summary: {result.summary}")
-        print(f"Total cost: ${response.total_cost_dollars:.4f}")
+        if result.status == "success":
+            print(f"\nTitle: {result.title}")
+            print(f"URL: {result.url}")
+            if result.summary:
+                print(f"Summary: {result.summary}")
+            print(f"Total cost: ${response.total_cost_dollars:.4f}")
+        else:
+            print(f"Failed: {result.url} - {result.error}")
 else:
     print(f"Error: {response.error}")
 
@@ -64,9 +70,12 @@ response = valyu.contents(
 
 if response.success:
     for result in response.results:
-        print(f"\nTitle: {result.title}")
-        if result.summary:
-            print(f"Custom Summary:\n{result.summary}")
+        if result.status == "success":
+            print(f"\nTitle: {result.title}")
+            if result.summary:
+                print(f"Custom Summary:\n{result.summary}")
+        else:
+            print(f"Failed: {result.url} - {result.error}")
 else:
     print(f"Error: {response.error}")
 
@@ -98,10 +107,13 @@ response = valyu.contents(
 
 if response.success:
     for result in response.results:
-        print(f"\nURL: {result.url}")
-        if result.summary and isinstance(result.summary, dict):
-            print("Extracted structured data:")
-            print(json.dumps(result.summary, indent=2))
+        if result.status == "success":
+            print(f"\nURL: {result.url}")
+            if result.summary and isinstance(result.summary, dict):
+                print("Extracted structured data:")
+                print(json.dumps(result.summary, indent=2))
+        else:
+            print(f"Failed: {result.url} - {result.error}")
 else:
     print(f"Error: {response.error}")
 
@@ -130,9 +142,12 @@ if response.success:
     print(f"Total cost: ${response.total_cost_dollars:.4f}")
 
     for i, result in enumerate(response.results, 1):
-        print(f"\n{i}. {result.title}")
-        if result.summary:
-            print(f"   Summary: {str(result.summary)[:200]}...")
+        if result.status == "success":
+            print(f"\n{i}. {result.title}")
+            if result.summary:
+                print(f"   Summary: {str(result.summary)[:200]}...")
+        else:
+            print(f"\n{i}. Failed: {result.url} - {result.error}")
 else:
     print(f"Error: {response.error}")
 
@@ -148,10 +163,13 @@ response = valyu.contents(
 
 if response.success:
     for result in response.results:
-        print(f"\nURL: {result.url}")
-        print(f"Raw content ({result.length} chars):")
-        print(result.content[:500])
-        print(f"Cost: ${response.total_cost_dollars:.4f}")
+        if result.status == "success":
+            print(f"\nURL: {result.url}")
+            print(f"Raw content ({result.length} chars):")
+            print(result.content[:500])
+            print(f"Cost: ${response.total_cost_dollars:.4f}")
+        else:
+            print(f"Failed: {result.url} - {result.error}")
 else:
     print(f"Error: {response.error}")
 
@@ -167,14 +185,63 @@ response = valyu.contents(
 
 if response.success:
     for result in response.results:
-        print(f"\nTitle: {result.title}")
-        print(f"URL: {result.url}")
-        print(f"Price: ${result.price:.4f}")
-        if result.screenshot_url:
-            print(f"Screenshot URL: {result.screenshot_url}")
-        print(f"Content length: {result.length} characters")
+        if result.status == "success":
+            print(f"\nTitle: {result.title}")
+            print(f"URL: {result.url}")
+            price = getattr(result, "price", None)
+            if price is not None:
+                print(f"Price: ${price:.4f}")
+            if result.screenshot_url:
+                print(f"Screenshot URL: {result.screenshot_url}")
+            print(f"Content length: {result.length} characters")
+        else:
+            print(f"Failed: {result.url} - {result.error}")
 else:
     print(f"Error: {response.error}")
+
+# Example 8: Async mode with wait (for >10 URLs)
+print("\n\n8. Async Mode - Many URLs with wait=True")
+print("-" * 40)
+
+# For >10 URLs, async_mode is required. Here we use 5 URLs with async_mode for illustration.
+async_urls = [
+    "https://en.wikipedia.org/wiki/Deep_learning",
+    "https://en.wikipedia.org/wiki/Natural_language_processing",
+    "https://en.wikipedia.org/wiki/Computer_vision",
+    "https://en.wikipedia.org/wiki/Transformer_(machine_learning_model)",
+    "https://en.wikipedia.org/wiki/Large_language_model",
+]
+
+# Option A: Async with wait - blocks until complete, returns results
+async_result = valyu.contents(
+    urls=async_urls,
+    async_mode=True,
+    wait=True,
+    poll_interval=5,
+    max_wait_time=300,
+)
+if async_result and hasattr(async_result, "results") and async_result.results:
+    print(f"Processed {async_result.urls_processed}/{async_result.urls_total} URLs")
+    for r in async_result.results:
+        if r.status == "success":
+            print(f"  ✓ {r.url}: {r.title[:50]}...")
+        else:
+            print(f"  ✗ {r.url}: {r.error}")
+
+# Example 9: Async mode with polling (for >10 URLs)
+print("\n\n9. Async Mode - Poll for Status")
+print("-" * 40)
+
+job = valyu.contents(
+    urls=async_urls[:3],
+    async_mode=True,
+)
+if job and hasattr(job, "job_id"):
+    print(f"Job ID: {job.job_id}")
+    if job.webhook_secret:
+        print(f"Webhook secret: {job.webhook_secret[:16]}...")
+    status = valyu.get_contents_job(job.job_id)
+    print(f"Status: {status.status} ({status.urls_processed}/{status.urls_total})")
 
 print("\n" + "=" * 60)
 print("End of Examples")
