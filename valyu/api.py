@@ -149,7 +149,6 @@ class Valyu:
                         query=query,
                         results=[],
                         results_by_source=ResultsBySource(web=0, proprietary=0),
-                        total_deduction_pcm=0.0,
                         total_deduction_dollars=0.0,
                         total_characters=0,
                     )
@@ -165,7 +164,6 @@ class Valyu:
                         query=query,
                         results=[],
                         results_by_source=ResultsBySource(web=0, proprietary=0),
-                        total_deduction_pcm=0.0,
                         total_deduction_dollars=0.0,
                         total_characters=0,
                     )
@@ -182,7 +180,6 @@ class Valyu:
                     query=query,
                     results=[],
                     results_by_source=ResultsBySource(web=0, proprietary=0),
-                    total_deduction_pcm=0.0,
                     total_deduction_dollars=0.0,
                     total_characters=0,
                 )
@@ -235,7 +232,6 @@ class Valyu:
                     query=query,
                     results=[],
                     results_by_source=ResultsBySource(web=0, proprietary=0),
-                    total_deduction_pcm=0.0,
                     total_deduction_dollars=0.0,
                     total_characters=0,
                 )
@@ -250,7 +246,6 @@ class Valyu:
                     results_by_source=data.get(
                         "results_by_source", ResultsBySource(web=0, proprietary=0)
                     ),
-                    total_deduction_pcm=data.get("total_deduction_pcm", 0.0),
                     total_deduction_dollars=data.get("total_deduction_dollars", 0.0),
                     total_characters=data.get("total_characters", 0),
                 )
@@ -264,7 +259,6 @@ class Valyu:
                 query=query,
                 results=[],
                 results_by_source=ResultsBySource(web=0, proprietary=0),
-                total_deduction_pcm=0.0,
                 total_deduction_dollars=0.0,
                 total_characters=0,
             )
