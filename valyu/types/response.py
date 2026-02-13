@@ -32,7 +32,6 @@ class SearchResponse(BaseModel):
     query: str
     results: List[SearchResult]
     results_by_source: ResultsBySource
-    total_deduction_pcm: float
     total_deduction_dollars: float
     total_characters: int
 
