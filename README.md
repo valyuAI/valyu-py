@@ -248,7 +248,6 @@ class SearchResponse:
     query: str                             # The original query
     results: List[SearchResult]            # List of search results
     results_by_source: ResultsBySource     # Count of results by source type
-    total_deduction_pcm: float             # Cost in CPM
     total_deduction_dollars: float         # Cost in dollars
     total_characters: int                  # Total characters returned
 ```
