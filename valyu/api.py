@@ -609,12 +609,7 @@ class Valyu:
                     original_query=final_metadata.get(
                         "original_query", payload.get("query", "")
                     ),
-                    contents=(
-                        full_content
-                        if full_content
-                        else final_metadata.get("contents", "")
-                    ),
-                    data_type=final_metadata.get("data_type", "unstructured"),
+                    answer=final_metadata.get("answer", full_content) or full_content,
                     search_results=(
                         [SearchResult(**r) for r in final_search_results]
                         if final_search_results
@@ -722,7 +717,7 @@ class Valyu:
                             type="metadata",
                             tx_id=parsed.get("tx_id"),
                             original_query=parsed.get("original_query"),
-                            data_type=parsed.get("data_type"),
+                            answer=parsed.get("answer"),
                             search_results=(
                                 [
                                     SearchResult(**r)
