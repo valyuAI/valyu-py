@@ -6,6 +6,7 @@ import time
 import requests
 from typing import Optional, List, Literal, Union, Dict, Any, Callable
 from valyu.types.deepresearch import (
+    AlertEmailConfig,
     DeepResearchMode,
     DeepResearchStatus,
     FileAttachment,
@@ -49,6 +50,7 @@ class DeepResearchClient:
         code_execution: bool = True,
         previous_reports: Optional[List[str]] = None,
         webhook_url: Optional[str] = None,
+        alert_email: Optional[Union[str, "AlertEmailConfig", Dict[str, str]]] = None,
         brand_collection_id: Optional[str] = None,
         metadata: Optional[Dict[str, Union[str, int, bool]]] = None,
     ) -> DeepResearchCreateResponse:
@@ -83,6 +85,9 @@ class DeepResearchClient:
             code_execution: Enable/disable code execution (default: True)
             previous_reports: Previous report IDs for context (max 3)
             webhook_url: HTTPS webhook URL for completion notification
+            alert_email: Email for completion alerts. Can be a string (email address) or
+                        a dict/AlertEmailConfig with 'email' and optional 'custom_url'.
+                        custom_url must contain {id} which is replaced with the task ID.
             brand_collection_id: Brand collection to apply to all deliverables
             metadata: Custom metadata (key-value pairs)
 
@@ -159,6 +164,13 @@ class DeepResearchClient:
                 payload["previous_reports"] = previous_reports
             if webhook_url:
                 payload["webhook_url"] = webhook_url
+            if alert_email is not None:
+                if isinstance(alert_email, str):
+                    payload["alert_email"] = alert_email
+                elif isinstance(alert_email, AlertEmailConfig):
+                    payload["alert_email"] = alert_email.model_dump(exclude_none=True)
+                else:
+                    payload["alert_email"] = alert_email
             if brand_collection_id:
                 payload["brand_collection_id"] = brand_collection_id
             if metadata:

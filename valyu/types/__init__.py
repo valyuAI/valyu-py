@@ -26,6 +26,7 @@ from .answer import (
     SUPPORTED_COUNTRY_CODES,
 )
 from .deepresearch import (
+    AlertEmailConfig,
     DeepResearchMode,
     DeepResearchStatus,
     FileAttachment,
@@ -82,6 +83,7 @@ __all__ = [
     "SUPPORTED_COUNTRY_CODES",
     "SourceFormat",
     "ValidatedSource",
+    "AlertEmailConfig",
     "DeepResearchMode",
     "DeepResearchStatus",
     "FileAttachment",
