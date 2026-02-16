@@ -3,6 +3,15 @@ from typing import Optional, List, Literal, Union, Dict, Any, Callable
 from enum import Enum
 
 
+class AlertEmailConfig(BaseModel):
+    """Alert email configuration with optional custom URL."""
+
+    email: str = Field(..., description="Email address to send alerts to")
+    custom_url: Optional[str] = Field(
+        None, description="Custom URL with {id} placeholder, replaced with task ID"
+    )
+
+
 class DeepResearchMode(str, Enum):
     """Research mode options."""
 
