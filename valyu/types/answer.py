@@ -252,7 +252,6 @@ class AnswerSuccessResponse(BaseModel):
     tx_id: str = Field(description="The AI transaction ID for this request.")
     original_query: str
     contents: Union[str, Dict[str, Any]]
-    data_type: Literal["structured", "unstructured"]
     search_results: List[SearchResult] = Field(default_factory=list)
     search_metadata: SearchMetadata
     ai_usage: AIUsage
@@ -298,7 +297,7 @@ class AnswerStreamChunk(BaseModel):
     # For type="metadata" (final metadata after streaming completes)
     tx_id: Optional[str] = None
     original_query: Optional[str] = None
-    data_type: Optional[Literal["structured", "unstructured"]] = None
+    contents: Optional[Union[str, Dict[str, Any]]] = None
     search_metadata: Optional[SearchMetadata] = None
     ai_usage: Optional[AIUsage] = None
     cost: Optional[CostBreakdown] = None
