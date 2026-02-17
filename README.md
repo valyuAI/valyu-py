@@ -80,7 +80,7 @@ print(result.pdf_url) # PDF download URL
 | `status(task_id)`                   | Get current status of a task              |
 | `wait(task_id, ...)`                | Wait for task completion with polling     |
 | `stream(task_id, ...)`              | Stream real-time updates                  |
-| `list(api_key_id, limit)`           | List all your research tasks              |
+| `list(limit)`                       | List all your research tasks              |
 | `update(task_id, instruction)`      | Add follow-up instruction to running task |
 | `cancel(task_id)`                   | Cancel a running task                     |
 | `delete(task_id)`                   | Delete a task                             |

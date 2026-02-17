@@ -351,14 +351,12 @@ class DeepResearchClient:
 
     def list(
         self,
-        api_key_id: str,
         limit: Optional[int] = None,
     ) -> DeepResearchListResponse:
         """
-        List all deep research tasks.
+        List all deep research tasks for the authenticated API key.
 
         Args:
-            api_key_id: API key ID for filtering tasks
             limit: Maximum number of tasks to return (1-100, default: all if not specified)
 
         Returns:
@@ -366,7 +364,7 @@ class DeepResearchClient:
         """
         try:
             # Build query parameters
-            params = {"api_key_id": api_key_id}
+            params = {}
             if limit is not None:
                 params["limit"] = limit
 
