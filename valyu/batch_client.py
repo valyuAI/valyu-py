@@ -222,6 +222,7 @@ class BatchClient:
         status: Optional[str] = None,
         limit: Optional[int] = None,
         last_key: Optional[str] = None,
+        include_output: Optional[bool] = None,
     ) -> BatchTasksListResponse:
         """
         List all tasks in a batch with optional filtering and pagination.
@@ -231,6 +232,8 @@ class BatchClient:
             status: Filter by status: "queued", "running", "completed", "failed", or "cancelled"
             limit: Maximum number of tasks to return
             last_key: Pagination token from previous response
+            include_output: If True, include full output, sources, images, deliverables, and cost
+                           for each task. Default is False (minimal task info only).
 
         Returns:
             BatchTasksListResponse with list of tasks
@@ -244,6 +247,8 @@ class BatchClient:
                 params["limit"] = limit
             if last_key:
                 params["last_key"] = last_key
+            if include_output is not None:
+                params["include_output"] = str(include_output).lower()
 
             response = requests.get(
                 f"{self._base_url}/deepresearch/batches/{batch_id}/tasks",

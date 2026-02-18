@@ -548,7 +548,7 @@ class BatchStatusResponse(BaseModel):
 
 
 class BatchTaskListItem(BaseModel):
-    """Minimal task info in batch list."""
+    """Task info in batch list. Extended fields included when include_output=True."""
 
     deepresearch_id: str
     task_id: Optional[str] = None
@@ -556,6 +556,15 @@ class BatchTaskListItem(BaseModel):
     status: DeepResearchStatus
     created_at: str
     completed_at: Optional[str] = None
+    # Included when include_output=True
+    output_type: Optional[str] = None
+    output: Optional[Any] = None
+    sources: Optional[List[Any]] = None
+    images: Optional[List[Any]] = None
+    pdf_url: Optional[str] = None
+    deliverables: Optional[Any] = None
+    error: Optional[str] = None
+    cost: Optional[float] = None
 
 
 class BatchPagination(BaseModel):
@@ -593,3 +602,5 @@ class BatchListResponse(BaseModel):
     success: bool
     batches: Optional[List[DeepResearchBatch]] = None
     error: Optional[str] = None
+
+
