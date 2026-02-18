@@ -16,6 +16,7 @@ from valyu.types.deepresearch import (
     BatchTasksListResponse,
     BatchCancelResponse,
     BatchListResponse,
+    BatchResultsResponse,
     SearchConfig,
 )
 
@@ -263,6 +264,60 @@ class BatchClient:
 
         except Exception as e:
             return BatchTasksListResponse(
+                success=False,
+                error=str(e),
+            )
+
+    def get_results(
+        self,
+        batch_id: str,
+        status: Optional[str] = None,
+        limit: Optional[int] = None,
+        last_key: Optional[str] = None,
+        include_output: Optional[bool] = None,
+    ) -> BatchResultsResponse:
+        """
+        Get paginated task results with full output, sources, and metadata.
+
+        Args:
+            batch_id: Batch ID to get results for
+            status: Filter by status: "completed", "failed", "cancelled", "running", "queued"
+            limit: Results per page (default: 25, max: 50)
+            last_key: Pagination cursor from previous response
+            include_output: Include full output and sources (default: True)
+
+        Returns:
+            BatchResultsResponse with paginated task results
+        """
+        try:
+            params = {}
+            if status:
+                params["status"] = status
+            if limit is not None:
+                params["limit"] = limit
+            if last_key:
+                params["last_key"] = last_key
+            if include_output is not None:
+                params["include_output"] = str(include_output).lower()
+
+            response = requests.get(
+                f"{self._base_url}/deepresearch/batches/{batch_id}/results",
+                headers=self._headers,
+                params=params if params else None,
+            )
+
+            data = response.json()
+
+            if not response.ok:
+                return BatchResultsResponse(
+                    success=False,
+                    error=data.get("error", f"HTTP Error: {response.status_code}"),
+                )
+
+            return BatchResultsResponse(success=True, **data)
+
+        except Exception as e:
+            return BatchResultsResponse(
                 success=False,
                 error=str(e),
             )
