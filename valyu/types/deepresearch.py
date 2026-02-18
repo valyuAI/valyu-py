@@ -593,3 +593,32 @@ class BatchListResponse(BaseModel):
     success: bool
     batches: Optional[List[DeepResearchBatch]] = None
     error: Optional[str] = None
+
+
+class BatchTaskResult(BaseModel):
+    """Individual task result with full output."""
+
+    task_id: Optional[str] = None
+    deepresearch_id: str
+    status: DeepResearchStatus
+    query: str
+    output_type: Optional[str] = None
+    output: Optional[str] = None
+    sources: Optional[List[Any]] = None
+    images: Optional[List[str]] = None
+    pdf_url: Optional[str] = None
+    deliverables: Optional[Any] = None
+    error: Optional[str] = None
+    cost: Optional[float] = None
+    created_at: str
+    completed_at: Optional[str] = None
+
+
+class BatchResultsResponse(BaseModel):
+    """Response from getting batch results."""
+
+    success: bool
+    batch_id: Optional[str] = None
+    results: Optional[List[BatchTaskResult]] = None
+    pagination: Optional[BatchPagination] = None
+    error: Optional[str] = None
