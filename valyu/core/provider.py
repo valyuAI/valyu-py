@@ -143,15 +143,15 @@ class BaseProvider(ABC, t.Generic[T, U]):
             ),
             Tool(
                 slug="valyu_contents",
-                description="Extract clean, structured content from web pages with optional AI-powered data extraction and summarization using the Valyu Contents API.",
+                description="Extract clean, structured content from web pages with optional AI-powered data extraction and summarization using the Valyu Contents API. Use async_mode for >10 URLs (max 50).",
                 input_parameters={
                     "type": "object",
                     "properties": {
                         "urls": {
                             "type": "array",
-                            "description": "List of URLs to process (maximum 10 URLs per request)",
+                            "description": "List of URLs to process (1-10 sync, 1-50 with async_mode)",
                             "items": {"type": "string"},
-                            "maxItems": 10,
+                            "maxItems": 50,
                         },
                         "summary": {
                             "type": ["boolean", "string", "object", "null"],
@@ -169,6 +169,18 @@ class BaseProvider(ABC, t.Generic[T, U]):
                         "max_price_dollars": {
                             "type": ["number", "null"],
                             "description": "Maximum cost limit in USD",
+                        },
+                        "screenshot": {
+                            "type": ["boolean", "null"],
+                            "description": "Capture page screenshots (adds screenshot_url to each result)",
+                        },
+                        "async_mode": {
+                            "type": ["boolean", "null"],
+                            "description": "Use async processing (required for >10 URLs). Returns job_id for polling.",
+                        },
+                        "webhook_url": {
+                            "type": ["string", "null"],
+                            "description": "HTTPS URL for completion notification (async only)",
                         },
                     },
                     "required": ["urls"],
