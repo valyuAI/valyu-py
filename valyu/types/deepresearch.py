@@ -145,6 +145,10 @@ class SearchConfig(BaseModel):
     country_code: Optional[str] = Field(
         None, description="ISO country code for location-filtered searches (e.g., 'US', 'GB')"
     )
+    source_biases: Optional[Dict[str, int]] = Field(
+        None,
+        description="Bias values for specific sources (-5 to +5) to influence ranking without hard filtering",
+    )
 
 
 class Progress(BaseModel):
