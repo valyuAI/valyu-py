@@ -365,7 +365,16 @@ class BatchTaskInput(BaseModel):
         None,
         description="Research query or task description (deprecated, use query instead)",
     )
-    strategy: Optional[str] = Field(None, description="Natural language strategy")
+    strategy: Optional[str] = Field(
+        None, description="Natural language strategy (deprecated, use research_strategy)"
+    )
+    research_strategy: Optional[str] = Field(
+        None, description="Natural language strategy to guide the research phase"
+    )
+    report_format: Optional[str] = Field(
+        None,
+        description="Natural language instructions for output format (highest priority, overrides defaults)",
+    )
     urls: Optional[List[str]] = Field(None, description="URLs to extract and analyze")
     metadata: Optional[Dict[str, Union[str, int, bool]]] = Field(
         None, description="Custom metadata"
