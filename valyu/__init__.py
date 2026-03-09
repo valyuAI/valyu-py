@@ -14,6 +14,13 @@ from .types.datasources import (
     DatasourceCategory,
     DatasourceCategoriesResponse,
 )
+from .types.deepresearch import (
+    HitlConfig,
+    InteractionType,
+    Interaction,
+    InteractionHistoryEntry,
+    DeepResearchRespondResponse,
+)
 from .api import Valyu
 from .providers.openai import OpenAIProvider
 from .providers.anthropic import AnthropicProvider
@@ -35,6 +42,11 @@ __all__ = [
     "DatasourcesResponse",
     "DatasourceCategory",
     "DatasourceCategoriesResponse",
+    "HitlConfig",
+    "InteractionType",
+    "Interaction",
+    "InteractionHistoryEntry",
+    "DeepResearchRespondResponse",
     "Valyu",
     "OpenAIProvider",
     "AnthropicProvider",
