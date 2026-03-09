@@ -107,6 +107,7 @@ class Valyu:
         end_date: Optional[str] = None,
         fast_mode: bool = False,
         url_only: bool = False,
+        source_biases: Optional[Dict[str, int]] = None,
     ) -> Optional[SearchResponse]:
         """
         Query the Valyu DeepSearch API to give your AI relevant context.
@@ -135,6 +136,10 @@ class Valyu:
             end_date (Optional[str]): End date filter in YYYY-MM-DD format.
             fast_mode (bool): Enable fast mode for faster but shorter results. Good for general purpose queries. Defaults to False.
             url_only (bool): Return shortened snippets only. Defaults to False.
+            source_biases (Optional[Dict[str, int]]): Bias values for specific sources to influence ranking.
+                Keys are domains (e.g., "nasa.gov") or URL paths (e.g., "nytimes.com/science").
+                Values are integers from -5 (strong demotion) to +5 (strong boost).
+                Unlike included/excluded_sources, biases adjust ranking without hard filtering.
 
         Returns:
             Optional[SearchResponse]: The search response.
@@ -219,6 +224,9 @@ class Valyu:
 
             if end_date is not None:
                 payload["end_date"] = end_date
+
+            if source_biases is not None:
+                payload["source_biases"] = source_biases
 
             response = requests.post(
                 f"{self.base_url}/deepsearch", json=payload, headers=self.headers

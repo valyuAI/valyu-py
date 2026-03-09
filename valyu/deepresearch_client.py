@@ -42,6 +42,8 @@ class DeepResearchClient:
             List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
         ] = None,
         strategy: Optional[str] = None,
+        research_strategy: Optional[str] = None,
+        report_format: Optional[str] = None,
         search: Optional[Union[SearchConfig, Dict[str, Any]]] = None,
         urls: Optional[List[str]] = None,
         files: Optional[List[Union[FileAttachment, Dict[str, Any]]]] = None,
@@ -67,7 +69,10 @@ class DeepResearchClient:
             output_formats: Output formats - ["markdown"], ["markdown", "pdf"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with markdown/pdf - use one or the other.
-            strategy: Natural language strategy for the research
+            strategy: Natural language strategy for the research (deprecated, use research_strategy instead)
+            research_strategy: Natural language strategy to guide the research phase (methodology, focus areas, depth)
+            report_format: Natural language instructions for the output format (structure, tone, length, style).
+                Has highest priority — overrides default formatting.
             search: Search configuration (type, sources, dates, category).
                    Can be a SearchConfig object or dict with search parameters:
                    - search_type: "all" (default), "web", or "proprietary"
@@ -133,6 +138,10 @@ class DeepResearchClient:
             # Add optional fields
             if strategy:
                 payload["strategy"] = strategy
+            if research_strategy:
+                payload["research_strategy"] = research_strategy
+            if report_format:
+                payload["report_format"] = report_format
             if search:
                 if isinstance(search, SearchConfig):
                     search_dict = search.dict(exclude_none=True)
