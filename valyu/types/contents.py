@@ -63,6 +63,7 @@ class ContentsJobCreateResponse(BaseModel):
     job_id: str
     status: Literal["pending"]
     urls_total: int
+    poll_url: Optional[str] = None
     webhook_secret: Optional[str] = None
     tx_id: Optional[str] = None
 
@@ -80,6 +81,8 @@ class ContentsJobStatus(BaseModel):
     urls_failed: int
     created_at: Optional[int] = None
     updated_at: Optional[int] = None
+    current_batch: Optional[int] = None
+    total_batches: Optional[int] = None
     results: Optional[List[ContentsResult]] = None
     actual_cost_dollars: Optional[float] = None
     error: Optional[str] = None
