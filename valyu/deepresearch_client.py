@@ -110,6 +110,29 @@ class DeepResearchClient:
                     error="'query' is required and cannot be empty",
                 )
 
+            if len(research_query) > 25000:
+                return DeepResearchCreateResponse(
+                    success=False,
+                    error=f"query exceeds 25,000 character limit ({len(research_query)} characters)",
+                )
+
+            strategy_len = len(research_strategy or "")
+            format_len = len(report_format or "")
+            if strategy_len + format_len > 15000:
+                return DeepResearchCreateResponse(
+                    success=False,
+                    error=f"Combined length of research_strategy ({strategy_len}) and report_format ({format_len}) exceeds 15,000 character limit",
+                )
+
+            if files:
+                for i, f in enumerate(files):
+                    ctx = f.context if isinstance(f, FileAttachment) else (f.get("context") if isinstance(f, dict) else None)
+                    if ctx and len(ctx) > 10000:
+                        return DeepResearchCreateResponse(
+                            success=False,
+                            error=f"files[{i}].context exceeds 10,000 character limit ({len(ctx)} characters)",
+                        )
+
             # Determine which mode to use (prefer mode over model)
             research_mode = (
                 mode
