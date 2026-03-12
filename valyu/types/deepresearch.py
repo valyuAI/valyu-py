@@ -27,6 +27,8 @@ class DeepResearchStatus(str, Enum):
 
     QUEUED = "queued"
     RUNNING = "running"
+    AWAITING_INPUT = "awaiting_input"
+    PAUSED = "paused"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
@@ -217,6 +219,60 @@ class Usage(BaseModel):
     total_cost: float
 
 
+class HitlConfig(BaseModel):
+    """Human-in-the-loop configuration for deep research tasks.
+
+    Enable checkpoints that pause execution at key decision points,
+    allowing users to review and guide the research process.
+    """
+
+    planning_questions: Optional[bool] = Field(
+        None, description="Pause before research to ask clarifying questions"
+    )
+    plan_review: Optional[bool] = Field(
+        None, description="Pause after planning for user to review the research plan"
+    )
+    source_review: Optional[bool] = Field(
+        None, description="Pause after research for user to filter sources by domain"
+    )
+    outline_review: Optional[bool] = Field(
+        None, description="Pause after source review for user to review the report outline"
+    )
+
+
+class InteractionType(str, Enum):
+    """HITL checkpoint types."""
+
+    PLANNING_QUESTIONS = "planning_questions"
+    PLAN_REVIEW = "plan_review"
+    SOURCE_REVIEW = "source_review"
+    OUTLINE_REVIEW = "outline_review"
+
+
+class Interaction(BaseModel):
+    """HITL interaction payload returned when a task is awaiting input."""
+
+    interaction_id: str = Field(..., description="Unique ID for this interaction (use when responding)")
+    type: InteractionType = Field(..., description="Type of checkpoint")
+    data: Dict[str, Any] = Field(..., description="Checkpoint-specific data")
+    created_at: int = Field(..., description="Unix timestamp (ms) when checkpoint fired")
+    timeout_ms: int = Field(..., description="Timeout duration in milliseconds")
+    expected_response: Optional[Dict[str, Any]] = Field(
+        None, description="Schema hint for the expected response shape"
+    )
+
+
+class InteractionHistoryEntry(BaseModel):
+    """Record of a completed HITL checkpoint."""
+
+    interaction_id: str
+    type: InteractionType
+    created_at: int = Field(..., description="When the checkpoint fired (ms)")
+    responded_at: Optional[int] = Field(None, description="When the user responded (ms)")
+    auto_continued: bool = Field(..., description="True if timed out, false if user responded")
+    response: Optional[Dict[str, Any]] = Field(None, description="The user's response (absent if timed out)")
+
+
 class DeepResearchCreateResponse(BaseModel):
     """Response from creating a deep research task."""
 
@@ -261,6 +317,12 @@ class DeepResearchStatusResponse(BaseModel):
     cost: Optional[float] = None
     batch_id: Optional[str] = None
     batch_task_id: Optional[str] = None
+
+    # HITL fields
+    hitl_config: Optional[Dict[str, Any]] = Field(None, description="HITL configuration (mirrors request hitl param)")
+    interaction: Optional[Interaction] = Field(None, description="Current HITL checkpoint (present when awaiting_input or paused)")
+    hitl_history: Optional[List[InteractionHistoryEntry]] = Field(None, description="History of completed HITL checkpoints")
+
     error: Optional[str] = None
 
 
@@ -296,6 +358,15 @@ class DeepResearchCancelResponse(BaseModel):
 
     success: bool
     message: Optional[str] = None
+    deepresearch_id: Optional[str] = None
+    error: Optional[str] = None
+
+
+class DeepResearchRespondResponse(BaseModel):
+    """Response from responding to a HITL checkpoint."""
+
+    success: bool
+    status: Optional[str] = None
     deepresearch_id: Optional[str] = None
     error: Optional[str] = None
 

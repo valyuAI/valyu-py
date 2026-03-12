@@ -13,6 +13,8 @@ from valyu.types.deepresearch import (
     MCPServerConfig,
     Deliverable,
     SearchConfig,
+    HitlConfig,
+    Interaction,
     DeepResearchCreateResponse,
     DeepResearchStatusResponse,
     DeepResearchListResponse,
@@ -20,6 +22,7 @@ from valyu.types.deepresearch import (
     DeepResearchCancelResponse,
     DeepResearchDeleteResponse,
     DeepResearchTogglePublicResponse,
+    DeepResearchRespondResponse,
 )
 
 
@@ -54,6 +57,7 @@ class DeepResearchClient:
         webhook_url: Optional[str] = None,
         alert_email: Optional[Union[str, "AlertEmailConfig", Dict[str, str]]] = None,
         brand_collection_id: Optional[str] = None,
+        hitl: Optional[Union[HitlConfig, Dict[str, bool]]] = None,
         metadata: Optional[Dict[str, Union[str, int, bool]]] = None,
     ) -> DeepResearchCreateResponse:
         """
@@ -94,6 +98,13 @@ class DeepResearchClient:
                         a dict/AlertEmailConfig with 'email' and optional 'custom_url'.
                         custom_url must contain {id} which is replaced with the task ID.
             brand_collection_id: Brand collection to apply to all deliverables
+            hitl: Human-in-the-loop configuration. Enable checkpoints that pause execution
+                at key decision points. Available checkpoints:
+                - planning_questions: Clarifying questions before research
+                - plan_review: Review the research plan
+                - source_review: Filter sources by domain after research
+                - outline_review: Review the report outline
+                Not available for batch requests.
             metadata: Custom metadata (key-value pairs)
 
         Returns:
@@ -207,6 +218,12 @@ class DeepResearchClient:
                 payload["brand_collection_id"] = brand_collection_id
             if metadata:
                 payload["metadata"] = metadata
+
+            if hitl is not None:
+                if isinstance(hitl, HitlConfig):
+                    payload["hitl"] = hitl.model_dump(exclude_none=True)
+                else:
+                    payload["hitl"] = hitl
 
             response = requests.post(
                 f"{self._base_url}/deepresearch/tasks",
@@ -458,6 +475,56 @@ class DeepResearchClient:
 
         except Exception as e:
             return DeepResearchUpdateResponse(
+                success=False,
+                error=str(e),
+            )
+
+    def respond(
+        self, task_id: str, interaction_id: str, response: Dict[str, Any]
+    ) -> DeepResearchRespondResponse:
+        """
+        Respond to a HITL checkpoint.
+
+        When a task is in 'awaiting_input' or 'paused' status, call this method
+        with the interaction_id from the task's interaction field and the appropriate
+        response data for the checkpoint type.
+
+        Args:
+            task_id: Task ID to respond to
+            interaction_id: The interaction_id from the task's interaction field
+            response: Response data matching the checkpoint type:
+                - planning_questions: {"answers": [{"question": str, "answer": str}]}
+                - plan_review: {"approved": bool, "modifications": str (optional)}
+                - source_review: {"included_domains": [str], "excluded_domains": [str]}
+                - outline_review: {"approved": bool, "modifications": str (optional)}
+
+        Returns:
+            DeepResearchRespondResponse with updated status
+        """
+        try:
+            payload = {
+                "interaction_id": interaction_id,
+                "response": response,
+            }
+
+            resp = requests.post(
+                f"{self._base_url}/deepresearch/tasks/{task_id}/respond",
+                json=payload,
+                headers=self._headers,
+            )
+
+            data = resp.json()
+
+            if not resp.ok:
+                return DeepResearchRespondResponse(
+                    success=False,
+                    error=data.get("error", f"HTTP Error: {resp.status_code}"),
+                )
+
+            return DeepResearchRespondResponse(success=True, **data)
+
+        except Exception as e:
+            return DeepResearchRespondResponse(
                 success=False,
                 error=str(e),
             )
