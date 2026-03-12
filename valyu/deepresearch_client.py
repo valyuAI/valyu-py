@@ -239,6 +239,7 @@ class DeepResearchClient:
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
                 )
 
+            data.pop("success", None)
             return DeepResearchCreateResponse(success=True, **data)
 
         except Exception as e:
@@ -271,6 +272,7 @@ class DeepResearchClient:
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
                 )
 
+            data.pop("success", None)
             return DeepResearchStatusResponse(success=True, **data)
 
         except Exception as e:
@@ -285,6 +287,7 @@ class DeepResearchClient:
         poll_interval: int = 5,
         max_wait_time: int = 7200,
         on_progress: Optional[Callable[[DeepResearchStatusResponse], None]] = None,
+        on_interaction: Optional[Callable[[Interaction], Optional[Dict[str, Any]]]] = None,
     ) -> DeepResearchStatusResponse:
         """
         Wait for a task to complete with automatic polling.
@@ -294,6 +297,10 @@ class DeepResearchClient:
             poll_interval: Seconds between polls (default: 5)
             max_wait_time: Maximum wait time in seconds (default: 7200)
             on_progress: Callback for progress updates
+            on_interaction: Callback for HITL checkpoints. Receives the Interaction
+                object and should return a response dict to submit, or None to skip.
+                When a response is returned, it is automatically submitted via respond()
+                and polling continues.
 
         Returns:
             Final task status
@@ -313,6 +320,14 @@ class DeepResearchClient:
             # Notify progress callback
             if on_progress:
                 on_progress(status)
+
+            # HITL checkpoint handling
+            if status.status in (DeepResearchStatus.AWAITING_INPUT, DeepResearchStatus.PAUSED) and status.interaction:
+                if on_interaction:
+                    response = on_interaction(status.interaction)
+                    if response:
+                        self.respond(task_id, status.interaction.interaction_id, response)
+                        continue
 
             # Terminal states
             if status.status == DeepResearchStatus.COMPLETED:
@@ -471,6 +486,7 @@ class DeepResearchClient:
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
                 )
 
+            data.pop("success", None)
             return DeepResearchUpdateResponse(success=True, **data)
 
         except Exception as e:
@@ -521,6 +537,7 @@ class DeepResearchClient:
                     error=data.get("error", f"HTTP Error: {resp.status_code}"),
                 )
 
+            data.pop("success", None)
             return DeepResearchRespondResponse(success=True, **data)
 
         except Exception as e:
@@ -528,6 +545,97 @@ class DeepResearchClient:
                 success=False,
                 error=str(e),
             )
+
+    def respond_planning_questions(
+        self,
+        task_id: str,
+        interaction_id: str,
+        answers: List[tuple],
+    ) -> DeepResearchRespondResponse:
+        """
+        Convenience method to respond to a planning_questions checkpoint.
+
+        Args:
+            task_id: Task ID
+            interaction_id: The interaction_id from the checkpoint
+            answers: List of (question, answer) tuples
+
+        Returns:
+            DeepResearchRespondResponse
+        """
+        return self.respond(task_id, interaction_id, {
+            "answers": [{"question": q, "answer": a} for q, a in answers]
+        })
+
+    def approve_plan(
+        self,
+        task_id: str,
+        interaction_id: str,
+        modifications: Optional[str] = None,
+    ) -> DeepResearchRespondResponse:
+        """
+        Convenience method to approve (or request modifications to) a plan_review checkpoint.
+
+        Args:
+            task_id: Task ID
+            interaction_id: The interaction_id from the checkpoint
+            modifications: Optional modification instructions (sets approved=False)
+
+        Returns:
+            DeepResearchRespondResponse
+        """
+        resp: Dict[str, Any] = {"approved": True}
+        if modifications:
+            resp["approved"] = False
+            resp["modifications"] = modifications
+        return self.respond(task_id, interaction_id, resp)
+
+    def respond_source_review(
+        self,
+        task_id: str,
+        interaction_id: str,
+        included_domains: Optional[List[str]] = None,
+        excluded_domains: Optional[List[str]] = None,
+    ) -> DeepResearchRespondResponse:
+        """
+        Convenience method to respond to a source_review checkpoint.
+
+        Args:
+            task_id: Task ID
+            interaction_id: The interaction_id from the checkpoint
+            included_domains: Domains to include (empty list = accept AI recommendations)
+            excluded_domains: Domains to exclude (empty list = accept AI recommendations)
+
+        Returns:
+            DeepResearchRespondResponse
+        """
+        return self.respond(task_id, interaction_id, {
+            "included_domains": included_domains or [],
+            "excluded_domains": excluded_domains or [],
+        })
+
+    def approve_outline(
+        self,
+        task_id: str,
+        interaction_id: str,
+        modifications: Optional[str] = None,
+    ) -> DeepResearchRespondResponse:
+        """
+        Convenience method to approve (or request modifications to) an outline_review checkpoint.
+
+        Args:
+            task_id: Task ID
+            interaction_id: The interaction_id from the checkpoint
+            modifications: Optional modification instructions (sets approved=False)
+
+        Returns:
+            DeepResearchRespondResponse
+        """
+        resp: Dict[str, Any] = {"approved": True}
+        if modifications:
+            resp["approved"] = False
+            resp["modifications"] = modifications
+        return self.respond(task_id, interaction_id, resp)
 
     def cancel(self, task_id: str) -> DeepResearchCancelResponse:
         """
@@ -554,6 +662,7 @@ class DeepResearchClient:
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
                 )
 
+            data.pop("success", None)
             return DeepResearchCancelResponse(success=True, **data)
 
         except Exception as e:
@@ -586,6 +695,7 @@ class DeepResearchClient:
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
                 )
 
+            data.pop("success", None)
             return DeepResearchDeleteResponse(success=True, **data)
 
         except Exception as e:
@@ -673,6 +783,7 @@ class DeepResearchClient:
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
                 )
 
+            data.pop("success", None)
             return DeepResearchTogglePublicResponse(success=True, **data)
 
         except Exception as e:
