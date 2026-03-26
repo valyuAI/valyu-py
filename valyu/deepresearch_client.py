@@ -15,6 +15,7 @@ from valyu.types.deepresearch import (
     SearchConfig,
     HitlConfig,
     Interaction,
+    DeepResearchTools,
     DeepResearchCreateResponse,
     DeepResearchStatusResponse,
     DeepResearchListResponse,
@@ -52,7 +53,8 @@ class DeepResearchClient:
         files: Optional[List[Union[FileAttachment, Dict[str, Any]]]] = None,
         deliverables: Optional[List[Union[str, Deliverable, Dict[str, Any]]]] = None,
         mcp_servers: Optional[List[Union[MCPServerConfig, Dict[str, Any]]]] = None,
-        code_execution: bool = True,
+        code_execution: Optional[bool] = None,
+        tools: Optional[Union["DeepResearchTools", Dict[str, bool]]] = None,
         previous_reports: Optional[List[str]] = None,
         webhook_url: Optional[str] = None,
         alert_email: Optional[Union[str, "AlertEmailConfig", Dict[str, str]]] = None,
@@ -91,7 +93,10 @@ class DeepResearchClient:
             deliverables: Additional file outputs to generate (CSV, Excel, PowerPoint, Word, PDF). Max 10.
                          Can be simple strings or Deliverable objects with detailed configuration.
             mcp_servers: MCP server configurations for custom tools
-            code_execution: Enable/disable code execution (default: True)
+            code_execution: Enable/disable code execution (deprecated, use tools parameter instead)
+            tools: Tools configuration. Controls which optional tools the research agent can use.
+                  Available tools: code_execution (bool), screenshots (bool). Both default to False.
+                  If both tools and code_execution are provided, tools takes precedence.
             previous_reports: Previous report IDs for context (max 3)
             webhook_url: HTTPS webhook URL for completion notification
             alert_email: Email for completion alerts. Can be a string (email address) or
@@ -160,8 +165,17 @@ class DeepResearchClient:
                 "query": research_query,  # Always send query (preferred field)
                 "mode": research_mode,  # Always send mode (preferred field)
                 "output_formats": output_formats or ["markdown"],
-                "code_execution": code_execution,
             }
+
+            # Handle tools configuration
+            if tools is not None:
+                if isinstance(tools, dict):
+                    payload["tools"] = tools
+                else:
+                    payload["tools"] = tools.model_dump(exclude_none=True)
+            elif code_execution is not None:
+                # Backward compatibility: top-level code_execution (deprecated)
+                payload["code_execution"] = code_execution
             # Also send input if it was provided (for backward compatibility with older API versions)
             if input:
                 payload["input"] = input

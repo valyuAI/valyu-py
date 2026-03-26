@@ -174,17 +174,27 @@ class ChartDataSeries(BaseModel):
     data: List[ChartDataPoint]
 
 
+class DeepResearchTools(BaseModel):
+    """Tools configuration for deep research tasks."""
+
+    code_execution: Optional[bool] = Field(False, description="Enable code execution in sandboxed environment")
+    screenshots: Optional[bool] = Field(False, description="Enable visual screenshot capture of web pages")
+
+
 class ImageMetadata(BaseModel):
     """Image metadata."""
 
     image_id: str
-    image_type: Literal["chart", "ai_generated"]
+    image_type: Literal["chart", "ai_generated", "screenshot"]
     deepresearch_id: str
     title: str
     description: Optional[str] = None
     image_url: str
     s3_key: str
     created_at: int
+    # Screenshot-only fields
+    source_url: Optional[str] = None
+    captured_at: Optional[int] = None
     chart_type: Optional[Literal["line", "bar", "area"]] = None
     x_axis_label: Optional[str] = None
     y_axis_label: Optional[str] = None
@@ -217,6 +227,15 @@ class Usage(BaseModel):
     ai_cost: float
     compute_cost: float
     total_cost: float
+
+
+class DeepResearchCostBreakdown(BaseModel):
+    """Itemized cost breakdown for a deep research task."""
+
+    task: float = Field(..., description="Base task price for the selected mode")
+    screenshots: Optional[float] = Field(None, description="Screenshot surcharges ($0.05 per URL captured)")
+    code_execution: Optional[float] = Field(None, description="Code execution surcharges ($0.10 per execution)")
+    deliverables: Optional[float] = Field(None, description="Deliverable surcharges ($0.10 per deliverable after the first)")
 
 
 class HitlConfig(BaseModel):
@@ -315,6 +334,8 @@ class DeepResearchStatusResponse(BaseModel):
     deliverables: Optional[List[DeliverableResult]] = None
     sources: Optional[List[DeepResearchSource]] = None
     cost: Optional[float] = None
+    cost_breakdown: Optional[DeepResearchCostBreakdown] = Field(None, description="Itemized cost breakdown (task, screenshots, code_execution, deliverables)")
+    tools: Optional[DeepResearchTools] = Field(None, description="Resolved tools configuration")
     batch_id: Optional[str] = None
     batch_task_id: Optional[str] = None
 
