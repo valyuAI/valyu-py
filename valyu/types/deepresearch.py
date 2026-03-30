@@ -186,11 +186,9 @@ class ImageMetadata(BaseModel):
 
     image_id: str
     image_type: Literal["chart", "ai_generated", "screenshot"]
-    deepresearch_id: str
     title: str
     description: Optional[str] = None
     image_url: str
-    s3_key: str
     created_at: int
     # Screenshot-only fields
     source_url: Optional[str] = None
