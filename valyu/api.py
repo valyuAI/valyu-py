@@ -1,12 +1,12 @@
 import json
-import requests
+import os
 import time
-from pydantic import BaseModel
-from typing import Optional, List, Literal, Union, Dict, Any, Callable, Generator
+
+import requests
+from typing import Optional, List, Union, Dict, Any, Callable
 from valyu.types.response import SearchResponse, SearchType, ResultsBySource
 from valyu.types.contents import (
     ContentsResponse,
-    ContentsResult,
     ContentsJobCreateResponse,
     ContentsJobStatus,
     ExtractEffort,
@@ -32,35 +32,9 @@ from valyu.types.answer import (
     ExtractionMetadata,
     SUPPORTED_COUNTRY_CODES,
 )
-from valyu.types.deepresearch import (
-    DeepResearchMode,
-    DeepResearchStatus,
-    FileAttachment,
-    MCPServerConfig,
-    SearchConfig,
-    DeepResearchCreateResponse,
-    DeepResearchStatusResponse,
-    DeepResearchListResponse,
-    DeepResearchUpdateResponse,
-    DeepResearchCancelResponse,
-    DeepResearchDeleteResponse,
-    DeepResearchTogglePublicResponse,
-)
 from valyu.validation import validate_sources, format_validation_error
 from valyu.deepresearch_client import DeepResearchClient
 from valyu.batch_client import BatchClient
-import os
-
-# Supported country codes for the country_code parameter - simplified for typing
-CountryCode = str  # Any of the codes in SUPPORTED_COUNTRY_CODES
-
-# Response length options
-ResponseLength = Union[Literal["short", "medium", "large", "max"], int]
-
-
-class ErrorResponse(BaseModel):
-    success: bool
-    error: str
 
 
 class Valyu:
@@ -100,8 +74,8 @@ class Valyu:
         max_price: Optional[int] = None,
         included_sources: Optional[List[str]] = None,
         excluded_sources: Optional[List[str]] = None,
-        country_code: Optional[CountryCode] = None,
-        response_length: Optional[ResponseLength] = None,
+        country_code: Optional[str] = None,
+        response_length: Optional[ContentsResponseLength] = None,
         category: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
@@ -129,8 +103,8 @@ class Valyu:
                 • Domain: 'paperswithcode.com', 'wikipedia.org'
                 • URL with path: 'https://example.com/path/to/page'
                 • Dataset name: 'provider/dataset-name'
-            country_code (Optional[CountryCode]): Country code filter for search results.
-            response_length (Optional[ResponseLength]): Length of response content - "short", "medium", "large", "max", or integer for character count.
+            country_code (Optional[str]): Country code filter for search results.
+            response_length (Optional[ContentsResponseLength]): Length of response content - "short", "medium", "large", "max", or integer for character count.
             category (Optional[str]): Category filter for search results.
             start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
             end_date (Optional[str]): End date filter in YYYY-MM-DD format.
@@ -675,7 +649,7 @@ class Valyu:
                     return AnswerErrorResponse(
                         error=data.get("error", f"HTTP Error: {response.status_code}")
                     )
-                except:
+                except Exception:
                     return AnswerErrorResponse(
                         error=f"HTTP Error: {response.status_code}"
                     )
@@ -796,7 +770,7 @@ class Valyu:
                         type="error",
                         error=data.get("error", f"HTTP Error: {response.status_code}"),
                     )
-                except:
+                except Exception:
                     yield AnswerStreamChunk(
                         type="error", error=f"HTTP Error: {response.status_code}"
                     )

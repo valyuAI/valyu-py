@@ -192,7 +192,7 @@ class DeepResearchClient:
                 payload["report_format"] = report_format
             if search:
                 if isinstance(search, SearchConfig):
-                    search_dict = search.dict(exclude_none=True)
+                    search_dict = search.model_dump(exclude_none=True)
                 else:
                     search_dict = search
                 payload["search"] = search_dict
@@ -209,12 +209,12 @@ class DeepResearchClient:
                 ]
             if deliverables:
                 payload["deliverables"] = [
-                    d.dict(exclude_none=True) if isinstance(d, Deliverable) else d
+                    d.model_dump(exclude_none=True) if isinstance(d, Deliverable) else d
                     for d in deliverables
                 ]
             if mcp_servers:
                 payload["mcp_servers"] = [
-                    s.dict(exclude_none=True) if isinstance(s, MCPServerConfig) else s
+                    s.model_dump(exclude_none=True) if isinstance(s, MCPServerConfig) else s
                     for s in mcp_servers
                 ]
             if previous_reports:

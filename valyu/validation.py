@@ -3,7 +3,8 @@ Validation utilities for Valyu API parameters.
 """
 
 import re
-from typing import List, Union
+import string
+from typing import List
 from urllib.parse import urlparse
 
 
@@ -88,8 +89,6 @@ def is_valid_domain_with_path(domain_path: str) -> bool:
         if not path or path.startswith("/") or path.endswith("/"):
             return False
         # Basic path character validation - allow reasonable URL path characters
-        import string
-
         allowed_chars = string.ascii_letters + string.digits + "-_.~!*'();:@&=+$,/?#[]"
         if not all(c in allowed_chars for c in path):
             return False
