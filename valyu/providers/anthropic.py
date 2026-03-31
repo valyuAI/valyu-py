@@ -134,8 +134,14 @@ class AnthropicProvider(BaseProvider[AnthropicTool, AnthropicToolCollection]):
         if not response or not hasattr(response, "content"):
             return outputs
 
+        valyu_slugs = {t.slug for t in self.get_available_tools()}
+
         for item in response.content:
-            if hasattr(item, "type") and item.type == "tool_use":
+            if (
+                hasattr(item, "type")
+                and item.type == "tool_use"
+                and item.name in valyu_slugs
+            ):
                 tool_response = self.execute_tool_call(
                     tool_call=item,
                     modifiers=modifiers,

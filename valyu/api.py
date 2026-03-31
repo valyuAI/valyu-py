@@ -103,8 +103,8 @@ class Valyu:
                 • Domain: 'paperswithcode.com', 'wikipedia.org'
                 • URL with path: 'https://example.com/path/to/page'
                 • Dataset name: 'provider/dataset-name'
-            country_code (Optional[CountryCode]): Country code filter for search results.
-            response_length (Optional[ResponseLength]): Length of response content - "short", "medium", "large", "max", or integer for character count.
+            country_code (Optional[str]): Country code filter for search results.
+            response_length (Optional[ContentsResponseLength]): Length of response content - "short", "medium", "large", "max", or integer for character count.
             category (Optional[str]): Category filter for search results.
             start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
             end_date (Optional[str]): End date filter in YYYY-MM-DD format.

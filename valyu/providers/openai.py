@@ -128,8 +128,14 @@ class OpenAIProvider(BaseProvider[OpenAITool, OpenAIToolCollection]):
         if not response or not hasattr(response, "output") or not response.output:
             return outputs
 
+        valyu_slugs = {t.slug for t in self.get_available_tools()}
+
         for item in response.output:
-            if hasattr(item, "type") and item.type == "function_call":
+            if (
+                hasattr(item, "type")
+                and item.type == "function_call"
+                and item.name in valyu_slugs
+            ):
                 tool_response = self.execute_tool_call(
                     tool_call=item,
                     modifiers=modifiers,
