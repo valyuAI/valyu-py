@@ -1,26 +1,13 @@
-# Valyu SDK
+# Valyu Python SDK
 
-**Search for AIs**
+[![PyPI version](https://img.shields.io/pypi/v/valyu.svg)](https://pypi.org/project/valyu/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Valyu's Deepsearch API gives AI the context it needs. Integrate trusted, high-quality public and proprietary sources, with full-text multimodal retrieval.
+Search and research APIs built for AI agents. Access web and proprietary data sources through Search, extract content from URLs, generate grounded answers, and run multi-step research with DeepResearch - all through a single SDK.
 
-Get **$10 free credits** for the Valyu API when you sign up at [Valyu](https://platform.valyu.ai)!
-
-_No credit card required._
-
-## How does it work?
-
-We do all the heavy lifting for you - one unified API for all data:
-
-- **Academic & Research Content** - Access millions of scholarly papers and textbooks
-- **Real-time Web Search** - Get the latest information from across the internet
-- **Structured Financial Data** - Stock prices, market data, and financial metrics
-- **Intelligent Reranking** - Results across all sources are automatically sorted by relevance
-- **Transparent Pricing** - Pay only for what you use with clear CPM pricing
+[Documentation](https://docs.valyu.ai) | [API Reference](https://docs.valyu.ai/api-reference) | [Platform](https://platform.valyu.ai)
 
 ## Installation
-
-Install the Valyu SDK using pip:
 
 ```bash
 pip install valyu
@@ -28,575 +15,217 @@ pip install valyu
 
 ## Quick Start
 
-Here's what it looks like, make your first query in just 4 lines of code:
-
 ```python
 from valyu import Valyu
 
-valyu = Valyu(api_key="your-api-key-here")
+valyu = Valyu()  # uses VALYU_API_KEY env var
 
 response = valyu.search(
-    "Implementation details of agentic search-enhanced large reasoning models",
-    max_num_results=5,            # Limit to top 5 results
-    max_price=10,                 # Maximum price per thousand queries (CPM)
-    fast_mode=True                # Enable fast mode for quicker, shorter results
+    "latest advances in transformer architectures",
+    max_num_results=5,
+    search_type="all",
 )
 
-print(response)
-
-# Feed the results to your AI agent as you would with other search APIs
+for result in response.results:
+    print(result.title, result.url)
 ```
 
-## API Reference
+Get **$10 free credits** when you sign up at [platform.valyu.ai](https://platform.valyu.ai). No credit card required.
 
-### DeepResearch Method
+## APIs
 
-The `deepresearch` namespace provides access to Valyu's AI-powered research agent that conducts comprehensive, multi-step research with citations and cost tracking.
+### Search
+
+Search across web and proprietary data sources with a single query.
 
 ```python
-# Create a research task
-task = valyu.deepresearch.create(
-    input="What are the latest developments in quantum computing?",
-    model="standard",                  # "standard" (fast) or "heavy" (thorough)
-    output_formats=["markdown", "pdf"] # Output formats
+response = valyu.search(
+    "CRISPR gene therapy clinical trials 2026",
+    search_type="proprietary",                     # "all", "web", or "proprietary"
+    max_num_results=10,                            # 1-20 results
+    included_sources=["valyu/valyu-pubmed"],        # filter to specific sources
+    start_date="2026-01-01",                       # date filtering
+    end_date="2026-12-31",
+)
+```
+
+<details>
+<summary>All search parameters</summary>
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `query` | `str` | required | Search query |
+| `search_type` | `str` | `"all"` | `"all"`, `"web"`, or `"proprietary"` |
+| `max_num_results` | `int` | `10` | Results to return (1-20) |
+| `max_price` | `int` | `30` | Max price per thousand queries (CPM) |
+| `relevance_threshold` | `float` | `0.5` | Min relevance score (0-1) |
+| `included_sources` | `List[str]` | `None` | Sources to search |
+| `excluded_sources` | `List[str]` | `None` | Sources to exclude |
+| `start_date` | `str` | `None` | Start date (YYYY-MM-DD) |
+| `end_date` | `str` | `None` | End date (YYYY-MM-DD) |
+| `country_code` | `str` | `None` | Country filter (e.g. `"US"`, `"GB"`) |
+| `response_length` | `str \| int` | `None` | `"short"`, `"medium"`, `"large"`, `"max"`, or character count |
+| `category` | `str` | `None` | Category filter |
+| `fast_mode` | `bool` | `False` | Faster results, shorter content |
+
+</details>
+
+### Contents
+
+Extract clean, structured content from URLs. Supports sync (1-10 URLs) and async (up to 50 URLs) modes.
+
+```python
+# Basic extraction
+response = valyu.contents(["https://arxiv.org/abs/2301.00001"])
+
+# With AI summarization
+response = valyu.contents(
+    ["https://example.com/article"],
+    summary=True,
+    response_length="medium",
 )
 
-# Wait for completion with progress updates
+# Structured data extraction with JSON schema
+response = valyu.contents(
+    ["https://en.wikipedia.org/wiki/OpenAI"],
+    summary={
+        "type": "object",
+        "properties": {
+            "company_name": {"type": "string"},
+            "founded_year": {"type": "integer"},
+        },
+    },
+)
+```
+
+### Answer
+
+AI-generated answers grounded by Valyu's search. Supports streaming.
+
+```python
+response = valyu.answer(
+    "What are the side effects of metformin?",
+    search_type="proprietary",
+    included_sources=["valyu/valyu-pubmed"],
+)
+
+print(response.contents)        # AI-generated answer
+print(response.search_results)  # Source citations
+```
+
+### DeepResearch
+
+Multi-step research agent that produces comprehensive reports with citations.
+
+```python
+# Start a research task
+task = valyu.deepresearch.create(
+    input="Compare CRISPR and base editing approaches for sickle cell disease",
+    model="heavy",
+    output_formats=["markdown", "pdf"],
+)
+
+# Wait for completion with progress
 def on_progress(status):
-    if status.progress:
-        print(f"Step {status.progress.current_step}/{status.progress.total_steps}")
+    print(f"Step {status.progress.current_step}/{status.progress.total_steps}")
 
 result = valyu.deepresearch.wait(task.deepresearch_id, on_progress=on_progress)
 
-print(result.output)  # Markdown report
-print(result.pdf_url) # PDF download URL
+print(result.output)   # Markdown report
+print(result.pdf_url)  # PDF download link
 ```
 
-#### DeepResearch Methods
+<details>
+<summary>All DeepResearch methods</summary>
 
-| Method                              | Description                               |
-| ----------------------------------- | ----------------------------------------- |
-| `create(...)`                       | Create a new research task                |
-| `status(task_id)`                   | Get current status of a task              |
-| `wait(task_id, ...)`                | Wait for task completion with polling     |
-| `stream(task_id, ...)`              | Stream real-time updates                  |
-| `list(api_key_id, limit)`           | List all your research tasks              |
-| `update(task_id, instruction)`      | Add follow-up instruction to running task |
-| `cancel(task_id)`                   | Cancel a running task                     |
-| `delete(task_id)`                   | Delete a task                             |
-| `toggle_public(task_id, is_public)` | Make task publicly accessible             |
+| Method | Description |
+|---|---|
+| `create(...)` | Start a new research task |
+| `status(task_id)` | Get task status |
+| `wait(task_id, ...)` | Poll until completion |
+| `stream(task_id, ...)` | Stream real-time updates |
+| `list(api_key_id, limit)` | List research tasks |
+| `update(task_id, instruction)` | Add follow-up instruction |
+| `cancel(task_id)` | Cancel a running task |
+| `delete(task_id)` | Delete a task |
+| `toggle_public(task_id, is_public)` | Toggle public access |
 
-#### DeepResearch Create Parameters
+</details>
 
-| Parameter          | Type         | Default        | Description                                              |
-| ------------------ | ------------ | -------------- | -------------------------------------------------------- |
-| `input`            | `str`        | _required_     | Research query or task description                       |
-| `model`            | `str`        | `"standard"`   | Research model - "standard" (fast) or "heavy" (thorough) |
-| `output_formats`   | `List[str]`  | `["markdown"]` | Output formats for the report                            |
-| `strategy`         | `str`        | `None`         | Natural language research strategy                       |
-| `search`           | `dict`       | `None`         | Search configuration (type, sources)                     |
-| `urls`             | `List[str]`  | `None`         | URLs to extract and analyze                              |
-| `files`            | `List[dict]` | `None`         | PDF/image files to analyze                               |
-| `mcp_servers`      | `List[dict]` | `None`         | MCP tool server configurations                           |
-| `code_execution`   | `bool`       | `True`         | Enable/disable code execution                            |
-| `previous_reports` | `List[str]`  | `None`         | Previous report IDs for context (max 3)                  |
-| `webhook_url`      | `str`        | `None`         | HTTPS webhook URL for completion notification            |
-| `metadata`         | `dict`       | `None`         | Custom metadata key-value pairs                          |
+### Batch
 
-#### DeepResearch Examples
-
-**Basic Research:**
+Run multiple DeepResearch tasks in parallel.
 
 ```python
-task = valyu.deepresearch.create(
-    input="Summarize recent AI safety research",
-    model="standard"
+batch = valyu.batch.create(
+    name="Q1 Analysis",
+    mode="fast",
+    output_formats=["markdown"],
 )
 
-result = valyu.deepresearch.wait(task.deepresearch_id)
-print(result.output)
-```
+valyu.batch.add_tasks(batch.batch_id, tasks=[
+    {"query": "Analyze recent SPAC performance"},
+    {"query": "Review semiconductor supply chain trends"},
+])
 
-**With Custom Sources:**
-
-```python
-task = valyu.deepresearch.create(
-    input="Latest transformer architecture improvements",
-    search={
-        "search_type": "proprietary",
-        "included_sources": ["academic"]
-    },
-    model="heavy",
-    output_formats=["markdown", "pdf"]
+result = valyu.batch.wait_for_completion(
+    batch.batch_id,
+    on_progress=lambda b: print(f"{b.counts.completed}/{b.counts.total}"),
 )
 ```
 
-**With Date Filters and Source Restrictions:**
+### Data Sources
+
+List available data sources programmatically.
 
 ```python
-from valyu.types.deepresearch import SearchConfig
-
-# Using SearchConfig object
-search_config = SearchConfig(
-    search_type="all",
-    included_sources=["academic", "web"],
-    start_date="2024-01-01",
-    end_date="2024-12-31"
-)
-
-task = valyu.deepresearch.create(
-    input="Recent advances in quantum computing",
-    search=search_config,
-    model="standard"
-)
-
-# Or using a dict
-task = valyu.deepresearch.create(
-    input="Financial analysis Q1 2024",
-    search={
-        "search_type": "all",
-        "included_sources": ["finance", "web"],
-        "start_date": "2024-01-01",
-        "end_date": "2024-03-31",
-        "excluded_sources": ["patent"]
-    },
-    model="standard"
-)
-```
-
-**Streaming Updates:**
-
-```python
-def on_progress(current, total):
-    print(f"Progress: {current}/{total}")
-
-def on_complete(result):
-    print("Complete! Cost:", result.cost)
-
-valyu.deepresearch.stream(
-    task.deepresearch_id,
-    on_progress=on_progress,
-    on_complete=on_complete
-)
-```
-
-**With File Analysis:**
-
-```python
-task = valyu.deepresearch.create(
-    input="Analyze these research papers and provide key insights",
-    files=[{
-        "data": "data:application/pdf;base64,...",
-        "filename": "paper.pdf",
-        "media_type": "application/pdf"
-    }],
-    urls=["https://arxiv.org/abs/2103.14030"]
-)
-```
-
-### Search Method
-
-The `search()` method is the core of the Valyu SDK. It accepts a query string as the first parameter, followed by optional configuration parameters.
-
-```python
-def search(
-    query: str,                                    # Your search query
-    search_type: str = "all",                     # "all", "web", or "proprietary"
-    max_num_results: int = 10,                    # Maximum results to return (1-20)
-    is_tool_call: bool = True,                    # Whether this is an AI tool call
-    relevance_threshold: float = 0.5,             # Minimum relevance score (0-1)
-    max_price: int = 30,                          # Maximum price per thousand queries (CPM)
-    included_sources: List[str] = None,           # Specific sources to search
-    excluded_sources: List[str] = None,            # Sources to exclude from search
-    country_code: str = None,                     # Country code filter (e.g., "US", "GB")
-    response_length: Union[str, int] = None,      # Response length: "short"/"medium"/"large"/"max" or character count
-    category: str = None,                         # Category filter
-    start_date: str = None,                       # Start date (YYYY-MM-DD)
-    end_date: str = None,                         # End date (YYYY-MM-DD)
-    fast_mode: bool = False,                      # Enable fast mode for faster but shorter results
-) -> SearchResponse
-```
-
-### Parameters
-
-| Parameter             | Type              | Default    | Description                                                                       |
-| --------------------- | ----------------- | ---------- | --------------------------------------------------------------------------------- |
-| `query`               | `str`             | _required_ | The search query string                                                           |
-| `search_type`         | `str`             | `"all"`    | Search scope: `"all"`, `"web"`, or `"proprietary"`                                |
-| `max_num_results`     | `int`             | `10`       | Maximum number of results to return (1-20)                                        |
-| `is_tool_call`        | `bool`            | `True`     | Whether this is an AI tool call (affects processing)                              |
-| `relevance_threshold` | `float`           | `0.5`      | Minimum relevance score for results (0.0-1.0)                                     |
-| `max_price`           | `int`             | `30`       | Maximum price per thousand queries in CPM                                         |
-| `included_sources`    | `List[str]`       | `None`     | Specific data sources or URLs to search                                           |
-| `excluded_sources`    | `List[str]`       | `None`     | Data sources or URLs to exclude from search                                       |
-| `country_code`        | `str`             | `None`     | Country code filter (e.g., "US", "GB", "JP", "ALL")                               |
-| `response_length`     | `Union[str, int]` | `None`     | Response length: "short"/"medium"/"large"/"max" or character count                |
-| `category`            | `str`             | `None`     | Category filter for results                                                       |
-| `start_date`          | `str`             | `None`     | Start date filter in YYYY-MM-DD format                                            |
-| `end_date`            | `str`             | `None`     | End date filter in YYYY-MM-DD format                                              |
-| `fast_mode`           | `bool`            | `False`    | Enable fast mode for faster but shorter results. Good for general purpose queries |
-
-### Response Format
-
-The search method returns a `SearchResponse` object with the following structure:
-
-```python
-class SearchResponse:
-    success: bool                           # Whether the search was successful
-    error: Optional[str]                    # Error message if any
-    tx_id: str                             # Transaction ID for feedback
-    query: str                             # The original query
-    results: List[SearchResult]            # List of search results
-    results_by_source: ResultsBySource     # Count of results by source type
-    total_deduction_dollars: float         # Cost in dollars
-    total_characters: int                  # Total characters returned
-```
-
-Each `SearchResult` contains:
-
-```python
-class SearchResult:
-    title: str                             # Result title
-    url: str                              # Source URL
-    content: Union[str, List[Dict]]       # Full content (text or structured)
-    description: Optional[str]            # Brief description
-    source: str                           # Source identifier
-    price: float                          # Cost for this result
-    length: int                           # Content length in characters
-    image_url: Optional[Dict[str, str]]   # Associated images
-    relevance_score: float                # Relevance score (0-1)
-    data_type: Optional[str]              # "structured" or "unstructured"
-```
-
-### Contents Method
-
-The `contents()` method extracts clean, structured content from web pages with optional AI-powered data extraction and summarization. Supports sync (1-10 URLs) and async mode (1-50 URLs).
-
-```python
-def contents(
-    urls: List[str],                                      # List of URLs (1-10 sync, 1-50 async)
-    summary: Union[bool, str, Dict] = None,                # AI summary configuration
-    extract_effort: str = None,                            # "normal", "high", or "auto"
-    response_length: Union[str, int] = None,              # Content length configuration
-    max_price_dollars: float = None,                      # Maximum cost limit in USD
-    screenshot: bool = False,                              # Request page screenshots
-    async_mode: bool = False,                              # Use async processing (required for >10 URLs)
-    webhook_url: Optional[str] = None,                     # HTTPS webhook URL (async only)
-    wait: bool = False,                                   # When async, poll until complete
-) -> Union[ContentsResponse, ContentsJobCreateResponse, ContentsJobStatus]
-```
-
-### Parameters
-
-| Parameter           | Type                     | Default    | Description                                                                                                                                                                                                               |
-| ------------------- | ------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `urls`              | `List[str]`              | _required_ | List of URLs to process (1-10 sync, 1-50 with `async_mode=True`)                                                                                                                                                         |
-| `summary`           | `Union[bool, str, Dict]` | `None`     | AI summary configuration:<br>- `False/None`: No AI processing (raw content)<br>- `True`: Basic automatic summarization<br>- `str`: Custom instructions (max 500 chars)<br>- `dict`: JSON schema for structured extraction |
-| `extract_effort`    | `str`                    | `None`     | Extraction thoroughness: `"normal"` (fast), `"high"` (thorough but slower), or `"auto"` (automatically determine)                                                                                                         |
-| `response_length`   | `Union[str, int]`        | `None`     | Content length per URL:<br>- `"short"`: 25,000 characters<br>- `"medium"`: 50,000 characters<br>- `"large"`: 100,000 characters<br>- `"max"`: No limit<br>- `int`: Custom character limit                                 |
-| `max_price_dollars` | `float`                  | `None`     | Maximum cost limit in USD                                                                                                                                                                                                 |
-| `screenshot`        | `bool`                   | `False`    | Request page screenshots. When `True`, each result includes a `screenshot_url` field with a pre-signed URL to a screenshot image                                                                                          |
-| `async_mode`        | `bool`                   | `False`    | Use async processing. **Required** for >10 URLs. Returns job ID for polling or final results when `wait=True`.                                                                                                          |
-| `webhook_url`       | `str`                    | `None`     | HTTPS URL for completion notification (async only). Store the returned `webhook_secret` for signature verification.                                                                                                       |
-| `wait`              | `bool`                   | `False`    | When `async_mode=True`, poll until complete and return final results. Default: return job immediately.                                                                                                                     |
-
-### Response Format
-
-The contents method returns a `ContentsResponse` object:
-
-```python
-class ContentsResponse:
-    success: bool                          # Whether the request was successful
-    error: Optional[str]                   # Error message if any
-    tx_id: str                            # Transaction ID for tracking
-    urls_requested: int                   # Number of URLs submitted
-    urls_processed: int                   # Number of URLs successfully processed
-    urls_failed: int                      # Number of URLs that failed
-    results: List[ContentsResult]        # List of extraction results
-    total_cost_dollars: float             # Total cost in dollars
-    total_characters: int                 # Total characters extracted
-```
-
-Each result has a `status` field: `"success"` or `"failed"`. Check before accessing content fields:
-
-```python
-for result in response.results:
-    if result.status == "success":
-        print(result.title)
-        print(result.content[:500])
-    else:
-        print(f"Failed: {result.url} - {result.error}")
-```
-
-**Successful result** (`status == "success"`): `url`, `title`, `content`, `length`, `source`, `summary`, `screenshot_url`, etc.
-
-**Failed result** (`status == "failed"`): `url`, `status`, `error`
-
-### Async Contents Methods
-
-| Method                          | Description                                              |
-| ------------------------------- | -------------------------------------------------------- |
-| `get_contents_job(job_id)`      | Get status of an async contents job                       |
-| `wait_for_contents_job(job_id, poll_interval, max_wait_time, on_progress)` | Poll until job completes, returns final results |
-
-### Webhook Verification
-
-When using `webhook_url`, verify incoming requests with the `webhook_secret` from job creation:
-
-```python
-from valyu import verify_contents_webhook
-
-# In your webhook handler
-def handle_webhook(request):
-    payload = request.body  # Raw bytes or str
-    signature = request.headers.get("X-Webhook-Signature")
-    timestamp = request.headers.get("X-Webhook-Timestamp")
-
-    if not verify_contents_webhook(payload, signature, timestamp, WEBHOOK_SECRET):
-        return 401  # Invalid signature
-    # Process webhook data...
-```
-
-## Examples
-
-### Basic Search
-
-```python
-from valyu import Valyu
-
-valyu = Valyu("your-api-key")
-
-# Simple search across all sources
-response = valyu.search("What is machine learning?")
-print(f"Found {len(response.results)} results")
-```
-
-### Academic Research
-
-```python
-# Search academic papers on arXiv
-response = valyu.search(
-    "transformer architecture improvements",
-    search_type="proprietary",
-    included_sources=["valyu/valyu-arxiv"],
-    relevance_threshold=0.7,
-    max_num_results=10
-)
-```
-
-### Web Search with Date Filtering
-
-```python
-# Search recent web content
-response = valyu.search(
-    "AI safety developments",
-    search_type="web",
-    start_date="2024-01-01",
-    end_date="2024-12-31",
-    max_num_results=5
-)
-```
-
-### Hybrid Search
-
-```python
-# Search both web and proprietary sources
-response = valyu.search(
-    "quantum computing breakthroughs",
-    search_type="all",
-    category="technology",
-    relevance_threshold=0.6,
-    max_price=50
-)
-```
-
-### Processing Results
-
-```python
-response = valyu.search("climate change solutions")
-
-if response.success:
-    print(f"Search cost: ${response.total_deduction_dollars:.4f}")
-    print(f"Sources: Web={response.results_by_source.web}, Proprietary={response.results_by_source.proprietary}")
-
-    for i, result in enumerate(response.results, 1):
-        print(f"\n{i}. {result.title}")
-        print(f"   Source: {result.source}")
-        print(f"   Relevance: {result.relevance_score:.2f}")
-        print(f"   Content: {result.content[:200]}...")
-else:
-    print(f"Search failed: {response.error}")
-```
-
-### Content Extraction Examples
-
-#### Basic Content Extraction
-
-```python
-# Extract raw content from URLs
-response = valyu.contents(
-    urls=["https://techcrunch.com/2025/08/28/anthropic-users-face-a-new-choice-opt-out-or-share-your-data-for-ai-training/"]
-)
-
-if response.success:
-    for result in response.results:
-        if result.status == "success":
-            print(f"Title: {result.title}")
-            print(f"Content: {result.content[:500]}...")
-```
-
-#### Content with AI Summary
-
-```python
-# Extract content with automatic summarization
-response = valyu.contents(
-    urls=["https://docs.python.org/3/tutorial/"],
-    summary=True,
-    response_length="max"
-)
-
-for result in response.results:
-    if result.status == "success" and result.summary:
-        print(f"Summary: {result.summary}")
-```
-
-#### Structured Data Extraction
-
-```python
-# Extract structured data using JSON schema
-company_schema = {
-    "type": "object",
-    "properties": {
-        "company_name": {"type": "string"},
-        "founded_year": {"type": "integer"},
-        "key_products": {
-            "type": "array",
-            "items": {"type": "string"},
-            "maxItems": 3
-        }
-    }
-}
-
-response = valyu.contents(
-    urls=["https://en.wikipedia.org/wiki/OpenAI"],
-    summary=company_schema,
-    response_length="max"
-)
-
-if response.success:
-    for result in response.results:
-        if result.status == "success" and result.summary:
-            print(f"Structured data: {json.dumps(result.summary, indent=2)}")
-```
-
-#### Multiple URLs
-
-```python
-# Process multiple URLs with a cost limit
-response = valyu.contents(
-    urls=[
-        "https://www.valyu.ai/",
-        "https://docs.valyu.ai/overview",
-        "https://www.valyu.ai/blogs/why-ai-agents-and-llms-struggle-with-search-and-data-access"
-    ],
-    summary="Provide key takeaways in bullet points, and write in very emphasised singaporean english"
-)
-
-print(f"Processed {response.urls_processed}/{response.urls_requested} URLs")
-print(f"Cost: ${response.total_cost_dollars:.4f}")
-```
-
-#### Async Mode (11-50 URLs)
-
-```python
-# For >10 URLs, async_mode is required
-job = valyu.contents(
-    urls=[...],  # 11-50 URLs
-    async_mode=True,
-    webhook_url="https://yourserver.com/webhook"  # Optional
-)
-print(f"Job ID: {job.job_id}")
-
-# Option A: Poll manually
-status = valyu.get_contents_job(job.job_id)
-while status.status not in ("completed", "partial", "failed"):
-    time.sleep(5)
-    status = valyu.get_contents_job(job.job_id)
-
-# Option B: Wait until complete (blocks)
-result = valyu.contents(urls=[...], async_mode=True, wait=True)
-if result.results:
-    for r in result.results:
-        if r.status == "success":
-            print(r.title)
-```
-
-#### Content Extraction with Screenshots
-
-```python
-# Extract content with page screenshots
-response = valyu.contents(
-    urls=["https://www.valyu.ai/"],
-    screenshot=True,  # Request page screenshots
-    response_length="short"
-)
-
-if response.success:
-    for result in response.results:
-        if result.status == "success":
-            print(f"Title: {result.title}")
-            price = getattr(result, "price", None)
-            if price is not None:
-                print(f"Price: ${price:.4f}")
-            if result.screenshot_url:
-                print(f"Screenshot: {result.screenshot_url}")
+sources = valyu.datasources.list()
+categories = valyu.datasources.categories()
 ```
 
 ## Authentication
 
-Set your API key in one of these ways:
+```bash
+export VALYU_API_KEY="your-api-key"
+```
 
-1. **Environment variable** (recommended):
+Or pass directly:
 
-   ```bash
-   export VALYU_API_KEY="your-api-key-here"
-   ```
+```python
+valyu = Valyu(api_key="your-api-key")
+```
 
-2. **Direct initialization**:
-   ```python
-   valyu = Valyu(api_key="your-api-key-here")
-   ```
+## Type Safety
+
+All request and response models use Pydantic v2:
+
+```python
+from valyu.types.response import SearchResult, SearchResponse
+from valyu.types.contents import ContentsResponse
+from valyu.types.answer import AnswerSuccessResponse
+```
 
 ## Error Handling
 
-The SDK handles errors gracefully and returns structured error responses:
-
 ```python
-response = valyu.search("test query")
+response = valyu.search("test")
 
 if not response.success:
     print(f"Error: {response.error}")
-    print(f"Transaction ID: {response.tx_id}")
-else:
-    # Process successful results
-    for result in response.results:
-        print(result.title)
+    print(f"tx_id: {response.tx_id}")
 ```
 
-## Getting Started
+## Integrations
 
-1. Sign up for a free account at [Valyu](https://platform.valyu.ai)
-2. Get your API key from the dashboard
-3. Install the SDK: `pip install valyu`
-4. Start building with the examples above
+Valyu works with [LangChain](https://docs.valyu.ai), [OpenAI](https://docs.valyu.ai), [Anthropic](https://docs.valyu.ai), [MCP](https://docs.valyu.ai), and more. See [docs.valyu.ai](https://docs.valyu.ai) for integration guides.
 
-## Support
+## Links
 
-- **Documentation**: [docs.valyu.ai](https://docs.valyu.ai)
-- **API Reference**: Full parameter documentation above
-- **Examples**: Check the `examples/` directory in this repository
-- **Issues**: Report bugs on GitHub
+- [Documentation](https://docs.valyu.ai)
+- [Platform & API Keys](https://platform.valyu.ai)
+- [Discord](https://discord.gg/valyu)
+- [GitHub Issues](https://github.com/valyuAI/valyu-py/issues)
 
 ## License
 
-This project is licensed under the MIT License.
+MIT
