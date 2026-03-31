@@ -18,6 +18,7 @@ class SearchResult(BaseModel):
     source_type: Optional[str] = None
     publication_date: Optional[str] = None
     id: Optional[str] = None
+    abstract: Optional[str] = None
 
 
 class ResultsBySource(BaseModel):

@@ -245,6 +245,7 @@ class SearchResult(BaseModel):
     length: int
     image_url: Optional[Dict[str, str]] = None
     relevance_score: Optional[float] = None
+    abstract: Optional[str] = None
 
 
 class AnswerSuccessResponse(BaseModel):
