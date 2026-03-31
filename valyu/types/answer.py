@@ -13,6 +13,8 @@ import re
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
+from .response import SearchResult
+
 
 # --------------------------
 # Request Schema
@@ -222,29 +224,6 @@ class ExtractionMetadata(BaseModel):
     total_characters: int = Field(default=0, description="Total characters extracted.")
     response_length: Optional[str] = Field(default=None, description="Response length setting used.")
     extract_effort: Optional[str] = Field(default=None, description="Extraction effort level used.")
-
-
-class SearchResult(BaseModel):
-    """Search result from the Answer API.
-
-    Note: `content` can be a string for text content, or a list/dict for structured
-    data (e.g., stock prices, financial data).
-    """
-    title: str
-    url: str
-    content: Union[str, List[Dict[str, Any]], Dict[str, Any]]
-    description: Optional[str] = None
-    source: str
-    source_type: Optional[str] = Field(
-        default=None, description="Type of source: 'website', 'data', 'forum'"
-    )
-    data_type: Optional[Literal["structured", "unstructured"]] = None
-    date: Optional[str] = Field(
-        default=None, description="Publication date in YYYY-MM-DD format"
-    )
-    length: int
-    image_url: Optional[Dict[str, str]] = None
-    relevance_score: Optional[float] = None
 
 
 class AnswerSuccessResponse(BaseModel):
