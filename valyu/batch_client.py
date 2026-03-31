@@ -6,8 +6,6 @@ import time
 import requests
 from typing import Optional, List, Literal, Union, Dict, Any, Callable
 from valyu.types.deepresearch import (
-    DeepResearchMode,
-    DeepResearchStatus,
     BatchStatus,
     BatchTaskInput,
     BatchCreateResponse,
@@ -92,7 +90,7 @@ class BatchClient:
                 payload["output_formats"] = output_formats
             if search:
                 if isinstance(search, SearchConfig):
-                    search_dict = search.dict(exclude_none=True)
+                    search_dict = search.model_dump(exclude_none=True)
                 else:
                     search_dict = search
                 payload["search"] = search_dict
@@ -149,7 +147,7 @@ class BatchClient:
 
             # Convert tasks to dict format
             task_dicts = [
-                t.dict(exclude_none=True) if isinstance(t, BatchTaskInput) else t
+                t.model_dump(exclude_none=True) if isinstance(t, BatchTaskInput) else t
                 for t in tasks
             ]
 

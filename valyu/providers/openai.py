@@ -129,29 +129,12 @@ class OpenAIProvider(BaseProvider[OpenAITool, OpenAIToolCollection]):
             return outputs
 
         for item in response.output:
-            if (
-                hasattr(item, "type")
-                and item.type == "function_call"
-                and item.name == "valyu_search"
-            ):
-                # Parse arguments and execute search
-                args = json.loads(item.arguments)
-                print(
-                    f"🔍 Executing Valyu search: {args.get('query', 'Unknown query')}"
-                )
-
-                # Execute the tool
+            if hasattr(item, "type") and item.type == "function_call":
                 tool_response = self.execute_tool_call(
                     tool_call=item,
                     modifiers=modifiers,
                 )
 
-                if tool_response.output:
-                    print(
-                        f"✅ Found {len(tool_response.output.get('results', []))} results"
-                    )
-
-                # Format result for OpenAI responses API
                 tool_result = {
                     "tool_call_id": item.call_id,
                     "output": (

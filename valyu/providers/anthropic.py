@@ -135,29 +135,12 @@ class AnthropicProvider(BaseProvider[AnthropicTool, AnthropicToolCollection]):
             return outputs
 
         for item in response.content:
-            if (
-                hasattr(item, "type")
-                and item.type == "tool_use"
-                and item.name == "valyu_search"
-            ):
-                # Parse arguments and execute search
-                args = item.input
-                print(
-                    f"🔍 Executing Valyu search: {args.get('query', 'Unknown query')}"
-                )
-
-                # Execute the tool
+            if hasattr(item, "type") and item.type == "tool_use":
                 tool_response = self.execute_tool_call(
                     tool_call=item,
                     modifiers=modifiers,
                 )
 
-                if tool_response.output:
-                    print(
-                        f"✅ Found {len(tool_response.output.get('results', []))} results"
-                    )
-
-                # Format result for Anthropic
                 tool_result = {
                     "tool_call_id": item.id,
                     "output": (

@@ -4,7 +4,6 @@ Base provider implementation.
 
 from __future__ import annotations
 
-import json
 import typing as t
 from abc import ABC, abstractmethod
 
@@ -58,11 +57,7 @@ class BaseProvider(ABC, t.Generic[T, U]):
 
             # Remove None values for the API call
             clean_args = {k: v for k, v in arguments.items() if v is not None}
-            print(f"Executing search with args: {clean_args}")
             search_result = self._valyu_client.search(**clean_args)
-
-            print(f"Search result: {search_result}")
-
             return ToolExecutionResponse(output=search_result.model_dump())
         except Exception as e:
             return ToolExecutionResponse(output=None, error=str(e))
@@ -80,11 +75,7 @@ class BaseProvider(ABC, t.Generic[T, U]):
 
             # Remove None values for the API call
             clean_args = {k: v for k, v in arguments.items() if v is not None}
-            print(f"Executing contents with args: {clean_args}")
             contents_result = self._valyu_client.contents(**clean_args)
-
-            print(f"Contents result: {contents_result}")
-
             return ToolExecutionResponse(output=contents_result.model_dump())
         except Exception as e:
             return ToolExecutionResponse(output=None, error=str(e))

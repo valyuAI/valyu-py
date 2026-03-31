@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="valyu",
-    version="2.8.6",
+    version="2.8.7",
     author="Valyu",
     author_email="contact@valyu.ai",
     maintainer="Harvey Yorke",
@@ -28,7 +28,6 @@ setup(
         "pydantic==2.12.5",
         "openai==2.30.0",
         "anthropic==0.86.0",
-        "python-dotenv==1.2.2",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
