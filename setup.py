@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="valyu",
-    version="2.8.7",
+    version="2.8.8",
     author="Valyu",
     author_email="contact@valyu.ai",
     maintainer="Harvey Yorke",
