@@ -91,7 +91,6 @@ class DeliverableResult(BaseModel):
     url: str = Field(
         ..., description="Token-signed authenticated URL to download the file"
     )
-    s3_key: str = Field(..., description="S3 storage key")
     row_count: Optional[int] = Field(None, description="Number of rows (for CSV/XLSX)")
     column_count: Optional[int] = Field(
         None, description="Number of columns (for CSV/XLSX)"
