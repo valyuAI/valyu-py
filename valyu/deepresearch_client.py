@@ -740,10 +740,16 @@ class DeepResearchClient:
             url = f"{self._base_url}/deepresearch/tasks/{task_id}/assets/{asset_id}"
 
             # Build headers - use API key if no token provided
-            headers = {}
+            # Always include SDK attribution headers
+            sdk_headers = {
+                k: v
+                for k, v in self._headers.items()
+                if k.startswith("X-Valyu-") or k == "User-Agent"
+            }
             if token:
                 # Token is passed as query parameter, not header
                 url += f"?token={token}"
+                headers = sdk_headers
             else:
                 # Use API key from headers
                 headers = self._headers.copy()

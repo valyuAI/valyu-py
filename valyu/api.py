@@ -1,8 +1,10 @@
 import json
 import os
+import platform
 import time
 
 import requests
+from valyu import __version__
 from typing import Optional, List, Union, Dict, Any, Callable
 from valyu.types.response import SearchResponse, SearchType, ResultsBySource
 from valyu.types.contents import (
@@ -56,7 +58,13 @@ class Valyu:
                 raise ValueError("VALYU_API_KEY is not set")
 
         self.base_url = base_url
-        self.headers = {"Content-Type": "application/json", "x-api-key": api_key}
+        self.headers = {
+            "Content-Type": "application/json",
+            "x-api-key": api_key,
+            "User-Agent": f"valyu-py/{__version__} python/{platform.python_version()}",
+            "X-Valyu-SDK": "valyu-py",
+            "X-Valyu-SDK-Version": __version__,
+        }
 
         # Initialize DeepResearch client
         self.deepresearch = DeepResearchClient(self)
