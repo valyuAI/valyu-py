@@ -15,7 +15,6 @@ from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 from .response import SearchResult
 
-
 # --------------------------
 # Request Schema
 # --------------------------
@@ -218,12 +217,22 @@ class CostBreakdown(BaseModel):
 class ExtractionMetadata(BaseModel):
     """Metadata about content extraction, only populated when contents_api tool was used."""
 
-    urls_requested: int = Field(default=0, description="Number of URLs requested for extraction.")
-    urls_processed: int = Field(default=0, description="Number of URLs successfully processed.")
-    urls_failed: int = Field(default=0, description="Number of URLs that failed extraction.")
+    urls_requested: int = Field(
+        default=0, description="Number of URLs requested for extraction."
+    )
+    urls_processed: int = Field(
+        default=0, description="Number of URLs successfully processed."
+    )
+    urls_failed: int = Field(
+        default=0, description="Number of URLs that failed extraction."
+    )
     total_characters: int = Field(default=0, description="Total characters extracted.")
-    response_length: Optional[str] = Field(default=None, description="Response length setting used.")
-    extract_effort: Optional[str] = Field(default=None, description="Extraction effort level used.")
+    response_length: Optional[str] = Field(
+        default=None, description="Response length setting used."
+    )
+    extract_effort: Optional[str] = Field(
+        default=None, description="Extraction effort level used."
+    )
 
 
 class AnswerSuccessResponse(BaseModel):
