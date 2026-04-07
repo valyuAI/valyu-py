@@ -10,7 +10,7 @@ class SearchResult(BaseModel):
     content: Union[str, List[Dict[str, Any]], Dict[str, Any]]
     description: Optional[str] = None
     source: str
-    price: Optional[float] = None
+    price: float
     length: int
     image_url: Optional[Dict[str, str]] = None
     relevance_score: Optional[float] = None

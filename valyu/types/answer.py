@@ -13,8 +13,6 @@ import re
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
-from .response import SearchResult
-
 
 # --------------------------
 # Request Schema
@@ -226,12 +224,36 @@ class ExtractionMetadata(BaseModel):
     extract_effort: Optional[str] = Field(default=None, description="Extraction effort level used.")
 
 
+class AnswerSearchResult(BaseModel):
+    """Search result from the Answer API.
+
+    Note: `content` can be a string for text content, or a list/dict for structured
+    data (e.g., stock prices, financial data).
+    """
+    title: str
+    url: str
+    content: Union[str, List[Dict[str, Any]], Dict[str, Any]]
+    description: Optional[str] = None
+    source: str
+    source_type: Optional[str] = Field(
+        default=None, description="Type of source: 'website', 'data', 'forum'"
+    )
+    data_type: Optional[Literal["structured", "unstructured"]] = None
+    date: Optional[str] = Field(
+        default=None, description="Publication date in YYYY-MM-DD format"
+    )
+    length: int
+    image_url: Optional[Dict[str, str]] = None
+    relevance_score: Optional[float] = None
+    abstract: Optional[str] = None
+
+
 class AnswerSuccessResponse(BaseModel):
     success: Literal[True] = True
     tx_id: str = Field(description="The AI transaction ID for this request.")
     original_query: str
     contents: Union[str, Dict[str, Any]]
-    search_results: List[SearchResult] = Field(default_factory=list)
+    search_results: List[AnswerSearchResult] = Field(default_factory=list)
     search_metadata: SearchMetadata
     ai_usage: AIUsage
     cost: CostBreakdown
@@ -267,7 +289,7 @@ class AnswerStreamChunk(BaseModel):
     type: Literal["search_results", "content", "metadata", "done", "error"]
 
     # For type="search_results"
-    search_results: Optional[List[SearchResult]] = None
+    search_results: Optional[List[AnswerSearchResult]] = None
 
     # For type="content"
     content: Optional[str] = None
@@ -296,7 +318,7 @@ __all__ = [
     "AIUsage",
     "CostBreakdown",
     "ExtractionMetadata",
-    "SearchResult",
+    "AnswerSearchResult",
     "AnswerSuccessResponse",
     "AnswerErrorResponse",
     "AnswerResponse",
