@@ -224,7 +224,7 @@ class ExtractionMetadata(BaseModel):
     extract_effort: Optional[str] = Field(default=None, description="Extraction effort level used.")
 
 
-class AnswerSearchResult(BaseModel):
+class SearchResult(BaseModel):
     """Search result from the Answer API.
 
     Note: `content` can be a string for text content, or a list/dict for structured
@@ -243,6 +243,7 @@ class AnswerSearchResult(BaseModel):
         default=None, description="Publication date in YYYY-MM-DD format"
     )
     length: int
+    price: Optional[float] = None
     image_url: Optional[Dict[str, str]] = None
     relevance_score: Optional[float] = None
     abstract: Optional[str] = None
@@ -253,7 +254,7 @@ class AnswerSuccessResponse(BaseModel):
     tx_id: str = Field(description="The AI transaction ID for this request.")
     original_query: str
     contents: Union[str, Dict[str, Any]]
-    search_results: List[AnswerSearchResult] = Field(default_factory=list)
+    search_results: List[SearchResult] = Field(default_factory=list)
     search_metadata: SearchMetadata
     ai_usage: AIUsage
     cost: CostBreakdown
@@ -289,7 +290,7 @@ class AnswerStreamChunk(BaseModel):
     type: Literal["search_results", "content", "metadata", "done", "error"]
 
     # For type="search_results"
-    search_results: Optional[List[AnswerSearchResult]] = None
+    search_results: Optional[List[SearchResult]] = None
 
     # For type="content"
     content: Optional[str] = None
@@ -318,7 +319,7 @@ __all__ = [
     "AIUsage",
     "CostBreakdown",
     "ExtractionMetadata",
-    "AnswerSearchResult",
+    "SearchResult",
     "AnswerSuccessResponse",
     "AnswerErrorResponse",
     "AnswerResponse",
