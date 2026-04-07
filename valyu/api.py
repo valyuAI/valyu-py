@@ -719,7 +719,8 @@ class Valyu:
                     original_query=final_metadata.get(
                         "original_query", payload.get("query", "")
                     ),
-                    contents=final_metadata.get("contents", full_content) or full_content,
+                    contents=final_metadata.get("contents", full_content)
+                    or full_content,
                     search_results=(
                         [SearchResult(**r) for r in final_search_results]
                         if final_search_results

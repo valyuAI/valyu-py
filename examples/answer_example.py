@@ -57,7 +57,9 @@ for chunk in valyu.answer(query, streaming=True):
 
     elif chunk.type == "metadata":
         print(f"\n\n[Metadata] Cost: ${chunk.cost.total_deduction_dollars:.4f}")
-        print(f"[Metadata] Tokens: {chunk.ai_usage.input_tokens} in, {chunk.ai_usage.output_tokens} out")
+        print(
+            f"[Metadata] Tokens: {chunk.ai_usage.input_tokens} in, {chunk.ai_usage.output_tokens} out"
+        )
 
     elif chunk.type == "done":
         print("\n[Stream complete]")
