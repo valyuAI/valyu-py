@@ -28,7 +28,7 @@ from valyu.types.answer import (
     AnswerStreamChunk,
     AnswerStreamGenerator,
     SearchMetadata,
-    SearchResult,
+    AnswerSearchResult,
     AIUsage,
     CostBreakdown,
     ExtractionMetadata,
@@ -721,7 +721,7 @@ class Valyu:
                     ),
                     contents=final_metadata.get("contents", full_content) or full_content,
                     search_results=(
-                        [SearchResult(**r) for r in final_search_results]
+                        [AnswerSearchResult(**r) for r in final_search_results]
                         if final_search_results
                         else []
                     ),
@@ -802,7 +802,7 @@ class Valyu:
                         yield AnswerStreamChunk(
                             type="search_results",
                             search_results=[
-                                SearchResult(**r) for r in parsed["search_results"]
+                                AnswerSearchResult(**r) for r in parsed["search_results"]
                             ],
                         )
 
@@ -830,7 +830,7 @@ class Valyu:
                             contents=parsed.get("contents"),
                             search_results=(
                                 [
-                                    SearchResult(**r)
+                                    AnswerSearchResult(**r)
                                     for r in parsed.get("search_results", [])
                                 ]
                                 if parsed.get("search_results")
