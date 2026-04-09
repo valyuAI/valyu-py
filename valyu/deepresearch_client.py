@@ -55,7 +55,7 @@ class DeepResearchClient:
         deliverables: Optional[List[Union[str, Deliverable, Dict[str, Any]]]] = None,
         mcp_servers: Optional[List[Union[MCPServerConfig, Dict[str, Any]]]] = None,
         code_execution: Optional[bool] = None,
-        tools: Optional[Union["DeepResearchTools", Dict[str, bool]]] = None,
+        tools: Optional[Union["DeepResearchTools", Dict[str, Any]]] = None,
         previous_reports: Optional[List[str]] = None,
         webhook_url: Optional[str] = None,
         alert_email: Optional[Union[str, "AlertEmailConfig", Dict[str, str]]] = None,
@@ -96,7 +96,10 @@ class DeepResearchClient:
             mcp_servers: MCP server configurations for custom tools
             code_execution: Enable/disable code execution (deprecated, use tools parameter instead)
             tools: Tools configuration. Controls which optional tools the research agent can use.
-                  Available tools: code_execution (bool), screenshots (bool). Both default to False.
+                  Available tools: code_execution, screenshots, browser_use.
+                  Each tool accepts a boolean or an object with `enabled` (bool) and `max_calls` (int).
+                  max_calls can only lower the system default, not raise it.
+                  System defaults: browser_use=5, screenshots=15, code_execution=10.
                   If both tools and code_execution are provided, tools takes precedence.
             previous_reports: Previous report IDs for context (max 3)
             webhook_url: HTTPS webhook URL for completion notification

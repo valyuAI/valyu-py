@@ -178,12 +178,32 @@ class ChartDataSeries(BaseModel):
     line_style: Optional[Literal["solid", "dashed", "dotted"]] = None
 
 
-class DeepResearchTools(BaseModel):
-    """Tools configuration for deep research tasks."""
+class ToolConfig(BaseModel):
+    """Per-tool configuration with optional call limit."""
 
-    code_execution: Optional[bool] = Field(False, description="Enable code execution in sandboxed environment")
-    screenshots: Optional[bool] = Field(False, description="Enable visual screenshot capture of web pages")
-    charts: Optional[bool] = Field(False, description="Enable chart/graph generation embedded in the final report (free)")
+    enabled: Optional[bool] = Field(True, description="Enable or disable the tool")
+    max_calls: Optional[int] = Field(None, description="Max invocations per task. Capped at system default if exceeded.")
+
+
+class DeepResearchTools(BaseModel):
+    """Tools configuration for deep research tasks.
+
+    Each tool accepts either a boolean (shorthand) or a ToolConfig object
+    with `enabled` and optional `max_calls` fields.
+
+    System defaults for max_calls:
+        - browser_use: 5
+        - screenshots: 15
+        - code_execution: 10
+
+    max_calls can only be lowered, not raised above the system default.
+    Setting max_calls: 0 effectively disables the tool.
+    """
+
+    code_execution: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable code execution in sandboxed environment")
+    screenshots: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable visual screenshot capture of web pages")
+    browser_use: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable autonomous browser sessions")
+    charts: Optional[bool] = Field(None, description="Enable chart/graph generation embedded in the final report (free)")
 
 
 class ImageMetadata(BaseModel):
