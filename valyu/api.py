@@ -90,6 +90,7 @@ class Valyu:
         fast_mode: bool = False,
         url_only: bool = False,
         source_biases: Optional[Dict[str, int]] = None,
+        instructions: Optional[str] = None,
     ) -> Optional[SearchResponse]:
         """
         Query the Valyu DeepSearch API to give your AI relevant context.
@@ -122,6 +123,10 @@ class Valyu:
                 Keys are domains (e.g., "nasa.gov") or URL paths (e.g., "nytimes.com/science").
                 Values are integers from -5 (strong demotion) to +5 (strong boost).
                 Unlike included/excluded_sources, biases adjust ranking without hard filtering.
+            instructions (Optional[str]): Natural language instructions to help rank results by relevance
+                to user intent. Acts as a system prompt for the search — e.g.
+                "Focus on oncology clinical trials from 2023 onwards". Max 500 characters.
+                Ignored when fast_mode=True.
 
         Returns:
             Optional[SearchResponse]: The search response.
@@ -209,6 +214,9 @@ class Valyu:
 
             if source_biases is not None:
                 payload["source_biases"] = source_biases
+
+            if instructions is not None:
+                payload["instructions"] = instructions
 
             response = requests.post(
                 f"{self.base_url}/deepsearch", json=payload, headers=self.headers
