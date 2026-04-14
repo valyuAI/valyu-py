@@ -19,6 +19,12 @@ class SearchResult(BaseModel):
     publication_date: Optional[str] = None
     id: Optional[str] = None
     abstract: Optional[str] = None
+    doi: Optional[str] = None
+    citation: Optional[str] = None
+    citation_count: Optional[int] = None
+    authors: Optional[List[str]] = None
+    references: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class ResultsBySource(BaseModel):
