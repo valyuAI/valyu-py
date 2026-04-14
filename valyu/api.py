@@ -219,7 +219,7 @@ class Valyu:
                 payload["instructions"] = instructions
 
             response = requests.post(
-                f"{self.base_url}/deepsearch", json=payload, headers=self.headers
+                f"{self.base_url}/search", json=payload, headers=self.headers
             )
 
             data = response.json()
