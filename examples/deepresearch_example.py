@@ -62,7 +62,7 @@ def main():
             try:
                 # Handle ISO 8601 timestamp format
                 # Remove 'Z' and replace with '+00:00' for fromisoformat compatibility
-                iso_str = result.completed_at.replace('Z', '+00:00')
+                iso_str = result.completed_at.replace("Z", "+00:00")
                 dt = datetime.fromisoformat(iso_str)
                 print(f"  Completed at: {dt.strftime('%Y-%m-%d %H:%M:%S')}")
             except Exception:
@@ -101,8 +101,7 @@ def main():
             for img in result.images[:2]:  # Download first 2 images as example
                 try:
                     image_data = valyu.deepresearch.get_assets(
-                        task_id=result.deepresearch_id,
-                        asset_id=img.image_id
+                        task_id=result.deepresearch_id, asset_id=img.image_id
                     )
                     print(f"  Downloaded {img.title}: {len(image_data)} bytes")
                 except Exception as e:
