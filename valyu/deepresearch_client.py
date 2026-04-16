@@ -35,6 +35,7 @@ class DeepResearchClient:
         self._parent = parent
         self._base_url = parent.base_url
         self._headers = parent.headers
+        self._session = parent._session
 
     def create(
         self,
@@ -239,10 +240,9 @@ class DeepResearchClient:
                 else:
                     payload["hitl"] = hitl
 
-            response = requests.post(
+            response = self._session.post(
                 f"{self._base_url}/deepresearch/tasks",
                 json=payload,
-                headers=self._headers,
             )
 
             data = response.json()
@@ -273,9 +273,8 @@ class DeepResearchClient:
             DeepResearchStatusResponse with current status
         """
         try:
-            response = requests.get(
+            response = self._session.get(
                 f"{self._base_url}/deepresearch/tasks/{task_id}/status",
-                headers=self._headers,
             )
 
             data = response.json()
@@ -446,10 +445,9 @@ class DeepResearchClient:
             if limit is not None:
                 params["limit"] = limit
 
-            response = requests.get(
+            response = self._session.get(
                 f"{self._base_url}/deepresearch/list",
                 params=params,
-                headers=self._headers,
             )
 
             data = response.json()
@@ -486,10 +484,9 @@ class DeepResearchClient:
                     error="instruction is required and cannot be empty",
                 )
 
-            response = requests.post(
+            response = self._session.post(
                 f"{self._base_url}/deepresearch/tasks/{task_id}/update",
                 json={"instruction": instruction},
-                headers=self._headers,
             )
 
             data = response.json()
@@ -537,10 +534,9 @@ class DeepResearchClient:
                 "response": response,
             }
 
-            resp = requests.post(
+            resp = self._session.post(
                 f"{self._base_url}/deepresearch/tasks/{task_id}/respond",
                 json=payload,
-                headers=self._headers,
             )
 
             data = resp.json()
@@ -662,10 +658,9 @@ class DeepResearchClient:
             DeepResearchCancelResponse
         """
         try:
-            response = requests.post(
+            response = self._session.post(
                 f"{self._base_url}/deepresearch/tasks/{task_id}/cancel",
                 json={},
-                headers=self._headers,
             )
 
             data = response.json()
@@ -696,9 +691,8 @@ class DeepResearchClient:
             DeepResearchDeleteResponse
         """
         try:
-            response = requests.delete(
+            response = self._session.delete(
                 f"{self._base_url}/deepresearch/tasks/{task_id}/delete",
-                headers=self._headers,
             )
 
             data = response.json()
@@ -739,22 +733,17 @@ class DeepResearchClient:
         try:
             url = f"{self._base_url}/deepresearch/tasks/{task_id}/assets/{asset_id}"
 
-            # Build headers - use API key if no token provided
-            # Always include SDK attribution headers
-            sdk_headers = {
-                k: v
-                for k, v in self._headers.items()
-                if k.startswith("X-Valyu-") or k == "User-Agent"
-            }
             if token:
-                # Token is passed as query parameter, not header
+                # Token is passed as query parameter; strip auth headers for this request
+                sdk_headers = {
+                    k: v
+                    for k, v in self._headers.items()
+                    if k.startswith("X-Valyu-") or k == "User-Agent"
+                }
                 url += f"?token={token}"
-                headers = sdk_headers
+                response = self._session.get(url, headers=sdk_headers)
             else:
-                # Use API key from headers
-                headers = self._headers.copy()
-
-            response = requests.get(url, headers=headers)
+                response = self._session.get(url)
 
             if not response.ok:
                 error_data = (
@@ -789,10 +778,9 @@ class DeepResearchClient:
             DeepResearchTogglePublicResponse
         """
         try:
-            response = requests.post(
+            response = self._session.post(
                 f"{self._base_url}/deepresearch/tasks/{task_id}/public",
                 json={"public": is_public},
-                headers=self._headers,
             )
 
             data = response.json()

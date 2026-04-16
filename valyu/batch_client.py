@@ -3,7 +3,6 @@ Batch Client for Valyu SDK
 """
 
 import time
-import requests
 from typing import Optional, List, Literal, Union, Dict, Any, Callable
 from valyu.types.deepresearch import (
     BatchStatus,
@@ -26,6 +25,7 @@ class BatchClient:
         self._parent = parent
         self._base_url = parent.base_url
         self._headers = parent.headers
+        self._session = parent._session
 
     def create(
         self,
@@ -101,10 +101,9 @@ class BatchClient:
             if metadata:
                 payload["metadata"] = metadata
 
-            response = requests.post(
+            response = self._session.post(
                 f"{self._base_url}/deepresearch/batches",
                 json=payload,
-                headers=self._headers,
             )
 
             data = response.json()
@@ -153,10 +152,9 @@ class BatchClient:
 
             payload = {"tasks": task_dicts}
 
-            response = requests.post(
+            response = self._session.post(
                 f"{self._base_url}/deepresearch/batches/{batch_id}/tasks",
                 json=payload,
-                headers=self._headers,
             )
 
             data = response.json()
@@ -186,9 +184,8 @@ class BatchClient:
             BatchStatusResponse with current batch status and task counts
         """
         try:
-            response = requests.get(
+            response = self._session.get(
                 f"{self._base_url}/deepresearch/batches/{batch_id}",
-                headers=self._headers,
             )
 
             data = response.json()
@@ -248,9 +245,8 @@ class BatchClient:
             if include_output is not None:
                 params["include_output"] = str(include_output).lower()
 
-            response = requests.get(
+            response = self._session.get(
                 f"{self._base_url}/deepresearch/batches/{batch_id}/tasks",
-                headers=self._headers,
                 params=params if params else None,
             )
 
@@ -281,10 +277,9 @@ class BatchClient:
             BatchCancelResponse
         """
         try:
-            response = requests.post(
+            response = self._session.post(
                 f"{self._base_url}/deepresearch/batches/{batch_id}/cancel",
                 json={},
-                headers=self._headers,
             )
 
             data = response.json()
@@ -322,10 +317,9 @@ class BatchClient:
             if limit is not None:
                 params["limit"] = limit
 
-            response = requests.get(
+            response = self._session.get(
                 f"{self._base_url}/deepresearch/batches",
                 params=params if params else None,
-                headers=self._headers,
             )
 
             data = response.json()
