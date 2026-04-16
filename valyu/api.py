@@ -66,6 +66,10 @@ class Valyu:
             "X-Valyu-SDK-Version": __version__,
         }
 
+        # Persistent session for TCP+TLS connection reuse
+        self._session = requests.Session()
+        self._session.headers.update(self.headers)
+
         # Initialize DeepResearch client
         self.deepresearch = DeepResearchClient(self)
 
@@ -218,8 +222,8 @@ class Valyu:
             if instructions is not None:
                 payload["instructions"] = instructions
 
-            response = requests.post(
-                f"{self.base_url}/search", json=payload, headers=self.headers
+            response = self._session.post(
+                f"{self.base_url}/search", json=payload
             )
 
             data = response.json()
@@ -366,8 +370,8 @@ class Valyu:
             if webhook_url:
                 payload["webhook_url"] = webhook_url
 
-            response = requests.post(
-                f"{self.base_url}/contents", json=payload, headers=self.headers
+            response = self._session.post(
+                f"{self.base_url}/contents", json=payload
             )
 
             data = response.json()
@@ -419,9 +423,8 @@ class Valyu:
         Returns:
             ContentsJobStatus with current status and results when terminal.
         """
-        response = requests.get(
+        response = self._session.get(
             f"{self.base_url}/contents/jobs/{job_id}",
-            headers=self.headers,
         )
         data = response.json()
 
@@ -651,11 +654,10 @@ class Valyu:
         """Fetch the complete answer (non-streaming mode)."""
         try:
             # Use streaming internally but collect into final response
-            headers = {**self.headers, "Accept": "text/event-stream"}
-            response = requests.post(
+            response = self._session.post(
                 f"{self.base_url}/answer",
                 json=payload,
-                headers=headers,
+                headers={"Accept": "text/event-stream"},
                 stream=True,
             )
 
@@ -771,11 +773,10 @@ class Valyu:
     def _stream_answer(self, payload: Dict[str, Any]) -> AnswerStreamGenerator:
         """Stream the answer response as chunks."""
         try:
-            headers = {**self.headers, "Accept": "text/event-stream"}
-            response = requests.post(
+            response = self._session.post(
                 f"{self.base_url}/answer",
                 json=payload,
-                headers=headers,
+                headers={"Accept": "text/event-stream"},
                 stream=True,
             )
 
@@ -901,10 +902,9 @@ class Valyu:
             if category is not None:
                 params["category"] = category
 
-            response = requests.get(
+            response = self._session.get(
                 f"{self.base_url}/datasources",
                 params=params if params else None,
-                headers=self.headers,
             )
 
             data = response.json()
@@ -944,9 +944,8 @@ class Valyu:
                 names and dataset counts.
         """
         try:
-            response = requests.get(
+            response = self._session.get(
                 f"{self.base_url}/datasources/categories",
-                headers=self.headers,
             )
 
             data = response.json()
