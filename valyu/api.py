@@ -222,9 +222,7 @@ class Valyu:
             if instructions is not None:
                 payload["instructions"] = instructions
 
-            response = self._session.post(
-                f"{self.base_url}/search", json=payload
-            )
+            response = self._session.post(f"{self.base_url}/search", json=payload)
 
             data = response.json()
 
@@ -370,9 +368,7 @@ class Valyu:
             if webhook_url:
                 payload["webhook_url"] = webhook_url
 
-            response = self._session.post(
-                f"{self.base_url}/contents", json=payload
-            )
+            response = self._session.post(f"{self.base_url}/contents", json=payload)
 
             data = response.json()
 
@@ -729,7 +725,8 @@ class Valyu:
                     original_query=final_metadata.get(
                         "original_query", payload.get("query", "")
                     ),
-                    contents=final_metadata.get("contents", full_content) or full_content,
+                    contents=final_metadata.get("contents", full_content)
+                    or full_content,
                     search_results=(
                         [SearchResult(**r) for r in final_search_results]
                         if final_search_results

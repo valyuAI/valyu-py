@@ -4,17 +4,20 @@ from pydantic import BaseModel
 
 class DatasourcePricing(BaseModel):
     """Pricing information for a datasource."""
+
     cpm: float  # Cost per million tokens
 
 
 class DatasourceCoverage(BaseModel):
     """Coverage information for a datasource."""
+
     start_date: Optional[str] = None
     end_date: Optional[str] = None
 
 
 class Datasource(BaseModel):
     """A single datasource available in Valyu."""
+
     id: str
     name: str
     description: str
@@ -34,6 +37,7 @@ class Datasource(BaseModel):
 
 class DatasourcesResponse(BaseModel):
     """Response from the datasources list endpoint."""
+
     success: bool
     error: Optional[str] = None
     datasources: List[Datasource] = []
@@ -44,6 +48,7 @@ class DatasourcesResponse(BaseModel):
 
 class DatasourceCategory(BaseModel):
     """A category of datasources."""
+
     id: str
     name: str
     description: Optional[str] = None
@@ -52,6 +57,7 @@ class DatasourceCategory(BaseModel):
 
 class DatasourceCategoriesResponse(BaseModel):
     """Response from the datasources categories endpoint."""
+
     success: bool
     error: Optional[str] = None
     categories: List[DatasourceCategory] = []

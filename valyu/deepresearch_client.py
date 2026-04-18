@@ -143,7 +143,11 @@ class DeepResearchClient:
 
             if files:
                 for i, f in enumerate(files):
-                    ctx = f.context if isinstance(f, FileAttachment) else (f.get("context") if isinstance(f, dict) else None)
+                    ctx = (
+                        f.context
+                        if isinstance(f, FileAttachment)
+                        else (f.get("context") if isinstance(f, dict) else None)
+                    )
                     if ctx and len(ctx) > 10000:
                         return DeepResearchCreateResponse(
                             success=False,
@@ -215,7 +219,11 @@ class DeepResearchClient:
                 ]
             if mcp_servers:
                 payload["mcp_servers"] = [
-                    s.model_dump(exclude_none=True) if isinstance(s, MCPServerConfig) else s
+                    (
+                        s.model_dump(exclude_none=True)
+                        if isinstance(s, MCPServerConfig)
+                        else s
+                    )
                     for s in mcp_servers
                 ]
             if previous_reports:
@@ -300,7 +308,9 @@ class DeepResearchClient:
         poll_interval: int = 5,
         max_wait_time: int = 7200,
         on_progress: Optional[Callable[[DeepResearchStatusResponse], None]] = None,
-        on_interaction: Optional[Callable[[Interaction], Optional[Dict[str, Any]]]] = None,
+        on_interaction: Optional[
+            Callable[[Interaction], Optional[Dict[str, Any]]]
+        ] = None,
     ) -> DeepResearchStatusResponse:
         """
         Wait for a task to complete with automatic polling.
@@ -335,11 +345,17 @@ class DeepResearchClient:
                 on_progress(status)
 
             # HITL checkpoint handling
-            if status.status in (DeepResearchStatus.AWAITING_INPUT, DeepResearchStatus.PAUSED) and status.interaction:
+            if (
+                status.status
+                in (DeepResearchStatus.AWAITING_INPUT, DeepResearchStatus.PAUSED)
+                and status.interaction
+            ):
                 if on_interaction:
                     response = on_interaction(status.interaction)
                     if response:
-                        self.respond(task_id, status.interaction.interaction_id, response)
+                        self.respond(
+                            task_id, status.interaction.interaction_id, response
+                        )
                         continue
 
             # Terminal states
@@ -573,9 +589,11 @@ class DeepResearchClient:
         Returns:
             DeepResearchRespondResponse
         """
-        return self.respond(task_id, interaction_id, {
-            "answers": [{"question": q, "answer": a} for q, a in answers]
-        })
+        return self.respond(
+            task_id,
+            interaction_id,
+            {"answers": [{"question": q, "answer": a} for q, a in answers]},
+        )
 
     def approve_plan(
         self,
@@ -619,10 +637,14 @@ class DeepResearchClient:
         Returns:
             DeepResearchRespondResponse
         """
-        return self.respond(task_id, interaction_id, {
-            "included_domains": included_domains or [],
-            "excluded_domains": excluded_domains or [],
-        })
+        return self.respond(
+            task_id,
+            interaction_id,
+            {
+                "included_domains": included_domains or [],
+                "excluded_domains": excluded_domains or [],
+            },
+        )
 
     def approve_outline(
         self,
