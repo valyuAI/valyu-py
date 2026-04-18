@@ -506,8 +506,6 @@ class DeepResearchBatch(BaseModel):
 
     batch_id: str = Field(..., description="Unique batch ID")
     organisation_id: Optional[str] = Field(None, description="Organization ID")
-    api_key_id: Optional[str] = Field(None, description="API key ID")
-    credit_id: Optional[str] = Field(None, description="Credit ID")
     status: BatchStatus = Field(..., description="Current batch status")
     mode: DeepResearchMode = Field(
         ..., description="Research mode (preferred field name)"
