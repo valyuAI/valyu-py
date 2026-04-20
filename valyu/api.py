@@ -4,6 +4,7 @@ import platform
 import time
 
 import requests
+from requests.adapters import HTTPAdapter
 from valyu import __version__
 from typing import Optional, List, Union, Dict, Any, Callable
 from valyu.types.response import SearchResponse, SearchType, ResultsBySource
@@ -44,13 +45,36 @@ class Valyu:
         self,
         api_key: Optional[str] = None,
         base_url: str = "https://api.valyu.ai/v1",
+        max_connections: int = 100,
+        timeout: Optional[float] = 600.0,
+        session: Optional[requests.Session] = None,
     ):
         """
         Initialize the Valyu client.
 
         Args:
-            api_key (Optional[str]): The API key to use for the client. If not provided, will attempt to read from VALYU_API_KEY environment variable.
+            api_key (Optional[str]): The API key to use for the client. If not
+                provided, will attempt to read from ``VALYU_API_KEY`` environment
+                variable.
             base_url (str): The base URL for the Valyu API.
+            max_connections (int): Maximum number of simultaneous HTTP
+                connections the underlying session will pool. Raise this when
+                calling the client from many threads; lower it if you want to be
+                gentle on a constrained environment. Defaults to 100. Ignored
+                when ``session`` is provided.
+            timeout (Optional[float]): Per-request timeout in seconds. Applied
+                to every outbound request unless overridden on the call. Pass
+                ``None`` to disable the timeout. Defaults to 600 seconds.
+            session (Optional[requests.Session]): Pre-configured
+                ``requests.Session`` to use. When provided, the client is used
+                as-is (no adapters mounted) and is NOT closed by ``close()`` —
+                lifecycle stays with the caller. Useful for injecting proxies,
+                custom TLS config, or a shared pool across clients.
+
+        The client may be used as a context manager::
+
+            with Valyu() as valyu:
+                response = valyu.search("...")
         """
         if api_key is None:
             api_key = os.getenv("VALYU_API_KEY")
@@ -58,6 +82,7 @@ class Valyu:
                 raise ValueError("VALYU_API_KEY is not set")
 
         self.base_url = base_url
+        self._timeout = timeout
         self.headers = {
             "Content-Type": "application/json",
             "x-api-key": api_key,
@@ -66,15 +91,44 @@ class Valyu:
             "X-Valyu-SDK-Version": __version__,
         }
 
-        # Persistent session for TCP+TLS connection reuse
-        self._session = requests.Session()
-        self._session.headers.update(self.headers)
+        if session is not None:
+            self._session = session
+            self._owns_session = False
+            # Ensure required headers are present without clobbering caller's.
+            for key, value in self.headers.items():
+                self._session.headers.setdefault(key, value)
+        else:
+            self._session = requests.Session()
+            self._session.headers.update(self.headers)
+            adapter = HTTPAdapter(
+                pool_connections=max_connections,
+                pool_maxsize=max_connections,
+                max_retries=0,
+            )
+            self._session.mount("https://", adapter)
+            self._session.mount("http://", adapter)
+            self._owns_session = True
 
         # Initialize DeepResearch client
         self.deepresearch = DeepResearchClient(self)
 
         # Initialize Batch client
         self.batch = BatchClient(self)
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
+
+    def close(self) -> None:
+        """Release the underlying HTTP session if this client owns it."""
+        if self._owns_session:
+            self._session.close()
+
+    def __enter__(self) -> "Valyu":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
 
     def search(
         self,
@@ -223,7 +277,9 @@ class Valyu:
                 payload["instructions"] = instructions
 
             response = self._session.post(
-                f"{self.base_url}/search", json=payload
+                f"{self.base_url}/search",
+                json=payload,
+                timeout=self._timeout,
             )
 
             data = response.json()
@@ -371,7 +427,9 @@ class Valyu:
                 payload["webhook_url"] = webhook_url
 
             response = self._session.post(
-                f"{self.base_url}/contents", json=payload
+                f"{self.base_url}/contents",
+                json=payload,
+                timeout=self._timeout,
             )
 
             data = response.json()
@@ -423,12 +481,26 @@ class Valyu:
         Returns:
             ContentsJobStatus with current status and results when terminal.
         """
-        response = self._session.get(
-            f"{self.base_url}/contents/jobs/{job_id}",
-        )
-        data = response.json()
+        try:
+            response = self._session.get(
+                f"{self.base_url}/contents/jobs/{job_id}",
+                timeout=self._timeout,
+            )
+            data = response.json()
 
-        if not response.ok:
+            if not response.ok:
+                return ContentsJobStatus(
+                    success=False,
+                    job_id=job_id,
+                    status="failed",
+                    urls_total=0,
+                    urls_processed=0,
+                    urls_failed=0,
+                    error=data.get("error", f"HTTP Error: {response.status_code}"),
+                )
+
+            return ContentsJobStatus(**data)
+        except Exception as e:
             return ContentsJobStatus(
                 success=False,
                 job_id=job_id,
@@ -436,10 +508,8 @@ class Valyu:
                 urls_total=0,
                 urls_processed=0,
                 urls_failed=0,
-                error=data.get("error", f"HTTP Error: {response.status_code}"),
+                error=str(e) or type(e).__name__,
             )
-
-        return ContentsJobStatus(**data)
 
     def wait_for_contents_job(
         self,
