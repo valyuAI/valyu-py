@@ -25,7 +25,7 @@ setup(
     },
     install_requires=[
         "requests==2.33.1",
-        "httpx>=0.27,<1.0",
+        "httpx==0.28.1",
         "pydantic==2.12.5",
         "openai==2.30.0",
         "anthropic==0.86.0",
