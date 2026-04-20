@@ -481,13 +481,26 @@ class Valyu:
         Returns:
             ContentsJobStatus with current status and results when terminal.
         """
-        response = self._session.get(
-            f"{self.base_url}/contents/jobs/{job_id}",
-            timeout=self._timeout,
-        )
-        data = response.json()
+        try:
+            response = self._session.get(
+                f"{self.base_url}/contents/jobs/{job_id}",
+                timeout=self._timeout,
+            )
+            data = response.json()
 
-        if not response.ok:
+            if not response.ok:
+                return ContentsJobStatus(
+                    success=False,
+                    job_id=job_id,
+                    status="failed",
+                    urls_total=0,
+                    urls_processed=0,
+                    urls_failed=0,
+                    error=data.get("error", f"HTTP Error: {response.status_code}"),
+                )
+
+            return ContentsJobStatus(**data)
+        except Exception as e:
             return ContentsJobStatus(
                 success=False,
                 job_id=job_id,
@@ -495,10 +508,8 @@ class Valyu:
                 urls_total=0,
                 urls_processed=0,
                 urls_failed=0,
-                error=data.get("error", f"HTTP Error: {response.status_code}"),
+                error=str(e) or type(e).__name__,
             )
-
-        return ContentsJobStatus(**data)
 
     def wait_for_contents_job(
         self,

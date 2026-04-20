@@ -226,7 +226,7 @@ class AsyncValyu:
             response = await self._post("/search", payload)
             data = response.json()
 
-            if response.status_code < 200 or response.status_code >= 300:
+            if not (200 <= response.status_code < 400):
                 return SearchResponse(
                     success=False,
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
@@ -318,7 +318,7 @@ class AsyncValyu:
             response = await self._post("/contents", payload)
             data = response.json()
 
-            if response.status_code < 200 or response.status_code >= 300:
+            if not (200 <= response.status_code < 400):
                 return ContentsResponse(
                     success=False,
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
@@ -362,7 +362,7 @@ class AsyncValyu:
             response = await self._get(f"/contents/jobs/{job_id}")
             data = response.json()
 
-            if response.status_code < 200 or response.status_code >= 300:
+            if not (200 <= response.status_code < 400):
                 return ContentsJobStatus(
                     success=False,
                     job_id=job_id,
