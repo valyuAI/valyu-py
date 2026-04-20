@@ -1,4 +1,4 @@
-__version__ = "2.9.4"
+__version__ = "2.9.5"
 
 from .types.response import SearchResponse
 from .types.contents import (
@@ -24,6 +24,7 @@ from .types.deepresearch import (
     DeepResearchRespondResponse,
 )
 from .api import Valyu
+from .async_api import AsyncValyu
 from .providers.openai import OpenAIProvider
 from .providers.anthropic import AnthropicProvider
 from .validation import validate_source, validate_sources, get_source_format_examples
@@ -50,6 +51,7 @@ __all__ = [
     "InteractionHistoryEntry",
     "DeepResearchRespondResponse",
     "Valyu",
+    "AsyncValyu",
     "OpenAIProvider",
     "AnthropicProvider",
     "validate_source",
