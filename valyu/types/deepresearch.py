@@ -183,6 +183,7 @@ class DeepResearchTools(BaseModel):
 
     code_execution: Optional[bool] = Field(False, description="Enable code execution in sandboxed environment")
     screenshots: Optional[bool] = Field(False, description="Enable visual screenshot capture of web pages")
+    charts: Optional[bool] = Field(False, description="Enable chart/graph generation embedded in the final report (free)")
 
 
 class ImageMetadata(BaseModel):
