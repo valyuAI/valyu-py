@@ -165,6 +165,9 @@ class ChartDataPoint(BaseModel):
 
     x: Union[str, int, float]
     y: Union[int, float]
+    y2: Optional[Union[int, float]] = None
+    z: Optional[Union[int, float]] = None
+    values: Optional[List[Union[int, float]]] = None
 
 
 class ChartDataSeries(BaseModel):
@@ -172,6 +175,7 @@ class ChartDataSeries(BaseModel):
 
     name: str
     data: List[ChartDataPoint]
+    line_style: Optional[Literal["solid", "dashed", "dotted"]] = None
 
 
 class DeepResearchTools(BaseModel):
@@ -193,7 +197,26 @@ class ImageMetadata(BaseModel):
     # Screenshot-only fields
     source_url: Optional[str] = None
     captured_at: Optional[int] = None
-    chart_type: Optional[Literal["line", "bar", "area"]] = None
+    chart_type: Optional[
+        Literal[
+            "line",
+            "bar",
+            "area",
+            "pie",
+            "doughnut",
+            "radar",
+            "scatter",
+            "horizontalBar",
+            "heatmap",
+            "boxplot",
+            "stackedBar",
+            "stackedArea",
+            "histogram",
+            "waterfall",
+            "timeline",
+            "bubble",
+        ]
+    ] = None
     x_axis_label: Optional[str] = None
     y_axis_label: Optional[str] = None
     data_series: Optional[List[ChartDataSeries]] = None
