@@ -159,7 +159,7 @@ class DeliverableResult(BaseModel):
         ...,
         description=(
             "Generation status. 'pending' means the deliverable is still being produced "
-            "(the task is still running): url, s3_key, row_count and column_count are not "
+            "(the task is still running): url, row_count and column_count are not "
             "yet available."
         ),
     )
@@ -170,7 +170,6 @@ class DeliverableResult(BaseModel):
     url: Optional[str] = Field(
         None, description="Token-signed authenticated URL to download the file (absent while pending)"
     )
-    s3_key: Optional[str] = Field(None, description="S3 storage key (absent while pending)")
     row_count: Optional[int] = Field(None, description="Number of rows (for CSV/XLSX)")
     column_count: Optional[int] = Field(
         None, description="Number of columns (for CSV/XLSX)"
