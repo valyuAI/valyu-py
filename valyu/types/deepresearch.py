@@ -91,7 +91,7 @@ class DeliverableResult(BaseModel):
     url: str = Field(
         ..., description="Token-signed authenticated URL to download the file"
     )
-    s3_key: str = Field(..., description="S3 storage key")
+    s3_key: str = Field(..., description="S3 storage key", exclude=True)
     row_count: Optional[int] = Field(None, description="Number of rows (for CSV/XLSX)")
     column_count: Optional[int] = Field(
         None, description="Number of columns (for CSV/XLSX)"
@@ -145,7 +145,8 @@ class SearchConfig(BaseModel):
     )
     category: Optional[str] = Field(None, description="Category filter for results")
     country_code: Optional[str] = Field(
-        None, description="ISO country code for location-filtered searches (e.g., 'US', 'GB')"
+        None,
+        description="ISO country code for location-filtered searches (e.g., 'US', 'GB')",
     )
     source_biases: Optional[Dict[str, int]] = Field(
         None,
@@ -181,9 +182,16 @@ class ChartDataSeries(BaseModel):
 class DeepResearchTools(BaseModel):
     """Tools configuration for deep research tasks."""
 
-    code_execution: Optional[bool] = Field(False, description="Enable code execution in sandboxed environment")
-    screenshots: Optional[bool] = Field(False, description="Enable visual screenshot capture of web pages")
-    charts: Optional[bool] = Field(False, description="Enable chart/graph generation embedded in the final report (free)")
+    code_execution: Optional[bool] = Field(
+        False, description="Enable code execution in sandboxed environment"
+    )
+    screenshots: Optional[bool] = Field(
+        False, description="Enable visual screenshot capture of web pages"
+    )
+    charts: Optional[bool] = Field(
+        False,
+        description="Enable chart/graph generation embedded in the final report (free)",
+    )
 
 
 class ImageMetadata(BaseModel):
@@ -255,9 +263,16 @@ class DeepResearchCostBreakdown(BaseModel):
     """Itemized cost breakdown for a deep research task."""
 
     task: float = Field(..., description="Base task price for the selected mode")
-    screenshots: Optional[float] = Field(None, description="Screenshot surcharges ($0.05 per URL captured)")
-    code_execution: Optional[float] = Field(None, description="Code execution surcharges ($0.10 per execution)")
-    deliverables: Optional[float] = Field(None, description="Deliverable surcharges ($0.10 per deliverable after the first)")
+    screenshots: Optional[float] = Field(
+        None, description="Screenshot surcharges ($0.05 per URL captured)"
+    )
+    code_execution: Optional[float] = Field(
+        None, description="Code execution surcharges ($0.10 per execution)"
+    )
+    deliverables: Optional[float] = Field(
+        None,
+        description="Deliverable surcharges ($0.10 per deliverable after the first)",
+    )
 
 
 class HitlConfig(BaseModel):
@@ -277,7 +292,8 @@ class HitlConfig(BaseModel):
         None, description="Pause after research for user to filter sources by domain"
     )
     outline_review: Optional[bool] = Field(
-        None, description="Pause after source review for user to review the report outline"
+        None,
+        description="Pause after source review for user to review the report outline",
     )
 
 
@@ -293,10 +309,14 @@ class InteractionType(str, Enum):
 class Interaction(BaseModel):
     """HITL interaction payload returned when a task is awaiting input."""
 
-    interaction_id: str = Field(..., description="Unique ID for this interaction (use when responding)")
+    interaction_id: str = Field(
+        ..., description="Unique ID for this interaction (use when responding)"
+    )
     type: InteractionType = Field(..., description="Type of checkpoint")
     data: Dict[str, Any] = Field(..., description="Checkpoint-specific data")
-    created_at: int = Field(..., description="Unix timestamp (ms) when checkpoint fired")
+    created_at: int = Field(
+        ..., description="Unix timestamp (ms) when checkpoint fired"
+    )
     timeout_ms: int = Field(..., description="Timeout duration in milliseconds")
     expected_response: Optional[Dict[str, Any]] = Field(
         None, description="Schema hint for the expected response shape"
@@ -309,9 +329,15 @@ class InteractionHistoryEntry(BaseModel):
     interaction_id: str
     type: InteractionType
     created_at: int = Field(..., description="When the checkpoint fired (ms)")
-    responded_at: Optional[int] = Field(None, description="When the user responded (ms)")
-    auto_continued: bool = Field(..., description="True if timed out, false if user responded")
-    response: Optional[Dict[str, Any]] = Field(None, description="The user's response (absent if timed out)")
+    responded_at: Optional[int] = Field(
+        None, description="When the user responded (ms)"
+    )
+    auto_continued: bool = Field(
+        ..., description="True if timed out, false if user responded"
+    )
+    response: Optional[Dict[str, Any]] = Field(
+        None, description="The user's response (absent if timed out)"
+    )
 
 
 class DeepResearchCreateResponse(BaseModel):
@@ -356,15 +382,27 @@ class DeepResearchStatusResponse(BaseModel):
     deliverables: Optional[List[DeliverableResult]] = None
     sources: Optional[List[DeepResearchSource]] = None
     cost: Optional[float] = None
-    cost_breakdown: Optional[DeepResearchCostBreakdown] = Field(None, description="Itemized cost breakdown (task, screenshots, code_execution, deliverables)")
-    tools: Optional[DeepResearchTools] = Field(None, description="Resolved tools configuration")
+    cost_breakdown: Optional[DeepResearchCostBreakdown] = Field(
+        None,
+        description="Itemized cost breakdown (task, screenshots, code_execution, deliverables)",
+    )
+    tools: Optional[DeepResearchTools] = Field(
+        None, description="Resolved tools configuration"
+    )
     batch_id: Optional[str] = None
     batch_task_id: Optional[str] = None
 
     # HITL fields
-    hitl_config: Optional[Dict[str, Any]] = Field(None, description="HITL configuration (mirrors request hitl param)")
-    interaction: Optional[Interaction] = Field(None, description="Current HITL checkpoint (present when awaiting_input or paused)")
-    hitl_history: Optional[List[InteractionHistoryEntry]] = Field(None, description="History of completed HITL checkpoints")
+    hitl_config: Optional[Dict[str, Any]] = Field(
+        None, description="HITL configuration (mirrors request hitl param)"
+    )
+    interaction: Optional[Interaction] = Field(
+        None,
+        description="Current HITL checkpoint (present when awaiting_input or paused)",
+    )
+    hitl_history: Optional[List[InteractionHistoryEntry]] = Field(
+        None, description="History of completed HITL checkpoints"
+    )
 
     error: Optional[str] = None
 
@@ -480,7 +518,8 @@ class BatchTaskInput(BaseModel):
         description="Research query or task description (deprecated, use query instead)",
     )
     strategy: Optional[str] = Field(
-        None, description="Natural language strategy (deprecated, use research_strategy)"
+        None,
+        description="Natural language strategy (deprecated, use research_strategy)",
     )
     research_strategy: Optional[str] = Field(
         None, description="Natural language strategy to guide the research phase"
@@ -530,7 +569,7 @@ class DeepResearchBatch(BaseModel):
 
     batch_id: str = Field(..., description="Unique batch ID")
     organisation_id: Optional[str] = Field(None, description="Organization ID")
-    api_key_id: Optional[str] = Field(None, description="API key ID")
+    api_key_id: Optional[str] = Field(None, description="API key ID", exclude=True)
     credit_id: Optional[str] = Field(None, description="Credit ID")
     status: BatchStatus = Field(..., description="Current batch status")
     mode: DeepResearchMode = Field(
@@ -729,5 +768,3 @@ class BatchListResponse(BaseModel):
     success: bool
     batches: Optional[List[DeepResearchBatch]] = None
     error: Optional[str] = None
-
-
