@@ -5,6 +5,7 @@ Shared between the sync `Valyu` client (``api.py``) and the async
 ``AsyncValyu`` client (``async_api.py``) so validation logic lives in
 one place.
 """
+
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from valyu.types.answer import SUPPORTED_COUNTRY_CODES
@@ -102,7 +103,9 @@ def build_search_payload(
     return payload
 
 
-def validate_contents_inputs(urls: List[str], async_mode: bool) -> Tuple[bool, Optional[str]]:
+def validate_contents_inputs(
+    urls: List[str], async_mode: bool
+) -> Tuple[bool, Optional[str]]:
     if len(urls) > 50:
         return False, "Maximum 50 URLs allowed per request"
     if len(urls) > 10 and not async_mode:
