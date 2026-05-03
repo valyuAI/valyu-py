@@ -23,6 +23,7 @@ Typical usage::
 
     asyncio.run(main())
 """
+
 import asyncio
 import os
 import platform
@@ -284,7 +285,9 @@ class AsyncValyu:
         wait: bool = False,
         poll_interval: int = 5,
         max_wait_time: int = 3600,
-    ) -> Optional[Union[ContentsResponse, ContentsJobCreateResponse, ContentsJobStatus]]:
+    ) -> Optional[
+        Union[ContentsResponse, ContentsJobCreateResponse, ContentsJobStatus]
+    ]:
         """
         Async version of ``Valyu.contents``. Arguments and semantics
         identical to :py:meth:`Valyu.contents`.
@@ -295,7 +298,9 @@ class AsyncValyu:
                 return ContentsResponse(
                     success=False,
                     error=err,
-                    tx_id="error-max-urls" if len(urls) > 50 else "error-async-required",
+                    tx_id=(
+                        "error-max-urls" if len(urls) > 50 else "error-async-required"
+                    ),
                     urls_requested=len(urls),
                     urls_processed=0,
                     urls_failed=len(urls),
