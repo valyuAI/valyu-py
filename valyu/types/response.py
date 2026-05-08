@@ -24,7 +24,6 @@ class SearchResult(BaseModel):
     citation_count: Optional[int] = None
     authors: Optional[List[str]] = None
     references: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
 
 
 class ResultsBySource(BaseModel):
