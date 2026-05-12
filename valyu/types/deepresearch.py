@@ -239,6 +239,7 @@ class DeepResearchSource(BaseModel):
     category: Optional[str] = None
     source_id: Optional[int] = None
     word_count: Optional[int] = None
+    fragment: Optional[str] = None
 
 
 class Usage(BaseModel):
