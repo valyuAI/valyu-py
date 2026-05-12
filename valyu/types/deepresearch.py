@@ -203,7 +203,7 @@ class DeepResearchTools(BaseModel):
     code_execution: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable code execution in sandboxed environment")
     screenshots: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable visual screenshot capture of web pages")
     browser_use: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable autonomous browser sessions")
-    charts: Optional[bool] = Field(None, description="Enable chart/graph generation embedded in the final report (free)")
+    charts: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable chart/graph generation embedded in the final report (free, unlimited)")
 
 
 class ImageMetadata(BaseModel):
