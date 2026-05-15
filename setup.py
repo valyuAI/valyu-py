@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="valyu",
-    version="2.9.9",
+    version="2.9.10",
     author="Valyu",
     author_email="contact@valyu.ai",
     maintainer="Harvey Yorke",
@@ -24,11 +24,9 @@ setup(
         "": ["*.pyc", "*.pyo", "*.pyd", "__pycache__", "*.so"],
     },
     install_requires=[
-        "requests==2.33.1",
-        "httpx==0.28.1",
-        "pydantic==2.12.5",
-        "openai==2.30.0",
-        "anthropic==0.86.0",
+        "requests>=2.31.0",
+        "httpx>=0.27.0",
+        "pydantic>=2.0.0",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
