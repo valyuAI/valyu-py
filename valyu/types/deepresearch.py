@@ -372,6 +372,8 @@ class DeepResearchStatusResponse(BaseModel):
     completed_at: Optional[str] = None
     output: Optional[Union[str, Dict[str, Any], Any]] = None
     output_type: Optional[Literal["markdown", "json", "toon"]] = None
+    title: Optional[str] = None
+    total_word_count: Optional[int] = None
     pdf_url: Optional[str] = None
     images: Optional[List[ImageMetadata]] = None
     deliverables: Optional[List[DeliverableResult]] = None
@@ -397,6 +399,7 @@ class DeepResearchTaskListItem(BaseModel):
     query: str
     status: DeepResearchStatus
     created_at: str
+    title: Optional[str] = None
     public: Optional[bool] = None
 
 
