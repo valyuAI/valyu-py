@@ -121,6 +121,11 @@ class SearchConfig(BaseModel):
             Format: ISO date (YYYY-MM-DD), e.g., "2024-01-01"
         end_date: Filters results to content published on or before this date.
             Format: ISO date (YYYY-MM-DD), e.g., "2024-12-31"
+        historical_cache: When True and a date range (start_date and/or end_date)
+            is set, searches return the newest cached snapshot inside the range
+            instead of the latest crawl. No-op without a date range. Locked to the
+            value passed here for the whole research run — the agent cannot
+            toggle it mid-research.
         category: Filters results by a specific category.
             Category values are source-dependent.
         country_code: ISO country code for location-filtered searches.
@@ -142,6 +147,10 @@ class SearchConfig(BaseModel):
     )
     end_date: Optional[str] = Field(
         None, description="End date filter in ISO format (YYYY-MM-DD)"
+    )
+    historical_cache: Optional[bool] = Field(
+        None,
+        description="When True and a date range is set, return the newest cached snapshot inside the range instead of the latest crawl. No-op without a date range.",
     )
     category: Optional[str] = Field(None, description="Category filter for results")
     country_code: Optional[str] = Field(

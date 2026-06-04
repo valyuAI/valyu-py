@@ -149,6 +149,7 @@ class Valyu:
         url_only: bool = False,
         source_biases: Optional[Dict[str, int]] = None,
         instructions: Optional[str] = None,
+        historical_cache: Optional[bool] = None,
     ) -> Optional[SearchResponse]:
         """
         Query the Valyu DeepSearch API to give your AI relevant context.
@@ -185,6 +186,9 @@ class Valyu:
                 to user intent. Acts as a system prompt for the search — e.g.
                 "Focus on oncology clinical trials from 2023 onwards". Max 500 characters.
                 Ignored when fast_mode=True.
+            historical_cache (Optional[bool]): When True and a date range (start_date and/or
+                end_date) is set, return the newest cached snapshot inside the range instead
+                of the latest crawl. No-op without a date range. Defaults to False.
 
         Returns:
             Optional[SearchResponse]: The search response.
@@ -270,6 +274,9 @@ class Valyu:
             if end_date is not None:
                 payload["end_date"] = end_date
 
+            if historical_cache is not None:
+                payload["historical_cache"] = historical_cache
+
             if source_biases is not None:
                 payload["source_biases"] = source_biases
 
@@ -336,6 +343,9 @@ class Valyu:
         wait: bool = False,
         poll_interval: int = 5,
         max_wait_time: int = 3600,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        historical_cache: Optional[bool] = None,
     ) -> Optional[
         Union[ContentsResponse, ContentsJobCreateResponse, ContentsJobStatus]
     ]:
@@ -368,6 +378,11 @@ class Valyu:
             wait (bool): When async_mode=True, poll until complete and return final results. Default: False.
             poll_interval (int): Seconds between polls when wait=True. Default: 5.
             max_wait_time (int): Max seconds to wait when wait=True. Default: 3600.
+            start_date (Optional[str]): Start date filter in YYYY-MM-DD format. Inclusive.
+            end_date (Optional[str]): End date filter in YYYY-MM-DD format. Inclusive.
+            historical_cache (Optional[bool]): When True and a date range (start_date and/or
+                end_date) is set, return the newest cached snapshot inside the range instead
+                of the latest crawl. No-op without a date range. Defaults to False.
 
         Returns:
             ContentsResponse (sync), ContentsJobCreateResponse (async, wait=False),
@@ -425,6 +440,15 @@ class Valyu:
 
             if webhook_url:
                 payload["webhook_url"] = webhook_url
+
+            if start_date is not None:
+                payload["start_date"] = start_date
+
+            if end_date is not None:
+                payload["end_date"] = end_date
+
+            if historical_cache is not None:
+                payload["historical_cache"] = historical_cache
 
             response = self._session.post(
                 f"{self.base_url}/contents",

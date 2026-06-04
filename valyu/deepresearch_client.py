@@ -88,6 +88,9 @@ class DeepResearchClient:
                    - excluded_sources: List of source types to exclude
                    - start_date: Start date filter in ISO format (YYYY-MM-DD), e.g., "2024-01-01"
                    - end_date: End date filter in ISO format (YYYY-MM-DD), e.g., "2024-12-31"
+                   - historical_cache: When True and a date range is set, searches return the
+                     newest cached snapshot inside the range instead of the latest crawl.
+                     Locked for the whole research run — the agent cannot toggle it mid-research.
                    - category: Category filter for results
             urls: URLs to extract and analyze
             files: File attachments (PDFs, images)

@@ -69,6 +69,7 @@ def build_search_payload(
     url_only: bool,
     source_biases: Optional[Dict[str, int]],
     instructions: Optional[str],
+    historical_cache: Optional[bool] = None,
 ) -> Dict[str, Any]:
     payload: Dict[str, Any] = {
         "query": query,
@@ -95,6 +96,8 @@ def build_search_payload(
         payload["start_date"] = start_date
     if end_date is not None:
         payload["end_date"] = end_date
+    if historical_cache is not None:
+        payload["historical_cache"] = historical_cache
     if source_biases is not None:
         payload["source_biases"] = source_biases
     if instructions is not None:
@@ -119,6 +122,9 @@ def build_contents_payload(
     screenshot: bool,
     async_mode: bool,
     webhook_url: Optional[str],
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    historical_cache: Optional[bool] = None,
 ) -> Dict[str, Any]:
     use_async = len(urls) > 10 or async_mode
     payload: Dict[str, Any] = {"urls": urls}
@@ -136,6 +142,12 @@ def build_contents_payload(
         payload["screenshot"] = screenshot
     if webhook_url:
         payload["webhook_url"] = webhook_url
+    if start_date is not None:
+        payload["start_date"] = start_date
+    if end_date is not None:
+        payload["end_date"] = end_date
+    if historical_cache is not None:
+        payload["historical_cache"] = historical_cache
     return payload
 
 
