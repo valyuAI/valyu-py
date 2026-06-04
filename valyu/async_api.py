@@ -187,6 +187,7 @@ class AsyncValyu:
         url_only: bool = False,
         source_biases: Optional[Dict[str, int]] = None,
         instructions: Optional[str] = None,
+        historical_cache: Optional[bool] = None,
     ) -> Optional[SearchResponse]:
         """
         Async version of ``Valyu.search``. See :py:meth:`Valyu.search`
@@ -221,6 +222,7 @@ class AsyncValyu:
                 url_only=url_only,
                 source_biases=source_biases,
                 instructions=instructions,
+                historical_cache=historical_cache,
             )
 
             response = await self._post("/search", payload)
@@ -284,6 +286,9 @@ class AsyncValyu:
         wait: bool = False,
         poll_interval: int = 5,
         max_wait_time: int = 3600,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        historical_cache: Optional[bool] = None,
     ) -> Optional[Union[ContentsResponse, ContentsJobCreateResponse, ContentsJobStatus]]:
         """
         Async version of ``Valyu.contents``. Arguments and semantics
@@ -313,6 +318,9 @@ class AsyncValyu:
                 screenshot=screenshot,
                 async_mode=async_mode,
                 webhook_url=webhook_url,
+                start_date=start_date,
+                end_date=end_date,
+                historical_cache=historical_cache,
             )
 
             response = await self._post("/contents", payload)
