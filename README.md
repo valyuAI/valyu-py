@@ -174,6 +174,56 @@ result = valyu.batch.wait_for_completion(
 )
 ```
 
+### Workflows
+
+Templated DeepResearch starting points - curated by Valyu or created by your org - with typed `{variable}` placeholders and version history.
+
+```python
+# Browse curated workflows
+catalog = valyu.workflows.list(scope="valyu", vertical="investment-banking")
+for wf in catalog.workflows:
+    print(wf.slug, "-", wf.title)
+
+# Run one as a DeepResearch task
+task = valyu.deepresearch.create(
+    workflow_id="ib-company-profile",
+    workflow_params={"company": "NVIDIA (NVDA)"},
+)
+
+result = valyu.deepresearch.wait(task.deepresearch_id)
+print(result.output)
+```
+
+Create your own:
+
+```python
+valyu.workflows.create(
+    slug="weekly-competitor-scan",
+    title="Weekly Competitor Scan",
+    version={
+        "prompt": "Summarize the week's most important developments at {company}.",
+        "strategy": "Prioritize primary sources: filings, press releases, earnings calls.",
+        "report_format": "Bullet-point briefing, grouped by theme.",
+        "variables": [{"key": "company", "label": "Company", "required": True}],
+    },
+)
+```
+
+<details>
+<summary>All Workflows methods</summary>
+
+| Method | Description |
+|---|---|
+| `list(vertical, scope, q, tags, limit, expand)` | List available workflows |
+| `get(slug, version)` | Get a workflow's full template |
+| `versions(slug)` | List a workflow's version history |
+| `preview(slug, workflow_params, workflow_version)` | Resolve the template without creating a task |
+| `create(slug, title, version, ...)` | Create an org workflow |
+| `update(slug, ..., version, set_current)` | Update metadata and/or publish a new version |
+| `delete(slug)` | Delete an org workflow |
+
+</details>
+
 ### Data Sources
 
 List available data sources programmatically.

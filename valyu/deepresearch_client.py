@@ -62,6 +62,9 @@ class DeepResearchClient:
         brand_collection_id: Optional[str] = None,
         hitl: Optional[Union[HitlConfig, Dict[str, bool]]] = None,
         metadata: Optional[Dict[str, Union[str, int, bool]]] = None,
+        workflow_id: Optional[str] = None,
+        workflow_params: Optional[Dict[str, Any]] = None,
+        workflow_version: Optional[int] = None,
     ) -> DeepResearchCreateResponse:
         """
         Create a new deep research task.
@@ -118,6 +121,12 @@ class DeepResearchClient:
                 - outline_review: Review the report outline
                 Not available for batch requests.
             metadata: Custom metadata (key-value pairs)
+            workflow_id: Slug of a workflow to run (see client.workflows.list()).
+                        The workflow's template supplies the prompt, strategy,
+                        report format, deliverables, and mode. Mutually exclusive
+                        with query/input/research_strategy/report_format.
+            workflow_params: Values for the workflow's variables
+            workflow_version: Specific workflow version to run (defaults to current)
 
         Returns:
             DeepResearchCreateResponse with task ID and status
@@ -125,6 +134,64 @@ class DeepResearchClient:
         try:
             # Determine which field to use (prefer query over input)
             research_query = query if query else input
+
+            # Workflow runs: the template supplies the freeform fields
+            if workflow_id:
+                if research_query or strategy or research_strategy or report_format:
+                    return DeepResearchCreateResponse(
+                        success=False,
+                        error="workflow_id is mutually exclusive with query/input/research_strategy/report_format - the workflow template supplies those fields",
+                    )
+                payload: Dict[str, Any] = {"workflow_id": workflow_id}
+                if workflow_params is not None:
+                    payload["workflow_params"] = workflow_params
+                if workflow_version is not None:
+                    payload["workflow_version"] = workflow_version
+                # Only send mode/output_formats when explicitly set so the
+                # workflow's recommended defaults apply otherwise
+                explicit_mode = mode if mode is not None else model
+                if explicit_mode is not None:
+                    payload["mode"] = (
+                        "standard" if explicit_mode == "lite" else explicit_mode
+                    )
+                if output_formats:
+                    payload["output_formats"] = output_formats
+                if webhook_url:
+                    payload["webhook_url"] = webhook_url
+                if alert_email is not None:
+                    if isinstance(alert_email, str):
+                        payload["alert_email"] = alert_email
+                    elif isinstance(alert_email, AlertEmailConfig):
+                        payload["alert_email"] = alert_email.model_dump(
+                            exclude_none=True
+                        )
+                    else:
+                        payload["alert_email"] = alert_email
+                if metadata:
+                    payload["metadata"] = metadata
+                if tools is not None:
+                    if isinstance(tools, dict):
+                        payload["tools"] = tools
+                    else:
+                        payload["tools"] = tools.model_dump(exclude_none=True)
+
+                response = self._session.post(
+                    f"{self._base_url}/deepresearch/tasks",
+                    json=payload,
+                )
+                data = response.json()
+
+                if not response.ok:
+                    return DeepResearchCreateResponse(
+                        success=False,
+                        error=data.get(
+                            "message",
+                            data.get("error", f"HTTP Error: {response.status_code}"),
+                        ),
+                    )
+
+                data.pop("success", None)
+                return DeepResearchCreateResponse(success=True, **data)
 
             # Validation
             if not research_query or not research_query.strip():
