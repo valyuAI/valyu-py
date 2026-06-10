@@ -2,6 +2,8 @@ from pydantic import BaseModel, Field, model_validator, ConfigDict
 from typing import Optional, List, Literal, Union, Dict, Any, Callable
 from enum import Enum
 
+from valyu.types.workflows import WorkflowRunInfo
+
 
 class AlertEmailConfig(BaseModel):
     """Alert email configuration with optional custom URL."""
@@ -358,6 +360,7 @@ class DeepResearchCreateResponse(BaseModel):
     webhook_secret: Optional[str] = None
     message: Optional[str] = None
     brand_collection_id: Optional[str] = None
+    workflow: Optional[WorkflowRunInfo] = None
     error: Optional[str] = None
 
 

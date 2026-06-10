@@ -38,6 +38,7 @@ from valyu.types.answer import (
 from valyu.validation import validate_sources, format_validation_error
 from valyu.deepresearch_client import DeepResearchClient
 from valyu.batch_client import BatchClient
+from valyu.workflows_client import WorkflowsClient
 
 
 class Valyu:
@@ -114,6 +115,9 @@ class Valyu:
 
         # Initialize Batch client
         self.batch = BatchClient(self)
+
+        # Initialize Workflows client
+        self.workflows = WorkflowsClient(self)
 
     # ------------------------------------------------------------------
     # Lifecycle

@@ -1,4 +1,4 @@
-__version__ = "2.9.12"
+__version__ = "2.10.0"
 
 from .types.response import SearchResponse
 from .types.contents import (
@@ -22,6 +22,21 @@ from .types.deepresearch import (
     Interaction,
     InteractionHistoryEntry,
     DeepResearchRespondResponse,
+)
+from .types.workflows import (
+    Workflow,
+    WorkflowVariable,
+    WorkflowVariableValidation,
+    WorkflowDeliverable,
+    WorkflowTools,
+    WorkflowVersionSummary,
+    WorkflowRunInfo,
+    ResolvedWorkflowTemplate,
+    WorkflowsListResponse,
+    WorkflowResponse,
+    WorkflowVersionsResponse,
+    WorkflowPreviewResponse,
+    WorkflowDeleteResponse,
 )
 from .api import Valyu
 from .async_api import AsyncValyu
@@ -50,6 +65,19 @@ __all__ = [
     "Interaction",
     "InteractionHistoryEntry",
     "DeepResearchRespondResponse",
+    "Workflow",
+    "WorkflowVariable",
+    "WorkflowVariableValidation",
+    "WorkflowDeliverable",
+    "WorkflowTools",
+    "WorkflowVersionSummary",
+    "WorkflowRunInfo",
+    "ResolvedWorkflowTemplate",
+    "WorkflowsListResponse",
+    "WorkflowResponse",
+    "WorkflowVersionsResponse",
+    "WorkflowPreviewResponse",
+    "WorkflowDeleteResponse",
     "Valyu",
     "AsyncValyu",
     "OpenAIProvider",
