@@ -402,6 +402,15 @@ class DeepResearchStatusResponse(BaseModel):
     hitl_history: Optional[List[InteractionHistoryEntry]] = Field(None, description="History of completed HITL checkpoints")
 
     error: Optional[str] = None
+    unreachable: Optional[bool] = Field(
+        None,
+        description=(
+            "True when success=False because the status endpoint could not be "
+            "reached after retries (transient gateway/network failure). This is "
+            "retryable and distinct from a failed task — the report may still be "
+            "available."
+        ),
+    )
 
 
 class DeepResearchTaskListItem(BaseModel):
