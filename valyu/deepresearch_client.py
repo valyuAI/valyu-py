@@ -3,6 +3,7 @@ DeepResearch Client for Valyu SDK
 """
 
 import time
+import random
 import requests
 from typing import Optional, List, Literal, Union, Dict, Any, Callable
 from valyu.types.deepresearch import (
@@ -25,6 +26,12 @@ from valyu.types.deepresearch import (
     DeepResearchTogglePublicResponse,
     DeepResearchRespondResponse,
 )
+
+
+# HTTP status codes that indicate a transient gateway/server/rate-limit
+# condition rather than a definitive answer about the task. The status
+# endpoint is idempotent and meant to be polled, so these are retried.
+_TRANSIENT_STATUS_CODES = frozenset({408, 429, 500, 502, 503, 504})
 
 
 class DeepResearchClient:
@@ -335,37 +342,86 @@ class DeepResearchClient:
                 error=str(e),
             )
 
-    def status(self, task_id: str) -> DeepResearchStatusResponse:
+    def status(self, task_id: str, max_attempts: int = 5) -> DeepResearchStatusResponse:
         """
         Get the status of a deep research task.
 
+        The status endpoint is idempotent and built to be polled, so transient
+        failures are retried with exponential backoff + jitter instead of being
+        reported as task failures. Treated as transient (and retried):
+        connection errors and timeouts, HTTP 429/5xx (e.g. an ALB 502 gateway
+        page), and non-JSON or empty response bodies. Only a definitive error
+        response (a 4xx other than 429 carrying a JSON error) is returned as a
+        failure.
+
+        If the endpoint stays unreachable across every attempt, the result has
+        ``success=False`` and ``unreachable=True`` — this means "couldn't read
+        status", which is retryable and distinct from "the task failed". The
+        completed report may still be retrievable.
+
         Args:
             task_id: Task ID to check
+            max_attempts: Attempts before giving up as unreachable (default: 5)
 
         Returns:
             DeepResearchStatusResponse with current status
         """
-        try:
-            response = self._session.get(
-                f"{self._base_url}/deepresearch/tasks/{task_id}/status",
-            )
+        url = f"{self._base_url}/deepresearch/tasks/{task_id}/status"
+        last_error = "status endpoint unreachable"
 
-            data = response.json()
+        for attempt in range(max_attempts):
+            transient = True
+            try:
+                response = self._session.get(url)
 
-            if not response.ok:
-                return DeepResearchStatusResponse(
-                    success=False,
-                    error=data.get("error", f"HTTP Error: {response.status_code}"),
-                )
+                if response.status_code in _TRANSIENT_STATUS_CODES:
+                    # Gateway/rate-limit/server blip — the task is unaffected.
+                    last_error = f"HTTP {response.status_code}"
+                else:
+                    # An HTML 502 page or an empty body is a gateway artifact,
+                    # not the task's real status. Guard before parsing so we
+                    # never conflate a bad body with a failed task.
+                    content_type = response.headers.get("content-type", "")
+                    if (
+                        "application/json" not in content_type.lower()
+                        or not response.text.strip()
+                    ):
+                        last_error = (
+                            f"non-JSON/empty status response (HTTP "
+                            f"{response.status_code}, content-type: "
+                            f"{content_type or 'none'})"
+                        )
+                    else:
+                        data = response.json()
+                        if not response.ok:
+                            # Definitive error response (e.g. 4xx) — terminal.
+                            return DeepResearchStatusResponse(
+                                success=False,
+                                error=data.get(
+                                    "error", f"HTTP Error: {response.status_code}"
+                                ),
+                            )
+                        data.pop("success", None)
+                        return DeepResearchStatusResponse(success=True, **data)
 
-            data.pop("success", None)
-            return DeepResearchStatusResponse(success=True, **data)
+            except (requests.exceptions.RequestException, ValueError) as e:
+                # Connection errors, timeouts, and JSON decode errors are all
+                # transient drops of a single poll.
+                last_error = str(e) or e.__class__.__name__
 
-        except Exception as e:
-            return DeepResearchStatusResponse(
-                success=False,
-                error=str(e),
-            )
+            if transient and attempt < max_attempts - 1:
+                # Exponential backoff capped at 30s, with jitter to avoid
+                # synchronised retries hammering a recovering gateway.
+                time.sleep(min(2 ** attempt, 30) + random.random())
+
+        return DeepResearchStatusResponse(
+            success=False,
+            unreachable=True,
+            error=(
+                f"Status endpoint unreachable after {max_attempts} attempts: "
+                f"{last_error}"
+            ),
+        )
 
     def wait(
         self,
@@ -392,8 +448,10 @@ class DeepResearchClient:
             Final task status
 
         Raises:
-            TimeoutError: If max_wait_time is exceeded
-            ValueError: If task fails or is cancelled
+            TimeoutError: If max_wait_time is exceeded (including while the
+                status endpoint stays unreachable)
+            ValueError: If task fails or is cancelled, or status returns a
+                definitive (non-transient) error
         """
         start_time = time.time()
 
@@ -401,6 +459,18 @@ class DeepResearchClient:
             status = self.status(task_id)
 
             if not status.success:
+                # A transiently unreachable status endpoint is not a task
+                # failure — keep polling within max_wait_time, since the task
+                # may well be running (or already completed) server-side.
+                if status.unreachable:
+                    elapsed = time.time() - start_time
+                    if elapsed > max_wait_time:
+                        raise TimeoutError(
+                            f"Status endpoint unreachable for {max_wait_time} "
+                            f"seconds: {status.error}"
+                        )
+                    time.sleep(poll_interval)
+                    continue
                 raise ValueError(f"Failed to get status: {status.error}")
 
             # Notify progress callback
