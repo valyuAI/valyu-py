@@ -119,15 +119,22 @@ class SearchConfig(BaseModel):
         excluded_sources: Excludes specific source types from search results.
             Uses the same source type values as included_sources.
             Cannot be used simultaneously with included_sources.
-        start_date: Filters results to content published on or after this date.
-            Format: ISO date (YYYY-MM-DD), e.g., "2024-01-01"
-        end_date: Filters results to content published on or before this date.
-            Format: ISO date (YYYY-MM-DD), e.g., "2024-12-31"
+        start_date: Inclusive lower bound on content date. Accepts a bare date
+            (YYYY-MM-DD, day granularity, e.g. "2026-01-01") or a full ISO-8601
+            datetime (YYYY-MM-DDTHH:MM[:SS[.sss]][Z|±HH:MM], e.g.
+            "2026-01-01T00:00:00Z"; a space separator is also accepted). A value
+            with any time component requires historical_cache=True and is
+            otherwise rejected with HTTP 400 — use a bare date for standard search.
+        end_date: Inclusive upper bound on content date. Same formats and
+            historical_cache=True requirement for sub-day timestamps as start_date.
         historical_cache: When True and a date range (start_date and/or end_date)
             is set, searches return the newest cached snapshot inside the range
-            instead of the latest crawl. No-op without a date range. Locked to the
-            value passed here for the whole research run — the agent cannot
-            toggle it mid-research.
+            instead of the latest crawl — a leak-safe "as-of" backtest (snapshot
+            metadata only on a hit; the URL is dropped on a miss). Also gates
+            sub-day precision: required to pass any timestamped start_date/end_date
+            (a time component without it is rejected with HTTP 400). No-op without
+            a date range. User-set only and locked for the whole research run —
+            the agent cannot toggle it mid-research.
         category: Filters results by a specific category.
             Category values are source-dependent.
         country_code: ISO country code for location-filtered searches.
@@ -145,14 +152,16 @@ class SearchConfig(BaseModel):
         None, description="Source types to exclude from search"
     )
     start_date: Optional[str] = Field(
-        None, description="Start date filter in ISO format (YYYY-MM-DD)"
+        None,
+        description="Inclusive start bound. Bare date (YYYY-MM-DD) or full ISO-8601 datetime; a datetime with any time component requires historical_cache=True, else HTTP 400.",
     )
     end_date: Optional[str] = Field(
-        None, description="End date filter in ISO format (YYYY-MM-DD)"
+        None,
+        description="Inclusive end bound. Bare date (YYYY-MM-DD) or full ISO-8601 datetime; a datetime with any time component requires historical_cache=True, else HTTP 400.",
     )
     historical_cache: Optional[bool] = Field(
         None,
-        description="When True and a date range is set, return the newest cached snapshot inside the range instead of the latest crawl. No-op without a date range.",
+        description="When True and a date range is set, return the newest cached snapshot inside the range (leak-safe as-of backtest) instead of the latest crawl. Also required to pass any sub-day timestamp on start_date/end_date. No-op without a date range. User-set only.",
     )
     category: Optional[str] = Field(None, description="Category filter for results")
     country_code: Optional[str] = Field(
