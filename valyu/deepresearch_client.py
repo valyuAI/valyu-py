@@ -28,6 +28,13 @@ from valyu.types.deepresearch import (
 )
 
 
+# Hard cap enforced by the create endpoint: the combined character length of
+# research_strategy (or its legacy alias strategy) and report_format must not
+# exceed this. The server rejects anything strictly greater with an HTTP 400,
+# so exactly this value still passes.
+MAX_STRATEGY_REPORT_FORMAT_COMBINED_LENGTH = 15000
+
+
 # HTTP status codes that indicate a transient gateway/server/rate-limit
 # condition rather than a definitive answer about the task. The status
 # endpoint is idempotent and meant to be polled, so these are retried.
@@ -86,10 +93,15 @@ class DeepResearchClient:
             output_formats: Output formats - ["markdown"], ["markdown", "pdf"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with markdown/pdf - use one or the other.
-            strategy: Natural language strategy for the research (deprecated, use research_strategy instead)
-            research_strategy: Natural language strategy to guide the research phase (methodology, focus areas, depth)
+            strategy: Natural language strategy for the research (deprecated, use research_strategy instead).
+                Counts toward the combined research_strategy/report_format length cap below.
+            research_strategy: Natural language strategy to guide the research phase (methodology, focus areas, depth).
+                Combined character length of research_strategy (or its legacy alias strategy) and report_format
+                must not exceed 15,000 characters; exceeding this returns a 400-equivalent error.
             report_format: Natural language instructions for the output format (structure, tone, length, style).
                 Has highest priority — overrides default formatting.
+                Combined character length of research_strategy (or its legacy alias strategy) and report_format
+                must not exceed 15,000 characters; exceeding this returns a 400-equivalent error.
             search: Search configuration (type, sources, dates, category).
                    Can be a SearchConfig object or dict with search parameters:
                    - search_type: "all" (default), "web", or "proprietary"
@@ -139,6 +151,25 @@ class DeepResearchClient:
             DeepResearchCreateResponse with task ID and status
         """
         try:
+            # Client-side guard mirroring the server's hard cap so callers get
+            # an identical error without a round-trip. The server reads
+            # research_strategy ?? strategy, so mirror that precedence here and
+            # reuse the API's exact 400 message.
+            effective_strategy = (
+                research_strategy if research_strategy is not None else strategy
+            )
+            combined_strategy_format_length = len(effective_strategy or "") + len(
+                report_format or ""
+            )
+            if (
+                combined_strategy_format_length
+                > MAX_STRATEGY_REPORT_FORMAT_COMBINED_LENGTH
+            ):
+                return DeepResearchCreateResponse(
+                    success=False,
+                    error=f"research_strategy and report_format combined length ({combined_strategy_format_length}) exceeds 15,000 character limit",
+                )
+
             # Determine which field to use (prefer query over input)
             research_query = query if query else input
 
@@ -211,14 +242,6 @@ class DeepResearchClient:
                 return DeepResearchCreateResponse(
                     success=False,
                     error=f"query exceeds 25,000 character limit ({len(research_query)} characters)",
-                )
-
-            strategy_len = len(research_strategy or "")
-            format_len = len(report_format or "")
-            if strategy_len + format_len > 15000:
-                return DeepResearchCreateResponse(
-                    success=False,
-                    error=f"Combined length of research_strategy ({strategy_len}) and report_format ({format_len}) exceeds 15,000 character limit",
                 )
 
             if files:
