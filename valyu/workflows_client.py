@@ -7,6 +7,7 @@ Run one by passing workflow_id (the slug) to deepresearch.create().
 """
 
 from typing import Optional, List, Dict, Any, Literal
+from valyu._errors import error_message
 from valyu.types.workflows import (
     Workflow,
     WorkflowDeleteResponse,
@@ -29,9 +30,7 @@ class WorkflowsClient:
 
     @staticmethod
     def _error_message(data: Dict[str, Any], status_code: int) -> str:
-        return (
-            data.get("message") or data.get("error") or f"HTTP Error: {status_code}"
-        )
+        return error_message(data, status_code)
 
     def list(
         self,

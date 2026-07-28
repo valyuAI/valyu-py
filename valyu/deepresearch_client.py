@@ -6,6 +6,7 @@ import time
 import random
 import requests
 from typing import Optional, List, Literal, Union, Dict, Any, Callable
+from valyu._errors import error_message as _error_message
 from valyu.types.deepresearch import (
     AlertEmailConfig,
     DeepResearchMode,
@@ -50,6 +51,89 @@ class DeepResearchClient:
         self._base_url = parent.base_url
         self._headers = parent.headers
         self._session = parent._session
+
+    @staticmethod
+    def _build_shared_fields(
+        search=None,
+        urls=None,
+        files=None,
+        deliverables=None,
+        mcp_servers=None,
+        previous_reports=None,
+        webhook_url=None,
+        alert_email=None,
+        brand_collection_id=None,
+        metadata=None,
+        hitl=None,
+        tools=None,
+        code_execution=None,
+    ) -> Dict[str, Any]:
+        """
+        Build the request fields that are valid for both freeform and workflow runs.
+
+        Workflow templates supply the freeform fields (prompt, strategy, report
+        format) but everything below is a per-run concern, so a workflow run
+        accepts the same values a freeform run does. Request-body values win
+        over the template server-side, except `tools`, which is merged.
+        """
+        fields: Dict[str, Any] = {}
+
+        if tools is not None:
+            fields["tools"] = (
+                tools if isinstance(tools, dict) else tools.model_dump(exclude_none=True)
+            )
+        elif code_execution is not None:
+            # Backward compatibility: top-level code_execution (deprecated)
+            fields["code_execution"] = code_execution
+
+        if search:
+            fields["search"] = (
+                search.model_dump(exclude_none=True)
+                if isinstance(search, SearchConfig)
+                else search
+            )
+        if urls:
+            fields["urls"] = urls
+        if files:
+            fields["files"] = [
+                (
+                    f.model_dump(by_alias=True, exclude_none=True)
+                    if isinstance(f, FileAttachment)
+                    else f
+                )
+                for f in files
+            ]
+        if deliverables:
+            fields["deliverables"] = [
+                d.model_dump(exclude_none=True) if isinstance(d, Deliverable) else d
+                for d in deliverables
+            ]
+        if mcp_servers:
+            fields["mcp_servers"] = [
+                s.model_dump(exclude_none=True) if isinstance(s, MCPServerConfig) else s
+                for s in mcp_servers
+            ]
+        if previous_reports:
+            fields["previous_reports"] = previous_reports
+        if webhook_url:
+            fields["webhook_url"] = webhook_url
+        if alert_email is not None:
+            if isinstance(alert_email, AlertEmailConfig):
+                fields["alert_email"] = alert_email.model_dump(exclude_none=True)
+            else:
+                fields["alert_email"] = alert_email
+        if brand_collection_id:
+            fields["brand_collection_id"] = brand_collection_id
+        if metadata:
+            fields["metadata"] = metadata
+        if hitl is not None:
+            fields["hitl"] = (
+                hitl.model_dump(exclude_none=True)
+                if isinstance(hitl, HitlConfig)
+                else hitl
+            )
+
+        return fields
 
     def create(
         self,
@@ -144,7 +228,13 @@ class DeepResearchClient:
                         The workflow's template supplies the prompt, strategy,
                         report format, deliverables, and mode. Mutually exclusive
                         with query/input/research_strategy/report_format.
-            workflow_params: Values for the workflow's variables
+                        Every other parameter on this method still applies to a
+                        workflow run, and a value passed here overrides the
+                        template's — except tools, which is merged with it.
+            workflow_params: Values for the workflow's variables. Keys must match
+                        the workflow's declared variables; read them from
+                        client.workflows.get(slug).workflow.variables, since they
+                        differ per workflow.
             workflow_version: Specific workflow version to run (defaults to current)
 
         Returns:
@@ -180,6 +270,19 @@ class DeepResearchClient:
                         success=False,
                         error="workflow_id is mutually exclusive with query/input/research_strategy/report_format - the workflow template supplies those fields",
                     )
+                if files:
+                    for i, f in enumerate(files):
+                        ctx = (
+                            f.context
+                            if isinstance(f, FileAttachment)
+                            else (f.get("context") if isinstance(f, dict) else None)
+                        )
+                        if ctx and len(ctx) > 10000:
+                            return DeepResearchCreateResponse(
+                                success=False,
+                                error=f"files[{i}].context exceeds 10,000 character limit ({len(ctx)} characters)",
+                            )
+
                 payload: Dict[str, Any] = {"workflow_id": workflow_id}
                 if workflow_params is not None:
                     payload["workflow_params"] = workflow_params
@@ -194,24 +297,26 @@ class DeepResearchClient:
                     )
                 if output_formats:
                     payload["output_formats"] = output_formats
-                if webhook_url:
-                    payload["webhook_url"] = webhook_url
-                if alert_email is not None:
-                    if isinstance(alert_email, str):
-                        payload["alert_email"] = alert_email
-                    elif isinstance(alert_email, AlertEmailConfig):
-                        payload["alert_email"] = alert_email.model_dump(
-                            exclude_none=True
-                        )
-                    else:
-                        payload["alert_email"] = alert_email
-                if metadata:
-                    payload["metadata"] = metadata
-                if tools is not None:
-                    if isinstance(tools, dict):
-                        payload["tools"] = tools
-                    else:
-                        payload["tools"] = tools.model_dump(exclude_none=True)
+
+                # Per-run options are as valid on a workflow run as on a
+                # freeform one — the template only supplies the freeform fields.
+                payload.update(
+                    self._build_shared_fields(
+                        search=search,
+                        urls=urls,
+                        files=files,
+                        deliverables=deliverables,
+                        mcp_servers=mcp_servers,
+                        previous_reports=previous_reports,
+                        webhook_url=webhook_url,
+                        alert_email=alert_email,
+                        brand_collection_id=brand_collection_id,
+                        metadata=metadata,
+                        hitl=hitl,
+                        tools=tools,
+                        code_execution=code_execution,
+                    )
+                )
 
                 response = self._session.post(
                     f"{self._base_url}/deepresearch/tasks",
@@ -222,10 +327,7 @@ class DeepResearchClient:
                 if not response.ok:
                     return DeepResearchCreateResponse(
                         success=False,
-                        error=data.get(
-                            "message",
-                            data.get("error", f"HTTP Error: {response.status_code}"),
-                        ),
+                        error=_error_message(data, response.status_code),
                     )
 
                 data.pop("success", None)
@@ -271,15 +373,6 @@ class DeepResearchClient:
                 "output_formats": output_formats or ["markdown"],
             }
 
-            # Handle tools configuration
-            if tools is not None:
-                if isinstance(tools, dict):
-                    payload["tools"] = tools
-                else:
-                    payload["tools"] = tools.model_dump(exclude_none=True)
-            elif code_execution is not None:
-                # Backward compatibility: top-level code_execution (deprecated)
-                payload["code_execution"] = code_execution
             # Also send input if it was provided (for backward compatibility with older API versions)
             if input:
                 payload["input"] = input
@@ -287,61 +380,31 @@ class DeepResearchClient:
             if model is not None:
                 payload["model"] = model if model != "lite" else "standard"
 
-            # Add optional fields
+            # Freeform-only fields — a workflow template supplies these instead
             if strategy:
                 payload["strategy"] = strategy
             if research_strategy:
                 payload["research_strategy"] = research_strategy
             if report_format:
                 payload["report_format"] = report_format
-            if search:
-                if isinstance(search, SearchConfig):
-                    search_dict = search.model_dump(exclude_none=True)
-                else:
-                    search_dict = search
-                payload["search"] = search_dict
-            if urls:
-                payload["urls"] = urls
-            if files:
-                payload["files"] = [
-                    (
-                        f.model_dump(by_alias=True, exclude_none=True)
-                        if isinstance(f, FileAttachment)
-                        else f
-                    )
-                    for f in files
-                ]
-            if deliverables:
-                payload["deliverables"] = [
-                    d.model_dump(exclude_none=True) if isinstance(d, Deliverable) else d
-                    for d in deliverables
-                ]
-            if mcp_servers:
-                payload["mcp_servers"] = [
-                    s.model_dump(exclude_none=True) if isinstance(s, MCPServerConfig) else s
-                    for s in mcp_servers
-                ]
-            if previous_reports:
-                payload["previous_reports"] = previous_reports
-            if webhook_url:
-                payload["webhook_url"] = webhook_url
-            if alert_email is not None:
-                if isinstance(alert_email, str):
-                    payload["alert_email"] = alert_email
-                elif isinstance(alert_email, AlertEmailConfig):
-                    payload["alert_email"] = alert_email.model_dump(exclude_none=True)
-                else:
-                    payload["alert_email"] = alert_email
-            if brand_collection_id:
-                payload["brand_collection_id"] = brand_collection_id
-            if metadata:
-                payload["metadata"] = metadata
 
-            if hitl is not None:
-                if isinstance(hitl, HitlConfig):
-                    payload["hitl"] = hitl.model_dump(exclude_none=True)
-                else:
-                    payload["hitl"] = hitl
+            payload.update(
+                self._build_shared_fields(
+                    search=search,
+                    urls=urls,
+                    files=files,
+                    deliverables=deliverables,
+                    mcp_servers=mcp_servers,
+                    previous_reports=previous_reports,
+                    webhook_url=webhook_url,
+                    alert_email=alert_email,
+                    brand_collection_id=brand_collection_id,
+                    metadata=metadata,
+                    hitl=hitl,
+                    tools=tools,
+                    code_execution=code_execution,
+                )
+            )
 
             response = self._session.post(
                 f"{self._base_url}/deepresearch/tasks",
@@ -353,7 +416,7 @@ class DeepResearchClient:
             if not response.ok:
                 return DeepResearchCreateResponse(
                     success=False,
-                    error=data.get("error", f"HTTP Error: {response.status_code}"),
+                    error=_error_message(data, response.status_code),
                 )
 
             data.pop("success", None)
