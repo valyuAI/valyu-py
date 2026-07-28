@@ -8,6 +8,8 @@ was wrong or what the API expected instead.
 
 import unittest
 
+import valyu
+from valyu import Valyu
 from valyu._errors import error_message
 
 
@@ -65,6 +67,17 @@ class ErrorMessageTest(unittest.TestCase):
 
     def test_non_dict_body(self):
         self.assertEqual(error_message("gateway timeout", 504), "HTTP Error: 504")
+
+
+class VersionHeaderTest(unittest.TestCase):
+    def test_headers_report_package_version(self):
+        """__version__ is what identifies the build to the API on every request."""
+        client = Valyu(api_key="val_test")
+
+        self.assertEqual(client.headers["X-Valyu-SDK-Version"], valyu.__version__)
+        self.assertTrue(
+            client.headers["User-Agent"].startswith(f"valyu-py/{valyu.__version__} ")
+        )
 
 
 if __name__ == "__main__":
