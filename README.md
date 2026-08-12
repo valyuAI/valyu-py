@@ -44,6 +44,7 @@ response = valyu.search(
     search_type="proprietary",                     # "all", "web", or "proprietary"
     max_num_results=10,                            # 1-20 results
     included_sources=["valyu/valyu-pubmed"],        # filter to specific sources
+    include_abstracts=True,                         # search the full PubMed abstract corpus
     start_date="2026-01-01",                       # date filtering
     end_date="2026-12-31",
 )
@@ -65,6 +66,7 @@ response = valyu.search(
 | `end_date` | `str` | `None` | End date (YYYY-MM-DD) |
 | `country_code` | `str` | `None` | Country filter (e.g. `"US"`, `"GB"`) |
 | `response_length` | `str \| int` | `None` | `"short"`, `"medium"`, `"large"`, `"max"`, or character count |
+| `include_abstracts` | `bool` | `False` | Search PubMed's complete abstract corpus instead of full-text papers |
 | `category` | `str` | `None` | Category filter |
 | `fast_mode` | `bool` | `False` | Faster results, shorter content |
 

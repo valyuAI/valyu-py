@@ -188,6 +188,7 @@ class AsyncValyu:
         source_biases: Optional[Dict[str, int]] = None,
         instructions: Optional[str] = None,
         historical_cache: Optional[bool] = None,
+        include_abstracts: bool = False,
     ) -> Optional[SearchResponse]:
         """
         Async version of ``Valyu.search``. See :py:meth:`Valyu.search`
@@ -223,6 +224,7 @@ class AsyncValyu:
                 source_biases=source_biases,
                 instructions=instructions,
                 historical_cache=historical_cache,
+                include_abstracts=include_abstracts,
             )
 
             response = await self._post("/search", payload)

@@ -154,6 +154,7 @@ class Valyu:
         source_biases: Optional[Dict[str, int]] = None,
         instructions: Optional[str] = None,
         historical_cache: Optional[bool] = None,
+        include_abstracts: bool = False,
     ) -> Optional[SearchResponse]:
         """
         Query the Valyu DeepSearch API to give your AI relevant context.
@@ -193,6 +194,9 @@ class Valyu:
             historical_cache (Optional[bool]): When True and a date range (start_date and/or
                 end_date) is set, return the newest cached snapshot inside the range instead
                 of the latest crawl. No-op without a date range. Defaults to False.
+            include_abstracts (bool): Search PubMed's complete abstract corpus and return
+                document-level abstracts. When False, PubMed search returns full-text papers.
+                Defaults to False.
 
         Returns:
             Optional[SearchResponse]: The search response.
@@ -252,6 +256,7 @@ class Valyu:
                 "relevance_threshold": relevance_threshold,
                 "fast_mode": fast_mode,
                 "url_only": url_only,
+                "include_abstracts": include_abstracts,
             }
 
             if max_price is not None:
