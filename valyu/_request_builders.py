@@ -70,6 +70,7 @@ def build_search_payload(
     source_biases: Optional[Dict[str, int]],
     instructions: Optional[str],
     historical_cache: Optional[bool] = None,
+    include_abstracts: bool = False,
 ) -> Dict[str, Any]:
     payload: Dict[str, Any] = {
         "query": query,
@@ -79,6 +80,7 @@ def build_search_payload(
         "relevance_threshold": relevance_threshold,
         "fast_mode": fast_mode,
         "url_only": url_only,
+        "include_abstracts": include_abstracts,
     }
     if max_price is not None:
         payload["max_price"] = max_price
