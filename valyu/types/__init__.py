@@ -1,4 +1,10 @@
-from .response import SearchResponse, SearchResult, SearchType, ResultsBySource
+from .response import (
+    SearchResponse,
+    SearchResult,
+    SearchType,
+    HistoricalCacheStrict,
+    ResultsBySource,
+)
 from .contents import (
     ContentsResponse,
     ContentsResult,
@@ -61,6 +67,7 @@ __all__ = [
     "SearchResponse",
     "SearchResult",
     "SearchType",
+    "HistoricalCacheStrict",
     "ResultsBySource",
     "ContentsResponse",
     "ContentsResult",

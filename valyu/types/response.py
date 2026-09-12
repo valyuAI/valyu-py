@@ -2,6 +2,13 @@ from typing import List, Optional, Literal, Union, Dict, Any
 from pydantic import BaseModel
 
 SearchType = Literal["web", "proprietary", "all", "news"]
+# Per-request strictness for a historical_cache (point-in-time backtest) search.
+#   "off"    - no point-in-time guarantee; serve whatever is freshest.
+#   "prefer" - serve an in-window snapshot when one exists, else fall back to a
+#              LIVE crawl so the query is never empty (the API default).
+#   "only"   - serve ONLY content provably captured at or before end_date; drop a
+#              result rather than fall back to live. Use for strict backtests.
+HistoricalCacheStrict = Literal["off", "prefer", "only"]
 
 
 class SearchResult(BaseModel):

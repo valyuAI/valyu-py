@@ -9,7 +9,12 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from valyu.types.answer import SUPPORTED_COUNTRY_CODES
 from valyu.types.contents import ContentsResponseLength, ExtractEffort
-from valyu.types.response import ResultsBySource, SearchResponse, SearchType
+from valyu.types.response import (
+    HistoricalCacheStrict,
+    ResultsBySource,
+    SearchResponse,
+    SearchType,
+)
 from valyu.validation import format_validation_error, validate_sources
 
 
@@ -70,6 +75,7 @@ def build_search_payload(
     source_biases: Optional[Dict[str, int]],
     instructions: Optional[str],
     historical_cache: Optional[bool] = None,
+    historical_cache_strict: Optional[HistoricalCacheStrict] = None,
     include_abstracts: bool = False,
 ) -> Dict[str, Any]:
     payload: Dict[str, Any] = {
@@ -100,6 +106,8 @@ def build_search_payload(
         payload["end_date"] = end_date
     if historical_cache is not None:
         payload["historical_cache"] = historical_cache
+    if historical_cache_strict is not None:
+        payload["historical_cache_strict"] = historical_cache_strict
     if source_biases is not None:
         payload["source_biases"] = source_biases
     if instructions is not None:
@@ -127,6 +135,7 @@ def build_contents_payload(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     historical_cache: Optional[bool] = None,
+    historical_cache_strict: Optional[HistoricalCacheStrict] = None,
 ) -> Dict[str, Any]:
     use_async = len(urls) > 10 or async_mode
     payload: Dict[str, Any] = {"urls": urls}
@@ -150,6 +159,8 @@ def build_contents_payload(
         payload["end_date"] = end_date
     if historical_cache is not None:
         payload["historical_cache"] = historical_cache
+    if historical_cache_strict is not None:
+        payload["historical_cache_strict"] = historical_cache_strict
     return payload
 
 
