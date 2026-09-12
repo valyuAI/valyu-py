@@ -7,7 +7,12 @@ import requests
 from requests.adapters import HTTPAdapter
 from valyu import __version__
 from typing import Optional, List, Union, Dict, Any, Callable
-from valyu.types.response import SearchResponse, SearchType, ResultsBySource
+from valyu.types.response import (
+    SearchResponse,
+    SearchType,
+    HistoricalCacheStrict,
+    ResultsBySource,
+)
 from valyu.types.contents import (
     ContentsResponse,
     ContentsJobCreateResponse,
@@ -154,6 +159,7 @@ class Valyu:
         source_biases: Optional[Dict[str, int]] = None,
         instructions: Optional[str] = None,
         historical_cache: Optional[bool] = None,
+        historical_cache_strict: Optional[HistoricalCacheStrict] = None,
         include_abstracts: bool = False,
     ) -> Optional[SearchResponse]:
         """
@@ -194,6 +200,14 @@ class Valyu:
             historical_cache (Optional[bool]): When True and a date range (start_date and/or
                 end_date) is set, return the newest cached snapshot inside the range instead
                 of the latest crawl. No-op without a date range. Defaults to False.
+            historical_cache_strict (Optional[HistoricalCacheStrict]): Point-in-time
+                strictness for a historical_cache search. "only" serves ONLY content
+                provably captured at or before end_date, dropping a result rather than
+                falling back to a live crawl — use it for strict backtests where a
+                post-cutoff leak is worse than a missing result. "prefer" (the API
+                default) falls back to a live crawl so the query is never empty.
+                "off" disables the point-in-time guarantee. No-op without
+                historical_cache=True.
             include_abstracts (bool): Search PubMed's complete abstract corpus and return
                 document-level abstracts. When False, PubMed search returns full-text papers.
                 Defaults to False.
@@ -286,6 +300,9 @@ class Valyu:
             if historical_cache is not None:
                 payload["historical_cache"] = historical_cache
 
+            if historical_cache_strict is not None:
+                payload["historical_cache_strict"] = historical_cache_strict
+
             if source_biases is not None:
                 payload["source_biases"] = source_biases
 
@@ -355,6 +372,7 @@ class Valyu:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         historical_cache: Optional[bool] = None,
+        historical_cache_strict: Optional[HistoricalCacheStrict] = None,
     ) -> Optional[
         Union[ContentsResponse, ContentsJobCreateResponse, ContentsJobStatus]
     ]:
@@ -392,6 +410,14 @@ class Valyu:
             historical_cache (Optional[bool]): When True and a date range (start_date and/or
                 end_date) is set, return the newest cached snapshot inside the range instead
                 of the latest crawl. No-op without a date range. Defaults to False.
+            historical_cache_strict (Optional[HistoricalCacheStrict]): Point-in-time
+                strictness for a historical_cache search. "only" serves ONLY content
+                provably captured at or before end_date, dropping a result rather than
+                falling back to a live crawl — use it for strict backtests where a
+                post-cutoff leak is worse than a missing result. "prefer" (the API
+                default) falls back to a live crawl so the query is never empty.
+                "off" disables the point-in-time guarantee. No-op without
+                historical_cache=True.
 
         Returns:
             ContentsResponse (sync), ContentsJobCreateResponse (async, wait=False),
@@ -458,6 +484,9 @@ class Valyu:
 
             if historical_cache is not None:
                 payload["historical_cache"] = historical_cache
+
+            if historical_cache_strict is not None:
+                payload["historical_cache_strict"] = historical_cache_strict
 
             response = self._session.post(
                 f"{self.base_url}/contents",

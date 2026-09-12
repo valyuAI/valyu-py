@@ -46,7 +46,12 @@ from valyu.types.contents import (
     ContentsResponseLength,
     ExtractEffort,
 )
-from valyu.types.response import ResultsBySource, SearchResponse, SearchType
+from valyu.types.response import (
+    HistoricalCacheStrict,
+    ResultsBySource,
+    SearchResponse,
+    SearchType,
+)
 
 
 def _format_exception(exc: BaseException) -> str:
@@ -188,6 +193,7 @@ class AsyncValyu:
         source_biases: Optional[Dict[str, int]] = None,
         instructions: Optional[str] = None,
         historical_cache: Optional[bool] = None,
+        historical_cache_strict: Optional[HistoricalCacheStrict] = None,
         include_abstracts: bool = False,
     ) -> Optional[SearchResponse]:
         """
@@ -224,6 +230,7 @@ class AsyncValyu:
                 source_biases=source_biases,
                 instructions=instructions,
                 historical_cache=historical_cache,
+                historical_cache_strict=historical_cache_strict,
                 include_abstracts=include_abstracts,
             )
 
@@ -291,6 +298,7 @@ class AsyncValyu:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         historical_cache: Optional[bool] = None,
+        historical_cache_strict: Optional[HistoricalCacheStrict] = None,
     ) -> Optional[Union[ContentsResponse, ContentsJobCreateResponse, ContentsJobStatus]]:
         """
         Async version of ``Valyu.contents``. Arguments and semantics
@@ -323,6 +331,7 @@ class AsyncValyu:
                 start_date=start_date,
                 end_date=end_date,
                 historical_cache=historical_cache,
+                historical_cache_strict=historical_cache_strict,
             )
 
             response = await self._post("/contents", payload)
