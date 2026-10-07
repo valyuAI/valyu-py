@@ -30,8 +30,8 @@ class BatchClient:
     def create(
         self,
         name: Optional[str] = None,
-        mode: Optional[Literal["lite", "standard", "heavy", "fast", "max"]] = None,
-        model: Optional[Literal["lite", "standard", "heavy", "fast", "max"]] = None,
+        mode: Optional[Literal["instant", "fast", "standard", "heavy", "max", "lite"]] = None,
+        model: Optional[Literal["instant", "fast", "standard", "heavy", "max", "lite"]] = None,
         output_formats: Optional[
             List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
         ] = None,
@@ -45,9 +45,11 @@ class BatchClient:
 
         Args:
             name: Optional name for the batch
-            mode: Research mode - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
-                  "fast" (lower cost, faster completion), or "lite" (deprecated, use "fast" instead)
-            model: Research mode (backward compatibility - use 'mode' instead) - "standard" (default), "heavy", "fast", or "lite"
+            mode: Research mode - "instant" (quick direct answer, $0.05 per task), "fast" ($0.10 per task),
+                  "standard" (default, $0.50 per task), "heavy" (comprehensive, $2.50 per task),
+                  "max" ($15.00 per task), or "lite" (deprecated, use "fast" instead)
+            model: Research mode (backward compatibility - use 'mode' instead) - "standard" (default),
+                  "instant", "fast", "heavy", "max", or "lite"
             output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with "markdown"/"pdf". "toon" requires a JSON schema.
@@ -411,8 +413,8 @@ class BatchClient:
         self,
         tasks: List[Union[BatchTaskInput, Dict[str, Any]]],
         name: Optional[str] = None,
-        mode: Optional[Literal["lite", "standard", "heavy", "fast", "max"]] = None,
-        model: Optional[Literal["lite", "standard", "heavy", "fast", "max"]] = None,
+        mode: Optional[Literal["instant", "fast", "standard", "heavy", "max", "lite"]] = None,
+        model: Optional[Literal["instant", "fast", "standard", "heavy", "max", "lite"]] = None,
         output_formats: Optional[
             List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
         ] = None,
@@ -431,9 +433,11 @@ class BatchClient:
         Args:
             tasks: List of task inputs
             name: Optional name for the batch
-            mode: Research mode - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
-                  "fast" (lower cost, faster completion $0.10 per task), or "lite" (deprecated, use "fast" instead)
-            model: Research mode (backward compatibility - use 'mode' instead) - "standard" (default), "heavy", "fast", or "lite"
+            mode: Research mode - "instant" (quick direct answer, $0.05 per task), "fast" ($0.10 per task),
+                  "standard" (default, $0.50 per task), "heavy" (comprehensive, $2.50 per task),
+                  "max" ($15.00 per task), or "lite" (deprecated, use "fast" instead)
+            model: Research mode (backward compatibility - use 'mode' instead) - "standard" (default),
+                  "instant", "fast", "heavy", "max", or "lite"
             output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with "markdown"/"pdf". "toon" requires a JSON schema.

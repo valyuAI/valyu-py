@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from typing import Optional, List, Literal
 
 
-WorkflowMode = Literal["fast", "standard", "heavy", "max"]
+WorkflowMode = Literal["instant", "fast", "standard", "heavy", "max"]
 
 WorkflowVariableType = Literal["text", "textarea", "number", "date", "enum"]
 

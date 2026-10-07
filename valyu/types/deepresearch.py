@@ -15,8 +15,13 @@ class AlertEmailConfig(BaseModel):
 
 
 class DeepResearchMode(str, Enum):
-    """Research mode options."""
+    """Research mode options.
 
+    Prices per task: instant $0.05, fast $0.10, standard $0.50, heavy $2.50,
+    max $15.00.
+    """
+
+    INSTANT = "instant"
     FAST = "fast"
     STANDARD = "standard"
     LITE = "lite"  # Deprecated: use STANDARD instead (kept for backward compatibility)

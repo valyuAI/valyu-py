@@ -122,8 +122,8 @@ Multi-step research agent that produces comprehensive reports with citations.
 ```python
 # Start a research task
 task = valyu.deepresearch.create(
-    input="Compare CRISPR and base editing approaches for sickle cell disease",
-    model="heavy",
+    query="Compare CRISPR and base editing approaches for sickle cell disease",
+    mode="heavy",
     output_formats=["markdown", "pdf"],
 )
 
@@ -153,6 +153,20 @@ print(result.pdf_url)  # PDF download link
 | `toggle_public(task_id, is_public)` | Toggle public access |
 
 </details>
+
+**Modes** (price per task):
+
+| Mode | Price | Use for |
+|---|---|---|
+| `instant` | $0.05 | A quick, direct answer to a short question |
+| `fast` | $0.10 | Lower cost, faster completion |
+| `standard` | $0.50 | The default: a full research report |
+| `heavy` | $2.50 | Comprehensive, multi-angle research |
+| `max` | $15.00 | The deepest research |
+
+`lite` is still accepted as a deprecated alias of `standard`.
+
+**Polling.** `status()`, `wait()` and `stream()` poll conditionally. When the server returns an `ETag`, the next poll for that task sends it as `If-None-Match`; a `304 Not Modified` reuses the previous response with no body transferred, and `on_progress` / stream callbacks fire only when the task's response actually changed. When `poll_interval` is not set, `wait()` and `stream()` follow the server's `Retry-After` hint (clamped to 1-30 seconds, default 5); an explicit `poll_interval` always wins. Rate limits (429) and server errors (5xx) are retried with jittered exponential backoff. Servers that send no `ETag` are polled exactly as before.
 
 ### Batch
 
