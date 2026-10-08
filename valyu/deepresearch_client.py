@@ -4,8 +4,10 @@ DeepResearch Client for Valyu SDK
 
 import time
 import random
+from collections import OrderedDict
+from email.utils import parsedate_to_datetime
 import requests
-from typing import Optional, List, Literal, Union, Dict, Any, Callable
+from typing import Optional, List, Literal, Union, Dict, Any, Callable, Tuple
 from valyu._errors import error_message as _error_message
 from valyu.types.deepresearch import (
     AlertEmailConfig,
@@ -41,6 +43,43 @@ MAX_STRATEGY_REPORT_FORMAT_COMBINED_LENGTH = 15000
 # endpoint is idempotent and meant to be polled, so these are retried.
 _TRANSIENT_STATUS_CODES = frozenset({408, 429, 500, 502, 503, 504})
 
+# Polling cadence for wait() and stream() when the caller does not set one.
+# A server Retry-After hint replaces the default, clamped to these bounds; an
+# interval the caller passes explicitly always wins over the hint.
+_DEFAULT_POLL_INTERVAL = 5
+_MIN_POLL_INTERVAL = 1
+_MAX_POLL_INTERVAL = 30
+
+# Tasks whose last status response (and ETag) is kept for conditional polling.
+# Least recently polled tasks are evicted first.
+_POLL_CACHE_SIZE = 128
+
+
+def _parse_retry_after(value: Optional[str]) -> Optional[float]:
+    """Parse a Retry-After header (delta-seconds or HTTP-date) into seconds."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    value = value.strip()
+    try:
+        return max(0.0, float(value))
+    except ValueError:
+        pass
+    try:
+        return max(0.0, parsedate_to_datetime(value).timestamp() - time.time())
+    except (TypeError, ValueError, IndexError, OverflowError):
+        return None
+
+
+def _next_poll_interval(
+    user_interval: Optional[float], retry_after: Optional[float]
+) -> float:
+    """Seconds to wait before the next poll."""
+    if user_interval is not None:
+        return user_interval
+    if retry_after is None:
+        return _DEFAULT_POLL_INTERVAL
+    return min(max(retry_after, _MIN_POLL_INTERVAL), _MAX_POLL_INTERVAL)
+
 
 class DeepResearchClient:
     """DeepResearch API client."""
@@ -51,6 +90,8 @@ class DeepResearchClient:
         self._base_url = parent.base_url
         self._headers = parent.headers
         self._session = parent._session
+        # task_id -> (ETag or None, last status response), for conditional polling
+        self._poll_cache: "OrderedDict[str, Tuple[Optional[str], DeepResearchStatusResponse]]" = OrderedDict()
 
     @staticmethod
     def _build_shared_fields(
@@ -438,7 +479,12 @@ class DeepResearchClient:
         connection errors and timeouts, HTTP 429/5xx (e.g. an ALB 502 gateway
         page), and non-JSON or empty response bodies. Only a definitive error
         response (a 4xx other than 429 carrying a JSON error) is returned as a
-        failure.
+        failure. A Retry-After header on a 429/503 lengthens the backoff.
+
+        Polling is conditional: when the server sends an ETag, the next call
+        for the same task sends it back as If-None-Match, and a 304 Not
+        Modified returns the previous response without downloading it again.
+        Servers that send no ETag are polled with plain requests.
 
         If the endpoint stays unreachable across every attempt, the result has
         ``success=False`` and ``unreachable=True`` — this means "couldn't read
@@ -452,15 +498,44 @@ class DeepResearchClient:
         Returns:
             DeepResearchStatusResponse with current status
         """
+        status, _, _ = self._poll_status(task_id, max_attempts)
+        return status
+
+    def _poll_status(
+        self, task_id: str, max_attempts: int = 5
+    ) -> Tuple[DeepResearchStatusResponse, bool, Optional[float]]:
+        """
+        Read a task's status, conditionally when an ETag is cached.
+
+        Returns:
+            (status, changed, retry_after): ``changed`` is False only when
+            the server answered 304 Not Modified; ``retry_after`` is the
+            server's polling hint in seconds, or None.
+        """
         url = f"{self._base_url}/deepresearch/tasks/{task_id}/status"
         last_error = "status endpoint unreachable"
 
         for attempt in range(max_attempts):
-            transient = True
+            retry_after = None
+            cached = self._poll_cache.get(task_id)
             try:
-                response = self._session.get(url)
+                if cached is not None and cached[0]:
+                    response = self._session.get(
+                        url, headers={"If-None-Match": cached[0]}
+                    )
+                else:
+                    response = self._session.get(url)
+                retry_after = _parse_retry_after(response.headers.get("Retry-After"))
 
-                if response.status_code in _TRANSIENT_STATUS_CODES:
+                if response.status_code == 304:
+                    if cached is not None:
+                        # Not modified: the body is empty by definition, so
+                        # reuse the last response rather than parse it.
+                        self._poll_cache.move_to_end(task_id)
+                        return cached[1].model_copy(), False, retry_after
+                    # A 304 we did not ask for has nothing to reuse.
+                    last_error = "HTTP 304 without a cached response"
+                elif response.status_code in _TRANSIENT_STATUS_CODES:
                     # Gateway/rate-limit/server blip — the task is unaffected.
                     last_error = f"HTTP {response.status_code}"
                 else:
@@ -481,38 +556,66 @@ class DeepResearchClient:
                         data = response.json()
                         if not response.ok:
                             # Definitive error response (e.g. 4xx) — terminal.
-                            return DeepResearchStatusResponse(
-                                success=False,
-                                error=data.get(
-                                    "error", f"HTTP Error: {response.status_code}"
+                            return (
+                                DeepResearchStatusResponse(
+                                    success=False,
+                                    error=data.get(
+                                        "error", f"HTTP Error: {response.status_code}"
+                                    ),
                                 ),
+                                True,
+                                retry_after,
                             )
                         data.pop("success", None)
-                        return DeepResearchStatusResponse(success=True, **data)
+                        status = DeepResearchStatusResponse(success=True, **data)
+                        etag = response.headers.get("ETag")
+                        self._remember(
+                            task_id,
+                            etag if isinstance(etag, str) else None,
+                            status.model_copy(),
+                        )
+                        return status, True, retry_after
 
             except (requests.exceptions.RequestException, ValueError) as e:
                 # Connection errors, timeouts, and JSON decode errors are all
                 # transient drops of a single poll.
                 last_error = str(e) or e.__class__.__name__
 
-            if transient and attempt < max_attempts - 1:
+            if attempt < max_attempts - 1:
                 # Exponential backoff capped at 30s, with jitter to avoid
-                # synchronised retries hammering a recovering gateway.
-                time.sleep(min(2 ** attempt, 30) + random.random())
+                # synchronised retries hammering a recovering gateway. A
+                # server-sent Retry-After is honoured when it asks for longer.
+                delay = min(2 ** attempt, 30) + random.random()
+                if retry_after is not None:
+                    delay = max(delay, min(retry_after, _MAX_POLL_INTERVAL))
+                time.sleep(delay)
 
-        return DeepResearchStatusResponse(
-            success=False,
-            unreachable=True,
-            error=(
-                f"Status endpoint unreachable after {max_attempts} attempts: "
-                f"{last_error}"
+        return (
+            DeepResearchStatusResponse(
+                success=False,
+                unreachable=True,
+                error=(
+                    f"Status endpoint unreachable after {max_attempts} attempts: "
+                    f"{last_error}"
+                ),
             ),
+            True,
+            None,
         )
+
+    def _remember(
+        self, task_id: str, etag: Optional[str], status: DeepResearchStatusResponse
+    ) -> None:
+        """Keep a task's latest status and ETag, evicting the stalest task."""
+        self._poll_cache[task_id] = (etag, status)
+        self._poll_cache.move_to_end(task_id)
+        while len(self._poll_cache) > _POLL_CACHE_SIZE:
+            self._poll_cache.popitem(last=False)
 
     def wait(
         self,
         task_id: str,
-        poll_interval: int = 5,
+        poll_interval: Optional[float] = None,
         max_wait_time: int = 7200,
         on_progress: Optional[Callable[[DeepResearchStatusResponse], None]] = None,
         on_interaction: Optional[Callable[[Interaction], Optional[Dict[str, Any]]]] = None,
@@ -522,9 +625,11 @@ class DeepResearchClient:
 
         Args:
             task_id: Task ID to wait for
-            poll_interval: Seconds between polls (default: 5)
+            poll_interval: Seconds between polls. When not set, the server's
+                Retry-After hint is used (clamped to 1-30 seconds), else 5.
             max_wait_time: Maximum wait time in seconds (default: 7200)
-            on_progress: Callback for progress updates
+            on_progress: Callback for progress updates. Not called again for
+                a poll the server answers 304 Not Modified.
             on_interaction: Callback for HITL checkpoints. Receives the Interaction
                 object and should return a response dict to submit, or None to skip.
                 When a response is returned, it is automatically submitted via respond()
@@ -542,7 +647,7 @@ class DeepResearchClient:
         start_time = time.time()
 
         while True:
-            status = self.status(task_id)
+            status, changed, retry_after = self._poll_status(task_id)
 
             if not status.success:
                 # A transiently unreachable status endpoint is not a task
@@ -555,12 +660,12 @@ class DeepResearchClient:
                             f"Status endpoint unreachable for {max_wait_time} "
                             f"seconds: {status.error}"
                         )
-                    time.sleep(poll_interval)
+                    time.sleep(_next_poll_interval(poll_interval, None))
                     continue
                 raise ValueError(f"Failed to get status: {status.error}")
 
             # Notify progress callback
-            if on_progress:
+            if on_progress and changed:
                 on_progress(status)
 
             # HITL checkpoint handling
@@ -587,7 +692,7 @@ class DeepResearchClient:
                 )
 
             # Wait before next poll
-            time.sleep(poll_interval)
+            time.sleep(_next_poll_interval(poll_interval, retry_after))
 
     def stream(
         self,
@@ -600,6 +705,10 @@ class DeepResearchClient:
         """
         Stream real-time updates for a task.
 
+        Progress callbacks are not repeated for a poll the server answers 304
+        Not Modified. The poll interval follows the server's Retry-After hint (clamped to 1-30
+        seconds), else 5 seconds.
+
         Args:
             task_id: Task ID to stream
             on_message: Callback for new messages
@@ -611,7 +720,7 @@ class DeepResearchClient:
 
         while True:
             try:
-                status = self.status(task_id)
+                status, changed, retry_after = self._poll_status(task_id)
 
                 if not status.success:
                     if on_error:
@@ -619,7 +728,7 @@ class DeepResearchClient:
                     return
 
                 # Progress updates
-                if status.progress and on_progress:
+                if changed and status.progress and on_progress:
                     on_progress(
                         status.progress.current_step,
                         status.progress.total_steps,
@@ -648,7 +757,7 @@ class DeepResearchClient:
                     return
 
                 # Wait before next poll
-                time.sleep(5)
+                time.sleep(_next_poll_interval(None, retry_after))
 
             except Exception as e:
                 if on_error:

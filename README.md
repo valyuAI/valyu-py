@@ -154,6 +154,8 @@ print(result.pdf_url)  # PDF download link
 
 </details>
 
+**Polling.** `status()`, `wait()` and `stream()` poll conditionally. When the server returns an `ETag`, the next poll for that task sends it as `If-None-Match`; a `304 Not Modified` reuses the previous response with no body transferred, and `on_progress` / stream progress callbacks are not repeated for a 304. When `poll_interval` is not set, `wait()` and `stream()` follow the server's `Retry-After` hint (clamped to 1-30 seconds, default 5); an explicit `poll_interval` always wins. Rate limits (429) and server errors (5xx) are retried with jittered exponential backoff. Servers that send no `ETag` are polled exactly as before.
+
 ### Batch
 
 Run multiple DeepResearch tasks in parallel.
