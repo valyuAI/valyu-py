@@ -81,6 +81,34 @@ def _next_poll_interval(
     return min(max(retry_after, _MIN_POLL_INTERVAL), _MAX_POLL_INTERVAL)
 
 
+_MAX_FILE_CONTEXT_CHARS = 50000
+_MAX_TOTAL_FILE_CONTEXT_CHARS = 100000
+
+
+def _validate_file_contexts(files: Optional[List[Any]]) -> Optional[str]:
+    """Check files[].context against the per-file and combined limits.
+
+    Returns an error message, or None when the contexts are within limits.
+    """
+    if not files:
+        return None
+    total = 0
+    for i, f in enumerate(files):
+        ctx = (
+            f.context
+            if isinstance(f, FileAttachment)
+            else (f.get("context") if isinstance(f, dict) else None)
+        )
+        if not ctx:
+            continue
+        if len(ctx) > _MAX_FILE_CONTEXT_CHARS:
+            return f"files[{i}].context exceeds 50,000 character limit ({len(ctx)} characters)"
+        total += len(ctx)
+    if total > _MAX_TOTAL_FILE_CONTEXT_CHARS:
+        return f"files[].context combined length exceeds 100,000 character limit ({total} characters)"
+    return None
+
+
 class DeepResearchClient:
     """DeepResearch API client."""
 
@@ -311,18 +339,9 @@ class DeepResearchClient:
                         success=False,
                         error="workflow_id is mutually exclusive with query/input/research_strategy/report_format - the workflow template supplies those fields",
                     )
-                if files:
-                    for i, f in enumerate(files):
-                        ctx = (
-                            f.context
-                            if isinstance(f, FileAttachment)
-                            else (f.get("context") if isinstance(f, dict) else None)
-                        )
-                        if ctx and len(ctx) > 10000:
-                            return DeepResearchCreateResponse(
-                                success=False,
-                                error=f"files[{i}].context exceeds 10,000 character limit ({len(ctx)} characters)",
-                            )
+                files_error = _validate_file_contexts(files)
+                if files_error:
+                    return DeepResearchCreateResponse(success=False, error=files_error)
 
                 payload: Dict[str, Any] = {"workflow_id": workflow_id}
                 if workflow_params is not None:
@@ -387,14 +406,9 @@ class DeepResearchClient:
                     error=f"query exceeds 25,000 character limit ({len(research_query)} characters)",
                 )
 
-            if files:
-                for i, f in enumerate(files):
-                    ctx = f.context if isinstance(f, FileAttachment) else (f.get("context") if isinstance(f, dict) else None)
-                    if ctx and len(ctx) > 10000:
-                        return DeepResearchCreateResponse(
-                            success=False,
-                            error=f"files[{i}].context exceeds 10,000 character limit ({len(ctx)} characters)",
-                        )
+            files_error = _validate_file_contexts(files)
+            if files_error:
+                return DeepResearchCreateResponse(success=False, error=files_error)
 
             # Determine which mode to use (prefer mode over model)
             research_mode = (
