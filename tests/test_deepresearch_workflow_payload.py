@@ -13,7 +13,12 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from valyu.deepresearch_client import DeepResearchClient
-from valyu.types.deepresearch import Deliverable, HitlConfig, SearchConfig
+from valyu.types.deepresearch import (
+    Deliverable,
+    FileAttachment,
+    HitlConfig,
+    SearchConfig,
+)
 
 # Per-run options that must survive on both code paths.
 SHARED_OPTIONS = dict(
@@ -140,12 +145,72 @@ class WorkflowPayloadTest(unittest.TestCase):
         result = client.create(
             workflow_id="ib-company-profile",
             workflow_params={"company": "NVIDIA (NVDA)"},
-            files=[{"url": "https://example.com/a.pdf", "context": "x" * 10001}],
+            files=[{"url": "https://example.com/a.pdf", "context": "x" * 50001}],
         )
 
         session.post.assert_not_called()
         self.assertFalse(result.success)
-        self.assertIn("files[0].context exceeds 10,000 character limit", result.error)
+        self.assertIn("files[0].context exceeds 50,000 character limit", result.error)
+
+    def test_workflow_run_accepts_file_context_at_limit(self):
+        """A context of exactly 50,000 characters is accepted."""
+        client, session = _make_client()
+
+        client.create(
+            workflow_id="ib-company-profile",
+            workflow_params={"company": "NVIDIA (NVDA)"},
+            files=[{"url": "https://example.com/a.pdf", "context": "x" * 50000}],
+        )
+
+        session.post.assert_called_once()
+
+    def test_workflow_run_rejects_oversized_combined_file_context(self):
+        """The combined files[].context cap applies across all files."""
+        client, session = _make_client()
+
+        result = client.create(
+            workflow_id="ib-company-profile",
+            workflow_params={"company": "NVIDIA (NVDA)"},
+            files=[
+                {"url": f"https://example.com/{i}.pdf", "context": "x" * 40000}
+                for i in range(3)
+            ],
+        )
+
+        session.post.assert_not_called()
+        self.assertFalse(result.success)
+        self.assertIn(
+            "files[].context combined length exceeds 100,000 character limit",
+            result.error,
+        )
+
+    def test_freeform_run_applies_file_context_limits(self):
+        """Freeform runs share the per-file and combined files[].context caps."""
+        client, session = _make_client()
+
+        too_long = client.create(
+            query="Summarise the attached filings",
+            files=[{"url": "https://example.com/a.pdf", "context": "x" * 50001}],
+        )
+        combined = client.create(
+            query="Summarise the attached filings",
+            files=[
+                FileAttachment(
+                    data="data:application/pdf;base64,AAAA",
+                    filename=f"{i}.pdf",
+                    media_type="application/pdf",
+                    context="x" * 40000,
+                )
+                for i in range(3)
+            ],
+        )
+
+        session.post.assert_not_called()
+        self.assertIn("files[0].context exceeds 50,000 character limit", too_long.error)
+        self.assertIn(
+            "files[].context combined length exceeds 100,000 character limit",
+            combined.error,
+        )
 
     def test_workflow_run_still_rejects_freeform_fields(self):
         """workflow_id stays mutually exclusive with the template-supplied fields."""

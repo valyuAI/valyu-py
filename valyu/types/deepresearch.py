@@ -44,7 +44,10 @@ class FileAttachment(BaseModel):
     data: str = Field(..., description="Data URL (base64 encoded)")
     filename: str = Field(..., description="Original filename")
     media_type: str = Field(..., description="MIME type", alias="mediaType")
-    context: Optional[str] = Field(None, description="Context about the file")
+    context: Optional[str] = Field(
+        None,
+        description="Context about the file (max 50,000 characters; 100,000 combined across all files)",
+    )
 
 
 class MCPServerConfig(BaseModel):
