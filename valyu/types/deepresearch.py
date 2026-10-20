@@ -333,9 +333,9 @@ class DeepResearchCostBreakdown(BaseModel):
     """Itemized cost breakdown for a deep research task."""
 
     task: float = Field(..., description="Base task price for the selected mode")
-    screenshots: Optional[float] = Field(None, description="Screenshot surcharges ($0.05 per URL captured)")
-    code_execution: Optional[float] = Field(None, description="Code execution surcharges ($0.10 per execution)")
-    deliverables: Optional[float] = Field(None, description="Deliverable surcharges ($0.10 per deliverable after the first)")
+    screenshots: Optional[float] = Field(None, description="Screenshot surcharges ($0.05, 8 credits, per successful capture)")
+    code_execution: Optional[float] = Field(None, description="Code execution surcharges ($0.10, 16 credits, per successful run)")
+    deliverables: Optional[float] = Field(None, description="Deliverable surcharges ($0.10, 16 credits, per deliverable after the first)")
 
 
 class HitlConfig(BaseModel):

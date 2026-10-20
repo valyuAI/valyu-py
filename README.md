@@ -154,7 +154,7 @@ print(result.pdf_url)  # PDF download link
 
 </details>
 
-**Modes.** `mode` is one of `"instant"`, `"fast"`, `"standard"` (default), `"heavy"` or `"max"`. `"instant"` is the quickest and lowest-cost mode and typically finishes in seconds; it does not support `hitl` checkpoints and is not available for batches.
+**Modes.** `mode` is one of `"instant"`, `"fast"`, `"standard"` (default), `"heavy"` or `"max"`. `"instant"` is the quickest and lowest-cost mode and typically finishes in under 30 seconds; it does not support `hitl` checkpoints and is not available for batches.
 
 ```python
 task = valyu.deepresearch.create(query="What is the capital of Australia?", mode="instant")

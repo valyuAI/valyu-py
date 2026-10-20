@@ -260,9 +260,9 @@ class DeepResearchClient:
             input: Research query or task description (deprecated, use query instead)
             mode: Research mode - "instant", "fast", "standard" (default), "heavy", or "max".
                   "instant" is the quickest and lowest-cost mode, typically finishing in
-                  seconds; it does not support hitl checkpoints. Preferred over model parameter.
-            model: Research mode (backward compatibility - use 'mode' instead) - "standard" (default),
-                  "instant", "heavy", "fast", "max", or "lite" (deprecated, maps to "standard")
+                  under 30 seconds; it does not support hitl checkpoints. Preferred over model parameter.
+            model: Research mode (backward compatibility - use 'mode' instead) - "instant", "fast",
+                  "standard" (default), "heavy" or "max"
             output_formats: Output formats - ["markdown"], ["markdown", "pdf"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with markdown/pdf - use one or the other.

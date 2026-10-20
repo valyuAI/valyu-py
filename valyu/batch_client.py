@@ -45,10 +45,11 @@ class BatchClient:
 
         Args:
             name: Optional name for the batch
-            mode: Research mode - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
-                  "fast" (lower cost, faster completion), or "lite" (deprecated, use "fast" instead)
+            mode: Research mode, priced per task - "fast" ($0.15625, 25 credits), "standard" (default,
+                  $0.625, 100 credits), "heavy" ($3.125, 500 credits) or "max" ($15.625, 2,500 credits).
                   "instant" is not available for batches.
-            model: Research mode (backward compatibility - use 'mode' instead) - "standard" (default), "heavy", "fast", or "lite"
+            model: Research mode (backward compatibility - use 'mode' instead) - "fast", "standard" (default),
+                  "heavy" or "max"
             output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with "markdown"/"pdf". "toon" requires a JSON schema.
@@ -436,10 +437,11 @@ class BatchClient:
         Args:
             tasks: List of task inputs
             name: Optional name for the batch
-            mode: Research mode - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
-                  "fast" (lower cost, faster completion $0.10 per task), or "lite" (deprecated, use "fast" instead)
+            mode: Research mode, priced per task - "fast" ($0.15625, 25 credits), "standard" (default,
+                  $0.625, 100 credits), "heavy" ($3.125, 500 credits) or "max" ($15.625, 2,500 credits).
                   "instant" is not available for batches.
-            model: Research mode (backward compatibility - use 'mode' instead) - "standard" (default), "heavy", "fast", or "lite"
+            model: Research mode (backward compatibility - use 'mode' instead) - "fast", "standard" (default),
+                  "heavy" or "max"
             output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with "markdown"/"pdf". "toon" requires a JSON schema.
