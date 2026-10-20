@@ -47,6 +47,7 @@ class BatchClient:
             name: Optional name for the batch
             mode: Research mode - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
                   "fast" (lower cost, faster completion), or "lite" (deprecated, use "fast" instead)
+                  "instant" is not available for batches.
             model: Research mode (backward compatibility - use 'mode' instead) - "standard" (default), "heavy", "fast", or "lite"
             output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
@@ -114,6 +115,7 @@ class BatchClient:
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
                 )
 
+            data.pop("success", None)
             return BatchCreateResponse(success=True, **data)
 
         except Exception as e:
@@ -165,6 +167,7 @@ class BatchClient:
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
                 )
 
+            data.pop("success", None)
             return BatchAddTasksResponse(success=True, **data)
 
         except Exception as e:
@@ -258,6 +261,7 @@ class BatchClient:
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
                 )
 
+            data.pop("success", None)
             return BatchTasksListResponse(success=True, **data)
 
         except Exception as e:
@@ -290,6 +294,7 @@ class BatchClient:
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
                 )
 
+            data.pop("success", None)
             return BatchCancelResponse(success=True, **data)
 
         except Exception as e:
@@ -433,6 +438,7 @@ class BatchClient:
             name: Optional name for the batch
             mode: Research mode - "standard" (default, $0.50 per task), "heavy" (comprehensive, $1.50 per task),
                   "fast" (lower cost, faster completion $0.10 per task), or "lite" (deprecated, use "fast" instead)
+                  "instant" is not available for batches.
             model: Research mode (backward compatibility - use 'mode' instead) - "standard" (default), "heavy", "fast", or "lite"
             output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
