@@ -7,6 +7,7 @@ import random
 from collections import OrderedDict
 from email.utils import parsedate_to_datetime
 import requests
+from pydantic import ValidationError
 from typing import Optional, List, Literal, Union, Dict, Any, Callable, Tuple
 from valyu._errors import error_message as _error_message
 from valyu.types.deepresearch import (
@@ -107,6 +108,24 @@ def _validate_file_contexts(files: Optional[List[Any]]) -> Optional[str]:
     if total > _MAX_TOTAL_FILE_CONTEXT_CHARS:
         return f"files[].context combined length exceeds 100,000 character limit ({total} characters)"
     return None
+
+
+def _parse_create_response(data: Dict[str, Any]) -> DeepResearchCreateResponse:
+    """
+    Build the response for a successful (2xx) create.
+
+    The task exists and is billed by now, so its ID must reach the caller even
+    if another field doesn't match this SDK's model: such fields are dropped
+    rather than turning the whole response into a failure the caller would
+    retry (and pay for twice).
+    """
+    data.pop("success", None)
+    try:
+        return DeepResearchCreateResponse(success=True, **data)
+    except ValidationError as e:
+        invalid = {err["loc"][0] for err in e.errors() if err["loc"]}
+        valid = {k: v for k, v in data.items() if k not in invalid}
+        return DeepResearchCreateResponse(success=True, **valid)
 
 
 class DeepResearchClient:
@@ -239,10 +258,11 @@ class DeepResearchClient:
         Args:
             query: Research query or task description (preferred)
             input: Research query or task description (deprecated, use query instead)
-            mode: Research mode - "fast", "standard" (default), "heavy", or "max".
-                  Preferred over model parameter.
-            model: Research mode (backward compatibility - use 'mode' instead) - "standard" (default),
-                  "heavy", "fast", "max", or "lite" (deprecated, maps to "standard")
+            mode: Research mode - "instant", "fast", "standard" (default), "heavy", or "max".
+                  "instant" is the quickest and lowest-cost mode, typically finishing in
+                  under 30 seconds; it does not support hitl checkpoints. Preferred over model parameter.
+            model: Research mode (backward compatibility - use 'mode' instead) - "instant", "fast",
+                  "standard" (default), "heavy" or "max"
             output_formats: Output formats - ["markdown"], ["markdown", "pdf"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
                            Cannot mix JSON schema with markdown/pdf - use one or the other.
@@ -291,7 +311,7 @@ class DeepResearchClient:
                 - plan_review: Review the research plan
                 - source_review: Filter sources by domain after research
                 - outline_review: Review the report outline
-                Not available for batch requests.
+                Not available for batch requests or in "instant" mode.
             metadata: Custom metadata (key-value pairs)
             workflow_id: Slug of a workflow to run (see client.workflows.list()).
                         The workflow's template supplies the prompt, strategy,
@@ -390,8 +410,7 @@ class DeepResearchClient:
                         error=_error_message(data, response.status_code),
                     )
 
-                data.pop("success", None)
-                return DeepResearchCreateResponse(success=True, **data)
+                return _parse_create_response(data)
 
             # Validation
             if not research_query or not research_query.strip():
@@ -474,8 +493,7 @@ class DeepResearchClient:
                     error=_error_message(data, response.status_code),
                 )
 
-            data.pop("success", None)
-            return DeepResearchCreateResponse(success=True, **data)
+            return _parse_create_response(data)
 
         except Exception as e:
             return DeepResearchCreateResponse(
@@ -581,7 +599,19 @@ class DeepResearchClient:
                                 retry_after,
                             )
                         data.pop("success", None)
-                        status = DeepResearchStatusResponse(success=True, **data)
+                        try:
+                            status = DeepResearchStatusResponse(success=True, **data)
+                        except ValidationError as e:
+                            # The server answered; retrying won't change the
+                            # shape. Fail now instead of polling until timeout.
+                            return (
+                                DeepResearchStatusResponse(
+                                    success=False,
+                                    error=f"Unexpected status response: {e}",
+                                ),
+                                True,
+                                retry_after,
+                            )
                         etag = response.headers.get("ETag")
                         self._remember(
                             task_id,
@@ -647,7 +677,9 @@ class DeepResearchClient:
             on_interaction: Callback for HITL checkpoints. Receives the Interaction
                 object and should return a response dict to submit, or None to skip.
                 When a response is returned, it is automatically submitted via respond()
-                and polling continues.
+                and polling continues at the normal interval. The callback runs once
+                per interaction; it is only called again for the same interaction if
+                it returned None or the response could not be submitted.
 
         Returns:
             Final task status
@@ -659,6 +691,7 @@ class DeepResearchClient:
                 definitive (non-transient) error
         """
         start_time = time.time()
+        answered = set()
 
         while True:
             status, changed, retry_after = self._poll_status(task_id)
@@ -682,13 +715,22 @@ class DeepResearchClient:
             if on_progress and changed:
                 on_progress(status)
 
-            # HITL checkpoint handling
-            if status.status in (DeepResearchStatus.AWAITING_INPUT, DeepResearchStatus.PAUSED) and status.interaction:
-                if on_interaction:
-                    response = on_interaction(status.interaction)
-                    if response:
-                        self.respond(task_id, status.interaction.interaction_id, response)
-                        continue
+            # HITL checkpoint handling. The task can still report the same
+            # checkpoint for a poll or two after a response is accepted, so
+            # each interaction is answered at most once.
+            interaction = status.interaction
+            if (
+                on_interaction
+                and interaction
+                and interaction.interaction_id not in answered
+                and status.status
+                in (DeepResearchStatus.AWAITING_INPUT, DeepResearchStatus.PAUSED)
+            ):
+                response = on_interaction(interaction)
+                if response:
+                    result = self.respond(task_id, interaction.interaction_id, response)
+                    if result.success:
+                        answered.add(interaction.interaction_id)
 
             # Terminal states
             if status.status == DeepResearchStatus.COMPLETED:

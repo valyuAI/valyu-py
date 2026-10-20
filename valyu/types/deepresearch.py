@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field, model_validator, ConfigDict
+from pydantic import BaseModel, BeforeValidator, Field, model_validator, ConfigDict
 from typing import Optional, List, Literal, Union, Dict, Any, Callable
+from typing_extensions import Annotated
 from enum import Enum
 
 from valyu.types.workflows import WorkflowRunInfo
@@ -17,6 +18,7 @@ class AlertEmailConfig(BaseModel):
 class DeepResearchMode(str, Enum):
     """Research mode options."""
 
+    INSTANT = "instant"
     FAST = "fast"
     STANDARD = "standard"
     LITE = "lite"  # Deprecated: use STANDARD instead (kept for backward compatibility)
@@ -34,6 +36,38 @@ class DeepResearchStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+
+
+def _open_enum(enum_cls):
+    """
+    Type for an enum field in an API response that tolerates values added
+    after this SDK release. A known value parses to the enum member as usual;
+    an unknown string is kept as a plain string instead of failing the whole
+    response.
+    """
+
+    def parse(value):
+        try:
+            return enum_cls(value)
+        except (ValueError, TypeError):
+            return value
+
+    return Annotated[Union[enum_cls, str], BeforeValidator(parse)]
+
+
+_OpenMode = _open_enum(DeepResearchMode)
+_OpenStatus = _open_enum(DeepResearchStatus)
+
+
+def _mode_from_research_mode(data):
+    """Fill ``mode`` from ``research_mode`` when the response only carries the latter."""
+    if (
+        isinstance(data, dict)
+        and data.get("mode") is None
+        and data.get("research_mode") is not None
+    ):
+        data = {**data, "mode": data["research_mode"]}
+    return data
 
 
 class FileAttachment(BaseModel):
@@ -299,9 +333,9 @@ class DeepResearchCostBreakdown(BaseModel):
     """Itemized cost breakdown for a deep research task."""
 
     task: float = Field(..., description="Base task price for the selected mode")
-    screenshots: Optional[float] = Field(None, description="Screenshot surcharges ($0.05 per URL captured)")
-    code_execution: Optional[float] = Field(None, description="Code execution surcharges ($0.10 per execution)")
-    deliverables: Optional[float] = Field(None, description="Deliverable surcharges ($0.10 per deliverable after the first)")
+    screenshots: Optional[float] = Field(None, description="Screenshot surcharges ($0.05, 8 credits, per successful capture)")
+    code_execution: Optional[float] = Field(None, description="Code execution surcharges ($0.10, 16 credits, per successful run)")
+    deliverables: Optional[float] = Field(None, description="Deliverable surcharges ($0.10, 16 credits, per deliverable after the first)")
 
 
 class HitlConfig(BaseModel):
@@ -334,11 +368,14 @@ class InteractionType(str, Enum):
     OUTLINE_REVIEW = "outline_review"
 
 
+_OpenInteractionType = _open_enum(InteractionType)
+
+
 class Interaction(BaseModel):
     """HITL interaction payload returned when a task is awaiting input."""
 
     interaction_id: str = Field(..., description="Unique ID for this interaction (use when responding)")
-    type: InteractionType = Field(..., description="Type of checkpoint")
+    type: _OpenInteractionType = Field(..., description="Type of checkpoint")
     data: Dict[str, Any] = Field(..., description="Checkpoint-specific data")
     created_at: int = Field(..., description="Unix timestamp (ms) when checkpoint fired")
     timeout_ms: int = Field(..., description="Timeout duration in milliseconds")
@@ -351,7 +388,7 @@ class InteractionHistoryEntry(BaseModel):
     """Record of a completed HITL checkpoint."""
 
     interaction_id: str
-    type: InteractionType
+    type: _OpenInteractionType
     created_at: int = Field(..., description="When the checkpoint fired (ms)")
     responded_at: Optional[int] = Field(None, description="When the user responded (ms)")
     auto_continued: bool = Field(..., description="True if timed out, false if user responded")
@@ -363,9 +400,13 @@ class DeepResearchCreateResponse(BaseModel):
 
     success: bool
     deepresearch_id: Optional[str] = None
-    status: Optional[DeepResearchStatus] = None
-    mode: Optional[DeepResearchMode] = None
-    model: Optional[DeepResearchMode] = None
+    status: Optional[_OpenStatus] = None
+    mode: Optional[_OpenMode] = None
+    model: Optional[_OpenMode] = None
+    research_mode: Optional[str] = Field(
+        None,
+        description="Research mode as sent by the API. mode is filled from it when the response has no mode.",
+    )
     created_at: Optional[str] = None
     metadata: Optional[Dict[str, Union[str, int, bool]]] = None
     public: Optional[bool] = None
@@ -375,17 +416,26 @@ class DeepResearchCreateResponse(BaseModel):
     workflow: Optional[WorkflowRunInfo] = None
     error: Optional[str] = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def fill_mode_from_research_mode(cls, data):
+        return _mode_from_research_mode(data)
+
 
 class DeepResearchStatusResponse(BaseModel):
     """Response from getting task status."""
 
     success: bool
     deepresearch_id: Optional[str] = None
-    status: Optional[DeepResearchStatus] = None
+    status: Optional[_OpenStatus] = None
     query: Optional[str] = None
-    mode: Optional[DeepResearchMode] = None
+    mode: Optional[_OpenMode] = None
+    research_mode: Optional[str] = Field(
+        None,
+        description="Research mode as sent by the API. mode is filled from it when the response has no mode.",
+    )
     output_formats: Optional[
-        List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
+        List[Union[Literal["markdown", "pdf", "toon"], str, Dict[str, Any]]]
     ] = None
     created_at: Optional[str] = None
     public: Optional[bool] = None
@@ -395,7 +445,7 @@ class DeepResearchStatusResponse(BaseModel):
     messages: Optional[List[Any]] = None
     completed_at: Optional[str] = None
     output: Optional[Union[str, Dict[str, Any], Any]] = None
-    output_type: Optional[Literal["markdown", "json", "toon"]] = None
+    output_type: Optional[Union[Literal["markdown", "json", "toon"], str]] = None
     title: Optional[str] = None
     total_word_count: Optional[int] = None
     pdf_url: Optional[str] = None
@@ -424,13 +474,18 @@ class DeepResearchStatusResponse(BaseModel):
         ),
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def fill_mode_from_research_mode(cls, data):
+        return _mode_from_research_mode(data)
+
 
 class DeepResearchTaskListItem(BaseModel):
     """Minimal task info for list view."""
 
     deepresearch_id: str
     query: str
-    status: DeepResearchStatus
+    status: _OpenStatus
     created_at: str
     title: Optional[str] = None
     public: Optional[bool] = None
@@ -503,6 +558,9 @@ class BatchStatus(str, Enum):
     COMPLETED = "completed"
     COMPLETED_WITH_ERRORS = "completed_with_errors"
     CANCELLED = "cancelled"
+
+
+_OpenBatchStatus = _open_enum(BatchStatus)
 
 
 class BatchCounts(BaseModel):
@@ -589,13 +647,13 @@ class DeepResearchBatch(BaseModel):
     organisation_id: Optional[str] = Field(None, description="Organization ID")
     api_key_id: Optional[str] = Field(None, description="API key ID")
     credit_id: Optional[str] = Field(None, description="Credit ID")
-    status: BatchStatus = Field(..., description="Current batch status")
-    mode: DeepResearchMode = Field(
+    status: _OpenBatchStatus = Field(..., description="Current batch status")
+    mode: _OpenMode = Field(
         ..., description="Research mode (preferred field name)"
     )
     name: Optional[str] = Field(None, description="Batch name")
     output_formats: Optional[
-        List[Union[Literal["markdown", "pdf"], Dict[str, Any]]]
+        List[Union[Literal["markdown", "pdf", "toon"], str, Dict[str, Any]]]
     ] = Field(None, description="Default output formats")
     search_params: Optional[Dict[str, Any]] = Field(
         None, description="Default search parameters"
@@ -619,7 +677,7 @@ class DeepResearchBatch(BaseModel):
     )
 
     # Backward compatibility fields
-    model: Optional[DeepResearchMode] = Field(
+    model: Optional[_OpenMode] = Field(
         None, description="Research mode (backward compatibility - use 'mode' instead)"
     )
     usage: Optional[BatchUsage] = Field(
@@ -668,8 +726,8 @@ class BatchCreateResponse(BaseModel):
 
     success: bool
     batch_id: Optional[str] = None
-    status: Optional[BatchStatus] = None
-    mode: Optional[DeepResearchMode] = None
+    status: Optional[_OpenBatchStatus] = None
+    mode: Optional[_OpenMode] = None
     name: Optional[str] = None
     output_formats: Optional[
         List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
@@ -684,7 +742,7 @@ class BatchCreateResponse(BaseModel):
     error: Optional[str] = None
 
     # Backward compatibility fields - populated by validator
-    model: Optional[DeepResearchMode] = Field(
+    model: Optional[_OpenMode] = Field(
         None, description="Research mode (backward compatibility - use 'mode' instead)"
     )
 
@@ -737,7 +795,7 @@ class BatchTaskListItem(BaseModel):
     deepresearch_id: str
     task_id: Optional[str] = None
     query: str
-    status: DeepResearchStatus
+    status: _OpenStatus
     created_at: str
     completed_at: Optional[str] = None
     # Included when include_output=True
@@ -774,7 +832,7 @@ class BatchCancelResponse(BaseModel):
 
     success: bool
     batch_id: Optional[str] = None
-    status: Optional[BatchStatus] = None
+    status: Optional[_OpenBatchStatus] = None
     cancelled_count: Optional[int] = None
     message: Optional[str] = None
     error: Optional[str] = None

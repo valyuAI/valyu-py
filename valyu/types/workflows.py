@@ -7,10 +7,13 @@ with workflow_params expands the template into a normal DeepResearch task.
 """
 
 from pydantic import BaseModel
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Union
 
 
-WorkflowMode = Literal["fast", "standard", "heavy", "max"]
+WorkflowMode = Literal["instant", "fast", "standard", "heavy", "max"]
+
+# Mode as read from a response: a value newer than this SDK stays a plain string.
+_ResponseMode = Union[WorkflowMode, str]
 
 WorkflowVariableType = Literal["text", "textarea", "number", "date", "enum"]
 
@@ -64,7 +67,7 @@ class Workflow(BaseModel):
     subtitle: Optional[str] = None
     description: Optional[str] = None
     popular: Optional[bool] = None
-    recommended_mode: Optional[WorkflowMode] = None
+    recommended_mode: Optional[_ResponseMode] = None
     estimated_time: Optional[str] = None
     is_valyu: Optional[bool] = None
     owner_org_id: Optional[str] = None
@@ -84,7 +87,7 @@ class WorkflowVersionSummary(BaseModel):
     """A single entry in a workflow's version history."""
 
     version: int
-    recommended_mode: Optional[WorkflowMode] = None
+    recommended_mode: Optional[_ResponseMode] = None
     estimated_time: Optional[str] = None
     changelog: Optional[str] = None
     created_at: Optional[str] = None
@@ -105,7 +108,7 @@ class ResolvedWorkflowTemplate(BaseModel):
     research_strategy: Optional[str] = None
     report_format: Optional[str] = None
     deliverables: Optional[List[WorkflowDeliverable]] = None
-    mode: Optional[WorkflowMode] = None
+    mode: Optional[_ResponseMode] = None
     tools: Optional[WorkflowTools] = None
 
 

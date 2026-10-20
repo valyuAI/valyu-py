@@ -83,6 +83,7 @@ class WorkflowsClient:
                     error=self._error_message(data, response.status_code),
                 )
 
+            data.pop("success", None)
             return WorkflowsListResponse(success=True, **data)
 
         except Exception as e:
@@ -147,6 +148,7 @@ class WorkflowsClient:
                     error=self._error_message(data, response.status_code),
                 )
 
+            data.pop("success", None)
             return WorkflowVersionsResponse(success=True, **data)
 
         except Exception as e:
@@ -190,6 +192,7 @@ class WorkflowsClient:
                     error=self._error_message(data, response.status_code),
                 )
 
+            data.pop("success", None)
             return WorkflowPreviewResponse(success=True, **data)
 
         except Exception as e:
@@ -350,6 +353,7 @@ class WorkflowsClient:
                     error=self._error_message(data, response.status_code),
                 )
 
+            data.pop("success", None)
             return WorkflowDeleteResponse(success=True, **data)
 
         except Exception as e:
