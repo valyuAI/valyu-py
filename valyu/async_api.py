@@ -206,6 +206,7 @@ class AsyncValyu:
         historical_cache: Optional[bool] = None,
         historical_cache_strict: Optional[HistoricalCacheStrict] = None,
         include_abstracts: bool = False,
+        include_image_links: bool = True,
     ) -> Optional[SearchResponse]:
         """
         Async version of ``Valyu.search``. See :py:meth:`Valyu.search`
@@ -243,6 +244,7 @@ class AsyncValyu:
                 historical_cache=historical_cache,
                 historical_cache_strict=historical_cache_strict,
                 include_abstracts=include_abstracts,
+                include_image_links=include_image_links,
             )
 
             # A 429 here means the search was never run and never billed,
@@ -321,6 +323,7 @@ class AsyncValyu:
         end_date: Optional[str] = None,
         historical_cache: Optional[bool] = None,
         historical_cache_strict: Optional[HistoricalCacheStrict] = None,
+        include_image_links: bool = True,
     ) -> Optional[Union[ContentsResponse, ContentsJobCreateResponse, ContentsJobStatus]]:
         """
         Async version of ``Valyu.contents``. Arguments and semantics
@@ -354,6 +357,7 @@ class AsyncValyu:
                 end_date=end_date,
                 historical_cache=historical_cache,
                 historical_cache_strict=historical_cache_strict,
+                include_image_links=include_image_links,
             )
 
             # A 429 here means the request was never accepted and never
