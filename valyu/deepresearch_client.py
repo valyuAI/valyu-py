@@ -10,6 +10,8 @@ import requests
 from pydantic import ValidationError
 from typing import Optional, List, Literal, Union, Dict, Any, Callable, Tuple
 from valyu._errors import error_message as _error_message
+from valyu._rate_limit import rate_limit_detail_from_response, send_with_rate_limit_retry
+from valyu.exceptions import RateLimitError
 from valyu.types.deepresearch import (
     AlertEmailConfig,
     DeepResearchMode,
@@ -137,6 +139,7 @@ class DeepResearchClient:
         self._base_url = parent.base_url
         self._headers = parent.headers
         self._session = parent._session
+        self._max_rate_limit_retries = getattr(parent, "_max_rate_limit_retries", 2)
         # task_id -> (ETag or None, last status response), for conditional polling
         self._poll_cache: "OrderedDict[str, Tuple[Optional[str], DeepResearchStatusResponse]]" = OrderedDict()
 
@@ -398,16 +401,27 @@ class DeepResearchClient:
                     )
                 )
 
-                response = self._session.post(
-                    f"{self._base_url}/deepresearch/tasks",
-                    json=payload,
+                # A 429 here means the task was never created and never
+                # billed, so retrying it is always safe.
+                response = send_with_rate_limit_retry(
+                    lambda: self._session.post(
+                        f"{self._base_url}/deepresearch/tasks",
+                        json=payload,
+                    ),
+                    self._max_rate_limit_retries,
                 )
                 data = response.json()
 
                 if not response.ok:
+                    rate_limit = (
+                        rate_limit_detail_from_response(data, response.headers)
+                        if response.status_code == 429
+                        else None
+                    )
                     return DeepResearchCreateResponse(
                         success=False,
                         error=_error_message(data, response.status_code),
+                        rate_limit=rate_limit,
                     )
 
                 return _parse_create_response(data)
@@ -480,17 +494,28 @@ class DeepResearchClient:
                 )
             )
 
-            response = self._session.post(
-                f"{self._base_url}/deepresearch/tasks",
-                json=payload,
+            # A 429 here means the task was never created and never billed,
+            # so retrying it is always safe.
+            response = send_with_rate_limit_retry(
+                lambda: self._session.post(
+                    f"{self._base_url}/deepresearch/tasks",
+                    json=payload,
+                ),
+                self._max_rate_limit_retries,
             )
 
             data = response.json()
 
             if not response.ok:
+                rate_limit = (
+                    rate_limit_detail_from_response(data, response.headers)
+                    if response.status_code == 429
+                    else None
+                )
                 return DeepResearchCreateResponse(
                     success=False,
                     error=_error_message(data, response.status_code),
+                    rate_limit=rate_limit,
                 )
 
             return _parse_create_response(data)
@@ -1121,7 +1146,8 @@ class DeepResearchClient:
             Binary asset data (bytes)
 
         Raises:
-            requests.HTTPError: If the request fails
+            RateLimitError: If the request is rate limited (HTTP 429)
+            requests.HTTPError: If the request fails for any other reason
             ValueError: If neither token nor API key is available
         """
         try:
@@ -1147,12 +1173,24 @@ class DeepResearchClient:
                     )
                     else {}
                 )
+                if response.status_code == 429:
+                    detail = rate_limit_detail_from_response(
+                        error_data, response.headers
+                    )
+                    message = (
+                        error_data.get("message")
+                        or error_data.get("error")
+                        or "Too many requests"
+                    )
+                    raise RateLimitError(message, detail)
                 raise requests.HTTPError(
                     f"HTTP {response.status_code}: {error_data.get('error', response.text)}"
                 )
 
             return response.content
 
+        except RateLimitError:
+            raise
         except requests.HTTPError:
             raise
         except Exception as e:

@@ -243,6 +243,26 @@ if job and hasattr(job, "job_id"):
     status = valyu.get_contents_job(job.job_id)
     print(f"Status: {status.status} ({status.urls_processed}/{status.urls_total})")
 
+# Example 8: Replace image links with their alt text
+print("\n\n8. Content Extraction without Image Links")
+print("-" * 30)
+
+response = valyu.contents(
+    urls=["https://www.valyu.ai/"],
+    include_image_links=False,  # ![alt](url) becomes [Image: alt]
+    response_length="short",
+)
+
+if response.success:
+    for result in response.results:
+        if result.status == "success":
+            print(f"\nTitle: {result.title}")
+            print(f"Content length: {result.length} characters")
+        else:
+            print(f"Failed: {result.url} - {result.error}")
+else:
+    print(f"Error: {response.error}")
+
 print("\n" + "=" * 60)
 print("End of Examples")
 print("=" * 60)

@@ -77,6 +77,7 @@ def build_search_payload(
     historical_cache: Optional[bool] = None,
     historical_cache_strict: Optional[HistoricalCacheStrict] = None,
     include_abstracts: bool = False,
+    include_image_links: bool = True,
 ) -> Dict[str, Any]:
     payload: Dict[str, Any] = {
         "query": query,
@@ -88,6 +89,8 @@ def build_search_payload(
         "url_only": url_only,
         "include_abstracts": include_abstracts,
     }
+    if include_image_links is False:
+        payload["include_image_links"] = False
     if max_price is not None:
         payload["max_price"] = max_price
     if included_sources is not None:
@@ -136,6 +139,7 @@ def build_contents_payload(
     end_date: Optional[str] = None,
     historical_cache: Optional[bool] = None,
     historical_cache_strict: Optional[HistoricalCacheStrict] = None,
+    include_image_links: bool = True,
 ) -> Dict[str, Any]:
     use_async = len(urls) > 10 or async_mode
     payload: Dict[str, Any] = {"urls": urls}
@@ -161,6 +165,8 @@ def build_contents_payload(
         payload["historical_cache"] = historical_cache
     if historical_cache_strict is not None:
         payload["historical_cache_strict"] = historical_cache_strict
+    if include_image_links is False:
+        payload["include_image_links"] = False
     return payload
 
 

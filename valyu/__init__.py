@@ -1,4 +1,4 @@
-__version__ = "2.13.0"
+__version__ = "2.13.1"
 
 from .types.response import SearchResponse
 from .types.contents import (
@@ -38,6 +38,8 @@ from .types.workflows import (
     WorkflowPreviewResponse,
     WorkflowDeleteResponse,
 )
+from .types.rate_limit import RateLimitDetail, RateLimitInfo
+from .exceptions import RateLimitError
 from .api import Valyu
 from .async_api import AsyncValyu
 from .providers.openai import OpenAIProvider
@@ -86,4 +88,7 @@ __all__ = [
     "validate_sources",
     "get_source_format_examples",
     "verify_contents_webhook",
+    "RateLimitDetail",
+    "RateLimitInfo",
+    "RateLimitError",
 ]

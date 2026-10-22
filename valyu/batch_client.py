@@ -4,6 +4,7 @@ Batch Client for Valyu SDK
 
 import time
 from typing import Optional, List, Literal, Union, Dict, Any, Callable
+from valyu._rate_limit import rate_limit_detail_from_response, send_with_rate_limit_retry
 from valyu.types.deepresearch import (
     BatchStatus,
     BatchTaskInput,
@@ -26,6 +27,7 @@ class BatchClient:
         self._base_url = parent.base_url
         self._headers = parent.headers
         self._session = parent._session
+        self._max_rate_limit_retries = getattr(parent, "_max_rate_limit_retries", 2)
 
     def create(
         self,
@@ -103,17 +105,28 @@ class BatchClient:
             if metadata:
                 payload["metadata"] = metadata
 
-            response = self._session.post(
-                f"{self._base_url}/deepresearch/batches",
-                json=payload,
+            # A 429 here means the batch was never created and never
+            # billed, so retrying it is always safe.
+            response = send_with_rate_limit_retry(
+                lambda: self._session.post(
+                    f"{self._base_url}/deepresearch/batches",
+                    json=payload,
+                ),
+                self._max_rate_limit_retries,
             )
 
             data = response.json()
 
             if not response.ok:
+                rate_limit = (
+                    rate_limit_detail_from_response(data, response.headers)
+                    if response.status_code == 429
+                    else None
+                )
                 return BatchCreateResponse(
                     success=False,
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
+                    rate_limit=rate_limit,
                 )
 
             data.pop("success", None)
@@ -155,17 +168,28 @@ class BatchClient:
 
             payload = {"tasks": task_dicts}
 
-            response = self._session.post(
-                f"{self._base_url}/deepresearch/batches/{batch_id}/tasks",
-                json=payload,
+            # A 429 here means the tasks were never added and never billed,
+            # so retrying it is always safe.
+            response = send_with_rate_limit_retry(
+                lambda: self._session.post(
+                    f"{self._base_url}/deepresearch/batches/{batch_id}/tasks",
+                    json=payload,
+                ),
+                self._max_rate_limit_retries,
             )
 
             data = response.json()
 
             if not response.ok:
+                rate_limit = (
+                    rate_limit_detail_from_response(data, response.headers)
+                    if response.status_code == 429
+                    else None
+                )
                 return BatchAddTasksResponse(
                     success=False,
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
+                    rate_limit=rate_limit,
                 )
 
             data.pop("success", None)

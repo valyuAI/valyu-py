@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.13.1
+
+- New `RateLimitError`, importable as `from valyu import RateLimitError`.
+- A 429 (rate limited) response now carries structured detail. A new `rate_limit` field holds it on `SearchResponse`, `ContentsResponse`, `AnswerErrorResponse`/`AnswerStreamChunk`, `DeepResearchCreateResponse`, `BatchCreateResponse`, and `BatchAddTasksResponse`. Its fields are `retry_after`, `plan`, `limit` (`endpoint`, `requests_per_second`), `upgrade_url`, and `contact_url`. Older servers that still send only the generic 429 message leave these fields `None`. Reading `error`/`success` does not change.
+- `search()`, `contents()`, `answer()`, `deepresearch.create()`, `batch.create()`, and `batch.add_tasks()` now automatically retry a 429. Each retry honors the response's own retry hint, capped at 60 seconds. A new `max_rate_limit_retries` constructor option controls this (default 2, `0` disables it). A 429 means the request was never accepted or billed, so retrying it is always safe.
+- `deepresearch.get_assets()` raises `RateLimitError` (with the same structured detail) instead of a generic `requests.HTTPError` when the download is rate limited.
+- Search and Contents: new optional `include_image_links` parameter (default `True`). When `False`, image markdown `![alt](url)` in result content becomes `[Image: alt]` (the URL is removed and the alt text is kept), and images with no alt text are removed. The SDK sends the field only when it is `False`.
+
 ## 2.13.0
 
 - DeepResearch: new `"instant"` mode (`DeepResearchMode.INSTANT`), the quickest and lowest-cost mode. It does not support `hitl` checkpoints and is not available for batches.
