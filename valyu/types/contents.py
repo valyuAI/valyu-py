@@ -1,5 +1,7 @@
 from typing import List, Optional, Literal, Union, Dict, Any
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from valyu.types.rate_limit import RateLimitDetail
 
 ExtractEffort = Literal["normal", "high", "auto"]
 ContentsResponseLength = Union[Literal["short", "medium", "large", "max"], int]
@@ -106,6 +108,10 @@ class ContentsResponse(BaseModel):
     results: List[ContentsResult]
     total_cost_dollars: float
     total_characters: int
+    rate_limit: Optional[RateLimitDetail] = Field(
+        default=None,
+        description="Structured detail when `error` is caused by HTTP 429 (rate limited). None otherwise.",
+    )
 
     @model_validator(mode="before")
     @classmethod

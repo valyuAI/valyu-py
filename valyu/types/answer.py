@@ -13,6 +13,8 @@ import re
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
+from valyu.types.rate_limit import RateLimitDetail
+
 
 # --------------------------
 # Request Schema
@@ -270,6 +272,10 @@ class AnswerSuccessResponse(BaseModel):
 class AnswerErrorResponse(BaseModel):
     success: Literal[False] = False
     error: str
+    rate_limit: Optional[RateLimitDetail] = Field(
+        default=None,
+        description="Structured detail when `error` is caused by HTTP 429 (rate limited). None otherwise.",
+    )
 
     def __str__(self) -> str:
         return self.model_dump_json(indent=2)
@@ -307,6 +313,10 @@ class AnswerStreamChunk(BaseModel):
 
     # For type="error"
     error: Optional[str] = None
+    rate_limit: Optional[RateLimitDetail] = Field(
+        default=None,
+        description="Structured detail when `error` is caused by HTTP 429 (rate limited). None otherwise.",
+    )
 
 
 # Type alias for streaming generator

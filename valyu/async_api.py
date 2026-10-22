@@ -33,6 +33,7 @@ from typing import Any, Callable, Dict, List, Optional, Type, Union
 import httpx
 
 from valyu import __version__
+from valyu._rate_limit import async_send_with_rate_limit_retry, rate_limit_detail_from_response
 from valyu._request_builders import (
     build_contents_payload,
     build_search_payload,
@@ -77,6 +78,7 @@ class AsyncValyu:
         max_keepalive_connections: Optional[int] = None,
         timeout: float = 600.0,
         http_client: Optional[httpx.AsyncClient] = None,
+        max_rate_limit_retries: int = 2,
     ):
         """
         Initialize the async Valyu client.
@@ -97,11 +99,20 @@ class AsyncValyu:
                 ``httpx.AsyncClient`` to use. When provided, the client is
                 used as-is and is NOT closed by ``aclose()`` — ownership
                 stays with the caller.
+            max_rate_limit_retries (int): How many times to automatically
+                retry a request that gets back HTTP 429 (rate limited),
+                awaiting the amount of time the response asks for (capped
+                at 60 seconds) between attempts. A 429 means the request was
+                never accepted, so retrying it is always safe. Set to ``0``
+                to disable and handle 429s yourself via the response's
+                ``rate_limit`` field. Defaults to 2.
         """
         if api_key is None:
             api_key = os.getenv("VALYU_API_KEY")
             if not api_key:
                 raise ValueError("VALYU_API_KEY is not set")
+
+        self._max_rate_limit_retries = max_rate_limit_retries
 
         # Normalise base_url so joining with a leading-slash path never
         # produces "//" in the URL.
@@ -234,10 +245,20 @@ class AsyncValyu:
                 include_abstracts=include_abstracts,
             )
 
-            response = await self._post("/search", payload)
+            # A 429 here means the search was never run and never billed,
+            # so retrying it is always safe.
+            response = await async_send_with_rate_limit_retry(
+                lambda: self._post("/search", payload),
+                self._max_rate_limit_retries,
+            )
             data = response.json()
 
             if not (200 <= response.status_code < 400):
+                rate_limit = (
+                    rate_limit_detail_from_response(data, response.headers)
+                    if response.status_code == 429
+                    else None
+                )
                 return SearchResponse(
                     success=False,
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
@@ -247,6 +268,7 @@ class AsyncValyu:
                     results_by_source=ResultsBySource(web=0, proprietary=0),
                     total_deduction_dollars=0.0,
                     total_characters=0,
+                    rate_limit=rate_limit,
                 )
 
             if not data.get("results") and data.get("error"):
@@ -334,10 +356,20 @@ class AsyncValyu:
                 historical_cache_strict=historical_cache_strict,
             )
 
-            response = await self._post("/contents", payload)
+            # A 429 here means the request was never accepted and never
+            # billed, so retrying it is always safe.
+            response = await async_send_with_rate_limit_retry(
+                lambda: self._post("/contents", payload),
+                self._max_rate_limit_retries,
+            )
             data = response.json()
 
             if not (200 <= response.status_code < 400):
+                rate_limit = (
+                    rate_limit_detail_from_response(data, response.headers)
+                    if response.status_code == 429
+                    else None
+                )
                 return ContentsResponse(
                     success=False,
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
@@ -348,6 +380,7 @@ class AsyncValyu:
                     results=[],
                     total_cost_dollars=0.0,
                     total_characters=0,
+                    rate_limit=rate_limit,
                 )
 
             if response.status_code == 202:

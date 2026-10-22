@@ -276,6 +276,40 @@ if not response.success:
     print(f"tx_id: {response.tx_id}")
 ```
 
+### Rate limits
+
+A request that exceeds your plan's rate limit gets back HTTP 429. `search()`, `contents()`, `answer()`, `deepresearch.create()`, `batch.create()`, and `batch.add_tasks()` retry it automatically — a 429 means the request was never accepted or billed, so retrying is always safe. Each retry waits the amount of time the response asks for (capped at 60 seconds), up to `max_rate_limit_retries` attempts (default 2):
+
+```python
+valyu = Valyu(max_rate_limit_retries=5)  # default is 2; use 0 to disable retrying
+```
+
+If every retry is also rate limited, the call still returns its normal response model with `success=False`, plus a structured `rate_limit` field:
+
+```python
+response = valyu.search("test")
+
+if response.rate_limit:
+    print(f"Retry after: {response.rate_limit.retry_after}s")
+    print(f"Plan: {response.rate_limit.plan}")
+    print(f"Limit: {response.rate_limit.limit}")  # {"endpoint": ..., "requests_per_second": ...}
+    print(f"Upgrade: {response.rate_limit.upgrade_url}")   # self-serve plans
+    print(f"Contact: {response.rate_limit.contact_url}")   # enterprise plans, instead of upgrade_url
+```
+
+`rate_limit` is `None` for any other error. Older API responses that send only a generic rate-limit message leave `plan`/`limit`/`upgrade_url`/`contact_url` as `None` too — `retry_after` is always set.
+
+The one method that raises on an HTTP error (`deepresearch.get_assets()`) raises a typed `RateLimitError` instead, carrying the same fields:
+
+```python
+from valyu import RateLimitError
+
+try:
+    data = valyu.deepresearch.get_assets(task_id, asset_id)
+except RateLimitError as e:
+    print(f"Rate limited, retry after {e.retry_after}s")
+```
+
 ## Integrations
 
 Valyu works with [LangChain](https://docs.valyu.ai), [OpenAI](https://docs.valyu.ai), [Anthropic](https://docs.valyu.ai), [MCP](https://docs.valyu.ai), and more. See [docs.valyu.ai](https://docs.valyu.ai) for integration guides.

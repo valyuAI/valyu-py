@@ -7,6 +7,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from valyu import __version__
 from typing import Optional, List, Union, Dict, Any, Callable
+from valyu._rate_limit import rate_limit_detail_from_response, send_with_rate_limit_retry
 from valyu.types.response import (
     SearchResponse,
     SearchType,
@@ -54,6 +55,7 @@ class Valyu:
         max_connections: int = 100,
         timeout: Optional[float] = 600.0,
         session: Optional[requests.Session] = None,
+        max_rate_limit_retries: int = 2,
     ):
         """
         Initialize the Valyu client.
@@ -76,6 +78,15 @@ class Valyu:
                 as-is (no adapters mounted) and is NOT closed by ``close()`` —
                 lifecycle stays with the caller. Useful for injecting proxies,
                 custom TLS config, or a shared pool across clients.
+            max_rate_limit_retries (int): How many times to automatically retry
+                a request that gets back HTTP 429 (rate limited), waiting the
+                amount of time the response asks for (capped at 60 seconds)
+                between attempts. A 429 means the request was never accepted,
+                so retrying it is always safe. Applies to ``search()``,
+                ``contents()``, ``answer()``, ``deepresearch.create()``,
+                ``batch.create()``, and ``batch.add_tasks()``. Set to ``0`` to
+                disable and handle 429s yourself via the response's
+                ``rate_limit`` field. Defaults to 2.
 
         The client may be used as a context manager::
 
@@ -89,6 +100,7 @@ class Valyu:
 
         self.base_url = base_url
         self._timeout = timeout
+        self._max_rate_limit_retries = max_rate_limit_retries
         self.headers = {
             "Content-Type": "application/json",
             "x-api-key": api_key,
@@ -309,15 +321,25 @@ class Valyu:
             if instructions is not None:
                 payload["instructions"] = instructions
 
-            response = self._session.post(
-                f"{self.base_url}/search",
-                json=payload,
-                timeout=self._timeout,
+            # A 429 here means the search was never run and never billed, so
+            # retrying it is always safe.
+            response = send_with_rate_limit_retry(
+                lambda: self._session.post(
+                    f"{self.base_url}/search",
+                    json=payload,
+                    timeout=self._timeout,
+                ),
+                self._max_rate_limit_retries,
             )
 
             data = response.json()
 
             if not response.ok:
+                rate_limit = (
+                    rate_limit_detail_from_response(data, response.headers)
+                    if response.status_code == 429
+                    else None
+                )
                 return SearchResponse(
                     success=False,
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
@@ -327,6 +349,7 @@ class Valyu:
                     results_by_source=ResultsBySource(web=0, proprietary=0),
                     total_deduction_dollars=0.0,
                     total_characters=0,
+                    rate_limit=rate_limit,
                 )
 
             if not data.get("results") and data.get("error"):
@@ -488,15 +511,25 @@ class Valyu:
             if historical_cache_strict is not None:
                 payload["historical_cache_strict"] = historical_cache_strict
 
-            response = self._session.post(
-                f"{self.base_url}/contents",
-                json=payload,
-                timeout=self._timeout,
+            # A 429 here means the request was never accepted and never
+            # billed, so retrying it is always safe.
+            response = send_with_rate_limit_retry(
+                lambda: self._session.post(
+                    f"{self.base_url}/contents",
+                    json=payload,
+                    timeout=self._timeout,
+                ),
+                self._max_rate_limit_retries,
             )
 
             data = response.json()
 
             if not response.ok:
+                rate_limit = (
+                    rate_limit_detail_from_response(data, response.headers)
+                    if response.status_code == 429
+                    else None
+                )
                 return ContentsResponse(
                     success=False,
                     error=data.get("error", f"HTTP Error: {response.status_code}"),
@@ -507,6 +540,7 @@ class Valyu:
                     results=[],
                     total_cost_dollars=0.0,
                     total_characters=0,
+                    rate_limit=rate_limit,
                 )
 
             if response.status_code == 202:
@@ -785,19 +819,30 @@ class Valyu:
     def _fetch_answer(self, payload: Dict[str, Any]) -> AnswerResponse:
         """Fetch the complete answer (non-streaming mode)."""
         try:
-            # Use streaming internally but collect into final response
-            response = self._session.post(
-                f"{self.base_url}/answer",
-                json=payload,
-                headers={"Accept": "text/event-stream"},
-                stream=True,
+            # Use streaming internally but collect into final response.
+            # A 429 here means the answer was never generated and never
+            # billed, so retrying it is always safe.
+            response = send_with_rate_limit_retry(
+                lambda: self._session.post(
+                    f"{self.base_url}/answer",
+                    json=payload,
+                    headers={"Accept": "text/event-stream"},
+                    stream=True,
+                ),
+                self._max_rate_limit_retries,
             )
 
             if not response.ok:
                 try:
                     data = response.json()
+                    rate_limit = (
+                        rate_limit_detail_from_response(data, response.headers)
+                        if response.status_code == 429
+                        else None
+                    )
                     return AnswerErrorResponse(
-                        error=data.get("error", f"HTTP Error: {response.status_code}")
+                        error=data.get("error", f"HTTP Error: {response.status_code}"),
+                        rate_limit=rate_limit,
                     )
                 except Exception:
                     return AnswerErrorResponse(
@@ -905,19 +950,30 @@ class Valyu:
     def _stream_answer(self, payload: Dict[str, Any]) -> AnswerStreamGenerator:
         """Stream the answer response as chunks."""
         try:
-            response = self._session.post(
-                f"{self.base_url}/answer",
-                json=payload,
-                headers={"Accept": "text/event-stream"},
-                stream=True,
+            # A 429 here means the answer was never generated and never
+            # billed, so retrying it is always safe.
+            response = send_with_rate_limit_retry(
+                lambda: self._session.post(
+                    f"{self.base_url}/answer",
+                    json=payload,
+                    headers={"Accept": "text/event-stream"},
+                    stream=True,
+                ),
+                self._max_rate_limit_retries,
             )
 
             if not response.ok:
                 try:
                     data = response.json()
+                    rate_limit = (
+                        rate_limit_detail_from_response(data, response.headers)
+                        if response.status_code == 429
+                        else None
+                    )
                     yield AnswerStreamChunk(
                         type="error",
                         error=data.get("error", f"HTTP Error: {response.status_code}"),
+                        rate_limit=rate_limit,
                     )
                 except Exception:
                     yield AnswerStreamChunk(

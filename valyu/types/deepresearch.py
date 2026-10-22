@@ -3,6 +3,7 @@ from typing import Optional, List, Literal, Union, Dict, Any, Callable
 from typing_extensions import Annotated
 from enum import Enum
 
+from valyu.types.rate_limit import RateLimitDetail
 from valyu.types.workflows import WorkflowRunInfo
 
 
@@ -415,6 +416,10 @@ class DeepResearchCreateResponse(BaseModel):
     brand_collection_id: Optional[str] = None
     workflow: Optional[WorkflowRunInfo] = None
     error: Optional[str] = None
+    rate_limit: Optional[RateLimitDetail] = Field(
+        default=None,
+        description="Structured detail when `error` is caused by HTTP 429 (rate limited). None otherwise.",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -740,6 +745,10 @@ class BatchCreateResponse(BaseModel):
     message: Optional[str] = None
     brand_collection_id: Optional[str] = None
     error: Optional[str] = None
+    rate_limit: Optional[RateLimitDetail] = Field(
+        default=None,
+        description="Structured detail when `error` is caused by HTTP 429 (rate limited). None otherwise.",
+    )
 
     # Backward compatibility fields - populated by validator
     model: Optional[_OpenMode] = Field(
@@ -779,6 +788,10 @@ class BatchAddTasksResponse(BaseModel):
     counts: Optional[BatchCounts] = None
     message: Optional[str] = None
     error: Optional[str] = None
+    rate_limit: Optional[RateLimitDetail] = Field(
+        default=None,
+        description="Structured detail when `error` is caused by HTTP 429 (rate limited). None otherwise.",
+    )
 
 
 class BatchStatusResponse(BaseModel):
