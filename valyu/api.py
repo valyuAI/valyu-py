@@ -173,6 +173,7 @@ class Valyu:
         historical_cache: Optional[bool] = None,
         historical_cache_strict: Optional[HistoricalCacheStrict] = None,
         include_abstracts: bool = False,
+        include_image_links: bool = True,
     ) -> Optional[SearchResponse]:
         """
         Query the Valyu DeepSearch API to give your AI relevant context.
@@ -223,6 +224,10 @@ class Valyu:
             include_abstracts (bool): Search PubMed's complete abstract corpus and return
                 document-level abstracts. When False, PubMed search returns full-text papers.
                 Defaults to False.
+            include_image_links (bool): Keep image links in result content. When False,
+                image markdown ![alt](url) becomes [Image: alt] (the URL is removed and the
+                alt text is kept), and images with no alt text are removed. Defaults to True,
+                which leaves the content unchanged.
 
         Returns:
             Optional[SearchResponse]: The search response.
@@ -284,6 +289,9 @@ class Valyu:
                 "url_only": url_only,
                 "include_abstracts": include_abstracts,
             }
+
+            if include_image_links is False:
+                payload["include_image_links"] = False
 
             if max_price is not None:
                 payload["max_price"] = max_price
@@ -396,6 +404,7 @@ class Valyu:
         end_date: Optional[str] = None,
         historical_cache: Optional[bool] = None,
         historical_cache_strict: Optional[HistoricalCacheStrict] = None,
+        include_image_links: bool = True,
     ) -> Optional[
         Union[ContentsResponse, ContentsJobCreateResponse, ContentsJobStatus]
     ]:
@@ -441,6 +450,10 @@ class Valyu:
                 default) falls back to a live crawl so the query is never empty.
                 "off" disables the point-in-time guarantee. No-op without
                 historical_cache=True.
+            include_image_links (bool): Keep image links in result content. When False,
+                image markdown ![alt](url) becomes [Image: alt] (the URL is removed and the
+                alt text is kept), and images with no alt text are removed. Defaults to True,
+                which leaves the content unchanged.
 
         Returns:
             ContentsResponse (sync), ContentsJobCreateResponse (async, wait=False),
@@ -510,6 +523,9 @@ class Valyu:
 
             if historical_cache_strict is not None:
                 payload["historical_cache_strict"] = historical_cache_strict
+
+            if include_image_links is False:
+                payload["include_image_links"] = False
 
             # A 429 here means the request was never accepted and never
             # billed, so retrying it is always safe.

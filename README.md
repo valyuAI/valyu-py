@@ -67,6 +67,7 @@ response = valyu.search(
 | `country_code` | `str` | `None` | Country filter (e.g. `"US"`, `"GB"`) |
 | `response_length` | `str \| int` | `None` | `"short"`, `"medium"`, `"large"`, `"max"`, or character count |
 | `include_abstracts` | `bool` | `False` | Search PubMed's complete abstract corpus instead of full-text papers |
+| `include_image_links` | `bool` | `True` | When `False`, image markdown `![alt](url)` in result content becomes `[Image: alt]` and images with no alt text are removed |
 | `category` | `str` | `None` | Category filter |
 | `fast_mode` | `bool` | `False` | Faster results, shorter content |
 
@@ -98,7 +99,15 @@ response = valyu.contents(
         },
     },
 )
+
+# Replace image links in the content with their alt text
+response = valyu.contents(
+    ["https://example.com/article"],
+    include_image_links=False,   # ![alt](url) becomes [Image: alt]
+)
 ```
+
+The `include_image_links` option (default `True`) is also available on `valyu.search()`. When it is `False`, image markdown `![alt](url)` becomes `[Image: alt]`, and images with no alt text are removed.
 
 ### Answer
 
