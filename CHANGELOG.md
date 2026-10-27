@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.13.2
+
+- New `warnings` field on `SearchResponse`, `AnswerSuccessResponse`, `AnswerStreamChunk` (metadata chunk), `DeepResearchCreateResponse` and `DeepResearchStatusResponse`: a list of `ResponseWarning` (`type`, `message`, optional `detail`), importable as `from valyu import ResponseWarning`. `type` is an open string, not an enum. Older responses that send plain-string warnings become `ResponseWarning(type="warning", message=...)`, and a malformed entry is dropped instead of failing the response. `None` when the API sends none.
+
 ## 2.13.1
 
 - New `RateLimitError`, importable as `from valyu import RateLimitError`.

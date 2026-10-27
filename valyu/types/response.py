@@ -2,6 +2,7 @@ from typing import List, Optional, Literal, Union, Dict, Any
 from pydantic import BaseModel, Field
 
 from valyu.types.rate_limit import RateLimitDetail
+from valyu.types.warning import ResponseWarnings
 
 SearchType = Literal["web", "proprietary", "all", "news"]
 # Per-request strictness for a historical_cache (point-in-time backtest) search.
@@ -54,6 +55,7 @@ class SearchResponse(BaseModel):
         default=None,
         description="Structured detail when `error` is caused by HTTP 429 (rate limited). None otherwise.",
     )
+    warnings: ResponseWarnings = None
 
     def __str__(self) -> str:
         return self.model_dump_json(indent=2)

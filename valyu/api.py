@@ -372,6 +372,7 @@ class Valyu:
                     ),
                     total_deduction_dollars=data.get("total_deduction_dollars", 0.0),
                     total_characters=data.get("total_characters", 0),
+                    warnings=data.get("warnings"),
                 )
 
             return SearchResponse(**data)
@@ -954,6 +955,7 @@ class Valyu:
                         )
                     ),
                     extraction_metadata=extraction_meta,
+                    warnings=final_metadata.get("warnings"),
                 )
             else:
                 return AnswerErrorResponse(
@@ -1071,6 +1073,7 @@ class Valyu:
                                 if parsed.get("extraction_metadata")
                                 else None
                             ),
+                            warnings=parsed.get("warnings"),
                         )
 
                 except json.JSONDecodeError:

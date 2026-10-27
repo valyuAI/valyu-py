@@ -14,6 +14,7 @@ import re
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 from valyu.types.rate_limit import RateLimitDetail
+from valyu.types.warning import ResponseWarnings
 
 
 # --------------------------
@@ -264,6 +265,7 @@ class AnswerSuccessResponse(BaseModel):
         default=None,
         description="Metadata about content extraction, only populated when contents_api tool was used.",
     )
+    warnings: ResponseWarnings = None
 
     def __str__(self) -> str:
         return self.model_dump_json(indent=2)
@@ -310,6 +312,7 @@ class AnswerStreamChunk(BaseModel):
     ai_usage: Optional[AIUsage] = None
     cost: Optional[CostBreakdown] = None
     extraction_metadata: Optional[ExtractionMetadata] = None
+    warnings: ResponseWarnings = None
 
     # For type="error"
     error: Optional[str] = None

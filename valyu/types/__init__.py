@@ -1,4 +1,5 @@
 from .rate_limit import RateLimitDetail, RateLimitInfo
+from .warning import ResponseWarning
 from .response import (
     SearchResponse,
     SearchResult,
@@ -67,6 +68,7 @@ from .deepresearch import (
 __all__ = [
     "RateLimitDetail",
     "RateLimitInfo",
+    "ResponseWarning",
     "SearchResponse",
     "SearchResult",
     "SearchType",
