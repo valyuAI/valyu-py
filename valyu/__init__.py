@@ -1,4 +1,4 @@
-__version__ = "2.13.1"
+__version__ = "2.13.2"
 
 from .types.response import SearchResponse
 from .types.contents import (
@@ -39,6 +39,7 @@ from .types.workflows import (
     WorkflowDeleteResponse,
 )
 from .types.rate_limit import RateLimitDetail, RateLimitInfo
+from .types.warning import ResponseWarning
 from .exceptions import RateLimitError
 from .api import Valyu
 from .async_api import AsyncValyu
@@ -90,5 +91,6 @@ __all__ = [
     "verify_contents_webhook",
     "RateLimitDetail",
     "RateLimitInfo",
+    "ResponseWarning",
     "RateLimitError",
 ]

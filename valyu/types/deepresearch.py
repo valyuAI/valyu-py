@@ -4,6 +4,7 @@ from typing_extensions import Annotated
 from enum import Enum
 
 from valyu.types.rate_limit import RateLimitDetail
+from valyu.types.warning import ResponseWarnings
 from valyu.types.workflows import WorkflowRunInfo
 
 
@@ -415,6 +416,7 @@ class DeepResearchCreateResponse(BaseModel):
     message: Optional[str] = None
     brand_collection_id: Optional[str] = None
     workflow: Optional[WorkflowRunInfo] = None
+    warnings: ResponseWarnings = None
     error: Optional[str] = None
     rate_limit: Optional[RateLimitDetail] = Field(
         default=None,
@@ -468,6 +470,7 @@ class DeepResearchStatusResponse(BaseModel):
     interaction: Optional[Interaction] = Field(None, description="Current HITL checkpoint (present when awaiting_input or paused)")
     hitl_history: Optional[List[InteractionHistoryEntry]] = Field(None, description="History of completed HITL checkpoints")
 
+    warnings: ResponseWarnings = None
     error: Optional[str] = None
     unreachable: Optional[bool] = Field(
         None,

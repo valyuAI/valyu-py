@@ -285,6 +285,8 @@ if not response.success:
     print(f"tx_id: {response.tx_id}")
 ```
 
+Search, answer and DeepResearch responses may also carry non-fatal `warnings` (a list of `ResponseWarning` with `type`, `message` and optional `detail`), for example when a requested dataset isn't included in your plan and was skipped.
+
 ### Rate limits
 
 A request that exceeds your plan's rate limit gets back HTTP 429. `search()`, `contents()`, `answer()`, `deepresearch.create()`, `batch.create()`, and `batch.add_tasks()` retry it automatically — a 429 means the request was never accepted or billed, so retrying is always safe. Each retry waits the amount of time the response asks for (capped at 60 seconds), up to `max_rate_limit_retries` attempts (default 2):

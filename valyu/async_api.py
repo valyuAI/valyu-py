@@ -286,6 +286,7 @@ class AsyncValyu:
                     ),
                     total_deduction_dollars=data.get("total_deduction_dollars", 0.0),
                     total_characters=data.get("total_characters", 0),
+                    warnings=data.get("warnings"),
                 )
 
             return SearchResponse(**data)
