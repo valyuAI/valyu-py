@@ -5,6 +5,9 @@ from valyu.types.rate_limit import RateLimitDetail
 
 ExtractEffort = Literal["normal", "high", "auto"]
 ContentsResponseLength = Union[Literal["short", "medium", "large", "max"], int]
+# "miss": crawled for this request. "hit": a fresh cached copy. "stale": a cached
+# copy older than 5 minutes served while it refreshes (only with max_age omitted).
+CacheState = Literal["hit", "miss", "stale"]
 
 
 def _normalize_result(raw: Any) -> Any:
@@ -41,6 +44,10 @@ class ContentsResultSuccess(BaseModel):
     data_type: Optional[str] = None
     image_url: Optional[Dict[str, str]] = None
     citation: Optional[str] = None
+    cache_state: Optional[CacheState] = None
+    # ISO 8601 capture time of the page copy; None when there is no page copy
+    # to date (for example a paper served from the index).
+    crawled_at: Optional[str] = None
 
 
 class ContentsResultFailed(BaseModel):

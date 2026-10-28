@@ -406,6 +406,7 @@ class Valyu:
         historical_cache: Optional[bool] = None,
         historical_cache_strict: Optional[HistoricalCacheStrict] = None,
         include_image_links: bool = True,
+        max_age: Optional[int] = None,
     ) -> Optional[
         Union[ContentsResponse, ContentsJobCreateResponse, ContentsJobStatus]
     ]:
@@ -455,6 +456,11 @@ class Valyu:
                 image markdown ![alt](url) becomes [Image: alt] (the URL is removed and the
                 alt text is kept), and images with no alt text are removed. Defaults to True,
                 which leaves the content unchanged.
+            max_age (Optional[int]): Oldest cached copy of a page, in seconds, that
+                you accept. 0 forces a live crawl. Range 0 to 2592000 (30 days).
+                Omit it for the default cache policy. Cannot be combined with
+                historical_cache. Each successful result has cache_state ("hit",
+                "miss" or "stale") and crawled_at. Works with async_mode too.
 
         Returns:
             ContentsResponse (sync), ContentsJobCreateResponse (async, wait=False),
@@ -527,6 +533,9 @@ class Valyu:
 
             if include_image_links is False:
                 payload["include_image_links"] = False
+
+            if max_age is not None:
+                payload["max_age"] = max_age
 
             # A 429 here means the request was never accepted and never
             # billed, so retrying it is always safe.

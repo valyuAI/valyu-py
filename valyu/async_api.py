@@ -325,6 +325,7 @@ class AsyncValyu:
         historical_cache: Optional[bool] = None,
         historical_cache_strict: Optional[HistoricalCacheStrict] = None,
         include_image_links: bool = True,
+        max_age: Optional[int] = None,
     ) -> Optional[Union[ContentsResponse, ContentsJobCreateResponse, ContentsJobStatus]]:
         """
         Async version of ``Valyu.contents``. Arguments and semantics
@@ -359,6 +360,7 @@ class AsyncValyu:
                 historical_cache=historical_cache,
                 historical_cache_strict=historical_cache_strict,
                 include_image_links=include_image_links,
+                max_age=max_age,
             )
 
             # A 429 here means the request was never accepted and never
