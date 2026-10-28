@@ -76,5 +76,13 @@ class CacheFieldsTest(unittest.TestCase):
         self.assertIsNone(result.crawled_at)
 
 
+class NotFoundRowTest(unittest.TestCase):
+    def test_not_found_row_parses(self):
+        row = {"url": "https://example.com/x", "status": "not_found", "error": "Page not found (404)"}
+        result = ContentsResponse(**_contents_response([row]).json.return_value).results[0]
+        self.assertEqual(result.status, "not_found")
+        self.assertEqual(result.error, "Page not found (404)")
+
+
 if __name__ == "__main__":
     unittest.main()

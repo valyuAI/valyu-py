@@ -51,12 +51,15 @@ class ContentsResultSuccess(BaseModel):
 
 
 class ContentsResultFailed(BaseModel):
-    """Failed content extraction result."""
+    """Result for a URL that was not extracted.
+
+    ``status`` is ``"failed"``, or ``"not_found"`` when the page returned 404.
+    """
 
     model_config = ConfigDict(extra="ignore")
 
     url: str
-    status: Literal["failed"]
+    status: Literal["failed", "not_found"]
     error: str
 
 
