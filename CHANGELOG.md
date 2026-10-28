@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.13.3
+
+- New `max_age` argument for `contents()` (sync and async client): the oldest cached copy of a page, in seconds, that you accept. `0` forces a live crawl. Use an integer from 0 to 2592000 (30 days). Omit it for the default cache policy. The SDK sends `max_age` only when you set it. It also works with async jobs.
+- Successful contents results gain `cache_state` (`"hit"`, `"miss"` or `"stale"`) and `crawled_at` (ISO 8601 capture time, or `None`).
+- A result for a page that returns 404 (`status` `"not_found"`, `error` `"Page not found (404)"`) now parses. Before, the response model accepted only `"failed"` for a URL that was not extracted.
+
 ## 2.13.2
 
 - New `warnings` field on `SearchResponse`, `AnswerSuccessResponse`, `AnswerStreamChunk` (metadata chunk), `DeepResearchCreateResponse` and `DeepResearchStatusResponse`: a list of `ResponseWarning` (`type`, `message`, optional `detail`), importable as `from valyu import ResponseWarning`. `type` is an open string, not an enum. Older responses that send plain-string warnings become `ResponseWarning(type="warning", message=...)`, and a malformed entry is dropped instead of failing the response. `None` when the API sends none.

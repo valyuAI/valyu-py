@@ -140,6 +140,7 @@ def build_contents_payload(
     historical_cache: Optional[bool] = None,
     historical_cache_strict: Optional[HistoricalCacheStrict] = None,
     include_image_links: bool = True,
+    max_age: Optional[int] = None,
 ) -> Dict[str, Any]:
     use_async = len(urls) > 10 or async_mode
     payload: Dict[str, Any] = {"urls": urls}
@@ -167,6 +168,8 @@ def build_contents_payload(
         payload["historical_cache_strict"] = historical_cache_strict
     if include_image_links is False:
         payload["include_image_links"] = False
+    if max_age is not None:
+        payload["max_age"] = max_age
     return payload
 
 
