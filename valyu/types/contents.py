@@ -48,6 +48,9 @@ class ContentsResultSuccess(BaseModel):
     # ISO 8601 capture time of the page copy; None when there is no page copy
     # to date (for example a paper served from the index).
     crawled_at: Optional[str] = None
+    # 404 when the page returned 404 but its body is a real page. None for a
+    # normal page.
+    http_status: Optional[int] = None
 
 
 class ContentsResultFailed(BaseModel):
