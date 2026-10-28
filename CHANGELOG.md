@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.13.4
+
+- Successful contents results gain `http_status`. It is `404` when the page returned 404 but its body is a real page (`status` is `"success"` and the page is billed). It is `None` for a normal page.
+
 ## 2.13.3
 
 - New `max_age` argument for `contents()` (sync and async client): the oldest cached copy of a page, in seconds, that you accept. `0` forces a live crawl. Use an integer from 0 to 2592000 (30 days). Omit it for the default cache policy. The SDK sends `max_age` only when you set it. It also works with async jobs.
