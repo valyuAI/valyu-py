@@ -7,7 +7,7 @@ from valyu._request_builders import build_search_payload
 from valyu.types.contents import ContentsResultSuccess
 from valyu.types.datasources import Datasource, DatasourcesResponse
 from valyu.types.deepresearch import DeepResearchSource, SearchConfig
-from valyu.types.response import SearchResponse, SearchResult
+from valyu.types.response import SearchResponse
 
 _BASE = {
     "success": True,
