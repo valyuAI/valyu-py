@@ -11,7 +11,9 @@ from valyu.types.answer import SUPPORTED_COUNTRY_CODES
 from valyu.types.contents import ContentsResponseLength, ExtractEffort
 from valyu.types.response import (
     HistoricalCacheStrict,
+    HlsCoverage,
     ResultsBySource,
+    ScopePolicy,
     SearchResponse,
     SearchType,
 )
@@ -62,7 +64,7 @@ def build_search_payload(
     max_num_results: int,
     is_tool_call: Optional[bool],
     relevance_threshold: Optional[float],
-    max_price: Optional[int],
+    max_price: Optional[float],
     included_sources: Optional[List[str]],
     excluded_sources: Optional[List[str]],
     country_code: Optional[str],
@@ -78,6 +80,8 @@ def build_search_payload(
     historical_cache_strict: Optional[HistoricalCacheStrict] = None,
     include_abstracts: bool = False,
     include_image_links: bool = True,
+    scope_policy: Optional[ScopePolicy] = None,
+    hls_coverage: Optional[HlsCoverage] = None,
 ) -> Dict[str, Any]:
     payload: Dict[str, Any] = {
         "query": query,
@@ -115,6 +119,10 @@ def build_search_payload(
         payload["source_biases"] = source_biases
     if instructions is not None:
         payload["instructions"] = instructions
+    if scope_policy is not None:
+        payload["scope_policy"] = scope_policy
+    if hls_coverage is not None:
+        payload["hls_coverage"] = hls_coverage
     return payload
 
 

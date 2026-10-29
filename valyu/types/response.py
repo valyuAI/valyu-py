@@ -12,6 +12,12 @@ SearchType = Literal["web", "proprietary", "all", "news"]
 #   "only"   - serve ONLY content provably captured at or before end_date; drop a
 #              result rather than fall back to live. Use for strict backtests.
 HistoricalCacheStrict = Literal["off", "prefer", "only"]
+# How included_sources is applied. "advisory" (API default) guides source
+# selection; "strict" searches exactly the datasets in included_sources.
+ScopePolicy = Literal["advisory", "strict"]
+# Wiley HLS coverage: "hls" is licensed Wiley content only; "increased_coverage"
+# blends it with open-access biomedical literature.
+HlsCoverage = Literal["hls", "increased_coverage"]
 
 
 class SearchResult(BaseModel):
@@ -27,6 +33,8 @@ class SearchResult(BaseModel):
     data_type: Optional[Literal["structured", "unstructured"]] = None
     source_type: Optional[str] = None
     publication_date: Optional[str] = None
+    # When the page was crawled (web results).
+    crawl_date: Optional[str] = None
     id: Optional[str] = None
     abstract: Optional[str] = None
     doi: Optional[str] = None
@@ -40,6 +48,25 @@ class SearchResult(BaseModel):
 class ResultsBySource(BaseModel):
     web: int
     proprietary: int
+
+
+class SourceScope(BaseModel):
+    """Receipt for a ``scope_policy="strict"`` search.
+
+    Shows which datasets were dispatched and which returned rows. It does not
+    certify full coverage.
+    """
+
+    policy: Optional[str] = None
+    allowed_dataset_ids: Optional[List[str]] = None
+    selected_dataset_ids: Optional[List[str]] = None
+    completed_dataset_ids: Optional[List[str]] = None
+    returned_dataset_ids: Optional[List[str]] = None
+    omitted_dataset_ids: Optional[List[str]] = None
+    selection_basis: Optional[str] = None
+    coverage: Optional[str] = None
+    exhaustive: Optional[bool] = None
+    errors: Optional[List[Dict[str, Any]]] = None
 
 
 class SearchResponse(BaseModel):
@@ -56,6 +83,8 @@ class SearchResponse(BaseModel):
         description="Structured detail when `error` is caused by HTTP 429 (rate limited). None otherwise.",
     )
     warnings: ResponseWarnings = None
+    # Present only for scope_policy="strict" requests.
+    source_scope: Optional[SourceScope] = None
 
     def __str__(self) -> str:
         return self.model_dump_json(indent=2)

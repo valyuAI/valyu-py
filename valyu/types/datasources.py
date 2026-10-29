@@ -30,6 +30,15 @@ class Datasource(BaseModel):
     update_frequency: Optional[str] = None
     size: Optional[int] = None
     coverage: Optional[DatasourceCoverage] = None
+    # Cheapest plan that includes this dataset ({"id", "name", "price"}); None
+    # when the dataset is licensed separately.
+    required_plan: Optional[Dict[str, Any]] = None
+    # Products the dataset can be used in: "search", "answer", "deepresearch".
+    access_modes: Optional[List[str]] = None
+    geography: Optional[Dict[str, Any]] = None
+    capabilities: Optional[Dict[str, Any]] = None
+    # Data provider information ({"provider", "license"}).
+    data_source: Optional[Dict[str, Any]] = None
 
 
 class DatasourcesResponse(BaseModel):
@@ -37,6 +46,26 @@ class DatasourcesResponse(BaseModel):
     success: bool
     error: Optional[str] = None
     datasources: List[Datasource] = []
+    total_count: Optional[int] = None
+
+    def __str__(self) -> str:
+        return self.model_dump_json(indent=2)
+
+
+class DatasourceSearchResult(Datasource):
+    """A datasource ranked by ``datasources_search()``."""
+    relevance_score: Optional[float] = None
+
+
+class DatasourceSearchResponse(BaseModel):
+    """Response from the semantic datasource search endpoint."""
+    success: bool
+    error: Optional[str] = None
+    query: Optional[str] = None
+    # "semantic" (embedding ranking) or "lexical" (full-text fallback).
+    search_mode: Optional[str] = None
+    total_count: Optional[int] = None
+    results: List[DatasourceSearchResult] = []
 
     def __str__(self) -> str:
         return self.model_dump_json(indent=2)

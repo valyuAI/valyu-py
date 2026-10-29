@@ -41,7 +41,7 @@ Search across web and proprietary data sources with a single query.
 ```python
 response = valyu.search(
     "CRISPR gene therapy clinical trials 2026",
-    search_type="proprietary",                     # "all", "web", or "proprietary"
+    search_type="proprietary",                     # "all", "web", "proprietary", or "news"
     max_num_results=10,                            # 1-20 results
     included_sources=["valyu/valyu-pubmed"],        # filter to specific sources
     include_abstracts=True,                         # search the full PubMed abstract corpus
@@ -56,9 +56,9 @@ response = valyu.search(
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `query` | `str` | required | Search query |
-| `search_type` | `str` | `"all"` | `"all"`, `"web"`, or `"proprietary"` |
-| `max_num_results` | `int` | `10` | Results to return (1-20) |
-| `max_price` | `int` | `30` | Max price per thousand queries (CPM) |
+| `search_type` | `str` | `"all"` | `"all"`, `"web"`, `"proprietary"`, or `"news"` |
+| `max_num_results` | `int` | `10` | Results to return (1-20 by default; the API lowers a higher value to your limit and adds a `max_num_results_capped` warning) |
+| `max_price` | `float` | `None` | Caps the cost of the whole request. The API default is 1000 when omitted |
 | `relevance_threshold` | `float` | `0.5` | Min relevance score (0-1) |
 | `included_sources` | `List[str]` | `None` | Sources to search |
 | `excluded_sources` | `List[str]` | `None` | Sources to exclude |
@@ -68,7 +68,9 @@ response = valyu.search(
 | `response_length` | `str \| int` | `None` | `"short"`, `"medium"`, `"large"`, `"max"`, or character count |
 | `include_abstracts` | `bool` | `False` | Search PubMed's complete abstract corpus instead of full-text papers |
 | `include_image_links` | `bool` | `True` | When `False`, image markdown `![alt](url)` in result content becomes `[Image: alt]` and images with no alt text are removed |
-| `category` | `str` | `None` | Category filter |
+| `category` | `str` | `None` | Deprecated by the API; use `instructions` instead |
+| `scope_policy` | `str` | `None` | `"advisory"` (API default) or `"strict"`. Strict searches exactly the datasets in `included_sources` and adds `source_scope` to the response |
+| `hls_coverage` | `str` | `None` | `"hls"` (API default) or `"increased_coverage"` for Wiley HLS searches |
 | `fast_mode` | `bool` | `False` | Faster results, shorter content |
 
 </details>
@@ -131,8 +133,8 @@ Multi-step research agent that produces comprehensive reports with citations.
 ```python
 # Start a research task
 task = valyu.deepresearch.create(
-    input="Compare CRISPR and base editing approaches for sickle cell disease",
-    model="heavy",
+    query="Compare CRISPR and base editing approaches for sickle cell disease",
+    mode="heavy",
     output_formats=["markdown", "pdf"],
 )
 
@@ -155,11 +157,17 @@ print(result.pdf_url)  # PDF download link
 | `status(task_id)` | Get task status |
 | `wait(task_id, ...)` | Poll until completion |
 | `stream(task_id, ...)` | Stream real-time updates |
-| `list(api_key_id, limit)` | List research tasks |
+| `list(limit)` | List research tasks |
 | `update(task_id, instruction)` | Add follow-up instruction |
 | `cancel(task_id)` | Cancel a running task |
 | `delete(task_id)` | Delete a task |
 | `toggle_public(task_id, is_public)` | Toggle public access |
+| `get_assets(task_id, asset_id, token)` | Download an authenticated asset (chart, deliverable, PDF) |
+| `respond(task_id, interaction_id, response)` | Respond to a HITL checkpoint |
+| `approve_plan(task_id, interaction_id, modifications)` | Approve the research plan |
+| `respond_planning_questions(task_id, interaction_id, answers)` | Answer planning questions |
+| `respond_source_review(task_id, interaction_id, ...)` | Respond to the source review |
+| `approve_outline(task_id, interaction_id, modifications)` | Approve the report outline |
 
 </details>
 

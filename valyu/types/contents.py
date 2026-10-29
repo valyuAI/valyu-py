@@ -51,6 +51,14 @@ class ContentsResultSuccess(BaseModel):
     # 404 when the page returned 404 but its body is a real page. None for a
     # normal page.
     http_status: Optional[int] = None
+    # Identifier: the URL for web pages, the bare paper id / DOI for papers.
+    id: Optional[str] = None
+    # Metadata from structured extraction; only when data_type is "structured".
+    structured_metadata: Optional[Dict[str, Any]] = None
+    # Academic papers served from the processed index.
+    doi: Optional[str] = None
+    authors: Optional[List[str]] = None
+    citation_count: Optional[int] = None
 
 
 class ContentsResultFailed(BaseModel):

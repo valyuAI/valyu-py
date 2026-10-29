@@ -174,8 +174,13 @@ class SearchConfig(BaseModel):
             (a time component without it is rejected with HTTP 400). No-op without
             a date range. User-set only and locked for the whole research run —
             the agent cannot toggle it mid-research.
-        category: Filters results by a specific category.
-            Category values are source-dependent.
+        reference_date: Pins the run to a date for backtests, as historical_cache
+            does with end_date. Takes precedence over end_date. YYYY-MM-DD or an
+            ISO-8601 datetime. Dates before 2026 return HTTP 400.
+        historical_cache_strict: Snapshot policy for a backtest run: "off",
+            "prefer" or "only".
+        category: Deprecated by the API. Filters results by a category;
+            use instructions on the search endpoint instead.
         country_code: ISO country code for location-filtered searches.
             E.g., "US", "GB", "DE". Only applies to web search results.
     """
@@ -209,6 +214,14 @@ class SearchConfig(BaseModel):
     source_biases: Optional[Dict[str, int]] = Field(
         None,
         description="Bias values for specific sources (-5 to +5) to influence ranking without hard filtering",
+    )
+    historical_cache_strict: Optional[Literal["off", "prefer", "only"]] = Field(
+        None,
+        description="Snapshot policy for a backtest run. 'prefer' uses a snapshot at or before the cutoff when one exists, else the live page. 'only' drops a page with no such snapshot. 'off' disables the guarantee.",
+    )
+    reference_date: Optional[str] = Field(
+        None,
+        description="Pins the run to this date for backtests. Takes precedence over end_date. YYYY-MM-DD or ISO-8601 datetime. Dates before 2026 return HTTP 400.",
     )
 
 
@@ -319,6 +332,8 @@ class DeepResearchSource(BaseModel):
     source_id: Optional[int] = None
     word_count: Optional[int] = None
     fragment: Optional[str] = None
+    # Passages supporting the citation: {"excerpt", "page"?, "piece"?}.
+    locations: Optional[List[Dict[str, Any]]] = None
 
 
 class Usage(BaseModel):

@@ -49,6 +49,8 @@ from valyu.types.contents import (
 )
 from valyu.types.response import (
     HistoricalCacheStrict,
+    HlsCoverage,
+    ScopePolicy,
     ResultsBySource,
     SearchResponse,
     SearchType,
@@ -191,7 +193,7 @@ class AsyncValyu:
         max_num_results: int = 10,
         is_tool_call: Optional[bool] = True,
         relevance_threshold: Optional[float] = 0.5,
-        max_price: Optional[int] = None,
+        max_price: Optional[float] = None,
         included_sources: Optional[List[str]] = None,
         excluded_sources: Optional[List[str]] = None,
         country_code: Optional[str] = None,
@@ -207,6 +209,8 @@ class AsyncValyu:
         historical_cache_strict: Optional[HistoricalCacheStrict] = None,
         include_abstracts: bool = False,
         include_image_links: bool = True,
+        scope_policy: Optional[ScopePolicy] = None,
+        hls_coverage: Optional[HlsCoverage] = None,
     ) -> Optional[SearchResponse]:
         """
         Async version of ``Valyu.search``. See :py:meth:`Valyu.search`
@@ -245,6 +249,8 @@ class AsyncValyu:
                 historical_cache_strict=historical_cache_strict,
                 include_abstracts=include_abstracts,
                 include_image_links=include_image_links,
+                scope_policy=scope_policy,
+                hls_coverage=hls_coverage,
             )
 
             # A 429 here means the search was never run and never billed,

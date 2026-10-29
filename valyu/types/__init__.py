@@ -5,6 +5,9 @@ from .response import (
     SearchResult,
     SearchType,
     HistoricalCacheStrict,
+    ScopePolicy,
+    HlsCoverage,
+    SourceScope,
     ResultsBySource,
 )
 from .contents import (
@@ -25,6 +28,8 @@ from .datasources import (
     DatasourceCategory,
     DatasourceCategoriesResponse,
     DatasourceCategoryType,
+    DatasourceSearchResult,
+    DatasourceSearchResponse,
 )
 from .answer import (
     AnswerResponse,
@@ -73,6 +78,11 @@ __all__ = [
     "SearchResult",
     "SearchType",
     "HistoricalCacheStrict",
+    "ScopePolicy",
+    "HlsCoverage",
+    "SourceScope",
+    "DatasourceSearchResult",
+    "DatasourceSearchResponse",
     "ResultsBySource",
     "ContentsResponse",
     "ContentsResult",

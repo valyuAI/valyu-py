@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.13.5
+
+- `search()` (sync and async) gains `scope_policy` (`"advisory"` or `"strict"`) and `hls_coverage` (`"hls"` or `"increased_coverage"`). `SearchResponse` gains `source_scope` (a `SourceScope` receipt for strict searches). `SearchResult` gains `crawl_date`. The SDK sends the new arguments only when you set them.
+- `max_price` on `search()` is now typed `float`; the API accepts decimals.
+- New `datasources_search(q, limit)` for `GET /v1/datasources/search`, with `DatasourceSearchResponse`.
+- `Datasource` gains `required_plan`, `access_modes`, `geography`, `capabilities` and `data_source`. `DatasourcesResponse` gains `total_count`.
+- `ContentsResultSuccess` gains `id`, `doi`, `authors`, `citation_count` and `structured_metadata`.
+- DeepResearch `SearchConfig` gains `reference_date` and `historical_cache_strict`. `DeepResearchSource` gains `locations`.
+- Docs: README and docstrings now match the API on `max_num_results`, `max_price`, `search_type`, the DeepResearch method table, and the deprecated `category`, `input` and `model` arguments.
+
 ## 2.13.4
 
 - Successful contents results gain `http_status`. It is `404` when the page returned 404 but its body is a real page (`status` is `"success"` and the page is billed). It is `None` for a normal page.

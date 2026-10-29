@@ -12,6 +12,8 @@ from valyu.types.response import (
     SearchResponse,
     SearchType,
     HistoricalCacheStrict,
+    HlsCoverage,
+    ScopePolicy,
     ResultsBySource,
 )
 from valyu.types.contents import (
@@ -27,6 +29,7 @@ from valyu.types.datasources import (
     DatasourceCategory,
     DatasourceCategoriesResponse,
     DatasourceCategoryType,
+    DatasourceSearchResponse,
 )
 from valyu.types.answer import (
     AnswerResponse,
@@ -158,7 +161,7 @@ class Valyu:
         max_num_results: int = 10,
         is_tool_call: Optional[bool] = True,
         relevance_threshold: Optional[float] = 0.5,
-        max_price: Optional[int] = None,
+        max_price: Optional[float] = None,
         included_sources: Optional[List[str]] = None,
         excluded_sources: Optional[List[str]] = None,
         country_code: Optional[str] = None,
@@ -174,6 +177,8 @@ class Valyu:
         historical_cache_strict: Optional[HistoricalCacheStrict] = None,
         include_abstracts: bool = False,
         include_image_links: bool = True,
+        scope_policy: Optional[ScopePolicy] = None,
+        hls_coverage: Optional[HlsCoverage] = None,
     ) -> Optional[SearchResponse]:
         """
         Query the Valyu DeepSearch API to give your AI relevant context.
@@ -181,10 +186,10 @@ class Valyu:
         Args:
             query (str): The query string.
             search_type (SearchType): The type of search to perform - "all", "web", "proprietary", or "news".
-            max_num_results (int): The maximum number of search results to return (max 100).
+            max_num_results (int): The maximum number of search results to return (1-20 by default; the API lowers a higher value to your limit and adds a max_num_results_capped warning).
             is_tool_call (Optional[bool]): Whether this is a tool call.
             relevance_threshold (Optional[float]): The relevance threshold to not return results below.
-            max_price (int): The maximum price (per thousand queries) to spend on the search.
+            max_price (float): Caps the cost of the whole request (not a per-result ceiling). The API default is 1000 when omitted.
             included_sources (Optional[List[str]]): The data sources to use for the search.
                 Sources must be formatted as one of:
                 • Domain: 'example.com', 'news.ycombinator.com'
@@ -197,7 +202,7 @@ class Valyu:
                 • Dataset name: 'provider/dataset-name'
             country_code (Optional[str]): Country code filter for search results.
             response_length (Optional[ContentsResponseLength]): Length of response content - "short", "medium", "large", "max", or integer for character count.
-            category (Optional[str]): Category filter for search results.
+            category (Optional[str]): Deprecated by the API; use instructions instead.
             start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
             end_date (Optional[str]): End date filter in YYYY-MM-DD format.
             fast_mode (bool): Enable fast mode for faster but shorter results. Good for general purpose queries. Defaults to False.
@@ -228,6 +233,17 @@ class Valyu:
                 image markdown ![alt](url) becomes [Image: alt] (the URL is removed and the
                 alt text is kept), and images with no alt text are removed. Defaults to True,
                 which leaves the content unchanged.
+            scope_policy (Optional[ScopePolicy]): How included_sources is applied.
+                "advisory" (API default) lets included_sources guide source selection;
+                with two or more datasets the API may search only the most relevant.
+                "strict" searches exactly the dataset IDs in included_sources (minus
+                excluded_sources) and adds a source_scope receipt to the response.
+                Strict requires 1-128 dataset IDs; presets, domains, URLs and "web"
+                are rejected.
+            hls_coverage (Optional[HlsCoverage]): Coverage for Wiley HLS
+                (wiley/wiley-hls) searches. "hls" (API default) returns licensed
+                Wiley content only; "increased_coverage" blends it with open-access
+                biomedical literature.
 
         Returns:
             Optional[SearchResponse]: The search response.
@@ -328,6 +344,12 @@ class Valyu:
 
             if instructions is not None:
                 payload["instructions"] = instructions
+
+            if scope_policy is not None:
+                payload["scope_policy"] = scope_policy
+
+            if hls_coverage is not None:
+                payload["hls_coverage"] = hls_coverage
 
             # A 429 here means the search was never run and never billed, so
             # retrying it is always safe.
@@ -1140,12 +1162,57 @@ class Valyu:
             return DatasourcesResponse(
                 success=True,
                 datasources=datasources,
+                total_count=data.get("total_count"),
             )
         except Exception as e:
             return DatasourcesResponse(
                 success=False,
                 error=str(e),
                 datasources=[],
+            )
+
+    def datasources_search(
+        self,
+        q: str,
+        limit: Optional[int] = None,
+    ) -> DatasourceSearchResponse:
+        """
+        Find datasources by a natural-language description of the data you want.
+
+        Args:
+            q (str): Description of the data you want, e.g. "clinical trial results".
+            limit (Optional[int]): Maximum number of datasets to return (1-100,
+                API default 20; larger values are capped at 100).
+
+        Returns:
+            DatasourceSearchResponse: Datasets ranked best-first, each with a
+                relevance_score.
+        """
+        try:
+            params: Dict[str, Any] = {"q": q}
+            if limit is not None:
+                params["limit"] = limit
+
+            response = self._session.get(
+                f"{self.base_url}/datasources/search",
+                params=params,
+            )
+
+            data = response.json()
+
+            if not response.ok:
+                return DatasourceSearchResponse(
+                    success=False,
+                    error=data.get("error", f"HTTP Error: {response.status_code}"),
+                    results=[],
+                )
+
+            return DatasourceSearchResponse(**data)
+        except Exception as e:
+            return DatasourceSearchResponse(
+                success=False,
+                error=str(e),
+                results=[],
             )
 
     def datasources_categories(self) -> DatasourceCategoriesResponse:
