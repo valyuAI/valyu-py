@@ -2,6 +2,8 @@
 DeepResearch Client for Valyu SDK
 """
 
+import base64
+import os
 import time
 import random
 from collections import OrderedDict
@@ -16,6 +18,7 @@ from valyu.types.deepresearch import (
     AlertEmailConfig,
     DeepResearchMode,
     DeepResearchStatus,
+    CoverArt,
     FileAttachment,
     MCPServerConfig,
     Deliverable,
@@ -130,6 +133,44 @@ def _parse_create_response(data: Dict[str, Any]) -> DeepResearchCreateResponse:
         return DeepResearchCreateResponse(success=True, **valid)
 
 
+def _build_cover_art(cover_art) -> Dict[str, Any]:
+    """
+    Build the ``cover_art`` request object.
+
+    Accepts a ``CoverArt`` or dict (sent as given), raw image ``bytes``, or a
+    file path (``str`` or ``os.PathLike``) which is read and base64-encoded.
+    """
+    if isinstance(cover_art, CoverArt):
+        return cover_art.model_dump(by_alias=True, exclude_none=True)
+    if isinstance(cover_art, dict):
+        return cover_art
+    if isinstance(cover_art, (bytes, bytearray)):
+        raw, filename = bytes(cover_art), None
+    elif isinstance(cover_art, (str, os.PathLike)):
+        path = os.fspath(cover_art)
+        with open(path, "rb") as f:
+            raw = f.read()
+        filename = os.path.basename(path)
+    else:
+        raise TypeError(
+            "cover_art must be a CoverArt, dict, bytes, or a file path"
+        )
+    if raw[:8] == b"\x89PNG\r\n\x1a\n":
+        media_type = "image/png"
+    elif raw[:3] == b"\xff\xd8\xff":
+        media_type = "image/jpeg"
+    else:
+        raise ValueError("cover_art must be a PNG or JPEG image")
+    art: Dict[str, Any] = {
+        "kind": "image",
+        "data": base64.b64encode(raw).decode("ascii"),
+        "mediaType": media_type,
+    }
+    if filename:
+        art["filename"] = filename
+    return art
+
+
 class DeepResearchClient:
     """DeepResearch API client."""
 
@@ -154,6 +195,7 @@ class DeepResearchClient:
         webhook_url=None,
         alert_email=None,
         brand_collection_id=None,
+        cover_art=None,
         metadata=None,
         hitl=None,
         tools=None,
@@ -215,6 +257,8 @@ class DeepResearchClient:
                 fields["alert_email"] = alert_email
         if brand_collection_id:
             fields["brand_collection_id"] = brand_collection_id
+        if cover_art is not None:
+            fields["cover_art"] = _build_cover_art(cover_art)
         if metadata:
             fields["metadata"] = metadata
         if hitl is not None:
@@ -249,6 +293,7 @@ class DeepResearchClient:
         webhook_url: Optional[str] = None,
         alert_email: Optional[Union[str, "AlertEmailConfig", Dict[str, str]]] = None,
         brand_collection_id: Optional[str] = None,
+        cover_art: Optional[Union[CoverArt, Dict[str, Any], bytes, str, "os.PathLike[str]"]] = None,
         hitl: Optional[Union[HitlConfig, Dict[str, bool]]] = None,
         metadata: Optional[Dict[str, Union[str, int, bool]]] = None,
         workflow_id: Optional[str] = None,
@@ -307,7 +352,15 @@ class DeepResearchClient:
             alert_email: Email for completion alerts. Can be a string (email address) or
                         a dict/AlertEmailConfig with 'email' and optional 'custom_url'.
                         custom_url must contain {id} which is replaced with the task ID.
-            brand_collection_id: Brand collection to apply to all deliverables
+            brand_collection_id: Brand collection (kit) ID to apply to the report and
+                deliverables. Pass "none" to opt out of your organization's default kit.
+            cover_art: Cover art for this report, replacing the kit's cover art on the
+                report PDF and PDF deliverable (works without a kit). Pass a ``CoverArt``
+                or dict (``{"kind": "image", "data": <base64>, "mediaType": "image/jpeg",
+                "filename": "cover.jpg"}``, or ``{"url": "https://..."}``), raw image
+                ``bytes``, or a file path, which is read and base64-encoded. PNG or JPEG,
+                at most 2 MB, 800 px or more on the short side. An unusable picture does
+                not fail the task; ``warnings`` then includes ``cover_art_not_used``.
             hitl: Human-in-the-loop configuration. Enable checkpoints that pause execution
                 at key decision points. Available checkpoints:
                 - planning_questions: Clarifying questions before research
@@ -394,6 +447,7 @@ class DeepResearchClient:
                         webhook_url=webhook_url,
                         alert_email=alert_email,
                         brand_collection_id=brand_collection_id,
+                        cover_art=cover_art,
                         metadata=metadata,
                         hitl=hitl,
                         tools=tools,
@@ -487,6 +541,7 @@ class DeepResearchClient:
                     webhook_url=webhook_url,
                     alert_email=alert_email,
                     brand_collection_id=brand_collection_id,
+                    cover_art=cover_art,
                     metadata=metadata,
                     hitl=hitl,
                     tools=tools,

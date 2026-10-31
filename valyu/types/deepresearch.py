@@ -86,6 +86,35 @@ class FileAttachment(BaseModel):
     )
 
 
+class CoverArt(BaseModel):
+    """
+    Cover art for one report, replacing the brand kit's cover art on the report
+    PDF and PDF deliverable. Works without a brand kit.
+
+    Send exactly one of ``data`` or ``url``. Pictures must be PNG or JPEG, at most
+    2 MB, and 800 px or more on the short side. A picture that cannot be used
+    never fails the task: the kit's cover art (or the standard cover) is used and
+    the response ``warnings`` include ``cover_art_not_used``.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    kind: Optional[Literal["image", "pattern"]] = Field(
+        None,
+        description='"image" (photo or illustration, default) or "pattern" (brand graphic, shown more quietly)',
+    )
+    data: Optional[str] = Field(
+        None, description="Base64 string or data URL of the picture (PNG or JPEG)"
+    )
+    url: Optional[str] = Field(
+        None, description="Public https URL of the picture, fetched when the report is rendered"
+    )
+    filename: Optional[str] = Field(None, description="File name (optional)")
+    media_type: Optional[str] = Field(
+        None, description='"image/png" or "image/jpeg" (optional)', alias="mediaType"
+    )
+
+
 class MCPServerConfig(BaseModel):
     """MCP server configuration."""
 
