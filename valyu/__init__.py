@@ -1,4 +1,4 @@
-__version__ = "2.13.4"
+__version__ = "2.13.5"
 
 from .types.response import SearchResponse
 from .types.contents import (
