@@ -6,7 +6,7 @@ import time
 import requests
 from requests.adapters import HTTPAdapter
 from valyu import __version__
-from typing import Optional, List, Union, Dict, Any, Callable
+from typing import Optional, List, Union, Dict, Any, Callable, Literal
 from valyu._rate_limit import rate_limit_detail_from_response, send_with_rate_limit_retry
 from valyu.types.response import (
     SearchResponse,
@@ -693,6 +693,7 @@ class Valyu:
         end_date: Optional[str] = None,
         fast_mode: bool = False,
         streaming: bool = False,
+        engine: Literal["default", "deepresearch_instant"] = "default",
     ) -> Union[AnswerResponse, AnswerStreamGenerator]:
         """
         Query the Valyu Answer API to get AI-processed answers to your questions.
@@ -721,6 +722,21 @@ class Valyu:
             streaming (bool): Enable streaming mode to receive chunks as they're generated.
                 When False (default), waits for the complete response.
                 When True, returns a generator that yields AnswerStreamChunk objects.
+            engine (Literal["default", "deepresearch_instant"]): Which backend answers the
+                query. Defaults to "default" (the standard answer path; nothing changes).
+                "deepresearch_instant" is an OPT-IN, experimental path that instead runs a
+                DeepResearch `instant` task and adapts it into this same response shape. Read
+                before using it:
+                  - Cost is the DeepResearch task cost, reported as the task's total cost.
+                  - Streaming is synthetic: one `search_results` chunk, then the full answer as
+                    a single `content` chunk (no incremental text), then `metadata` and `done` —
+                    there is no true token-by-token delta.
+                  - A cited source's `content` is a short snippet, not the full retrieved text.
+                  - `data_max_price` and `fast_mode=True` have no DeepResearch-instant
+                    equivalent and raise `ValueError` rather than being silently ignored;
+                    `search_type="news"` is not supported on this engine either.
+                  - This path depends on DeepResearch instant being reachable from your account;
+                    if it is not yet available, use the default engine.
 
         Returns:
             Union[AnswerResponse, AnswerStreamGenerator]:
@@ -743,6 +759,36 @@ class Valyu:
                 return error_generator()
             return AnswerErrorResponse(error=validation_error)
 
+        if engine == "deepresearch_instant":
+            engine_error = self._validate_instant_answer_params(
+                data_max_price=data_max_price,
+                fast_mode=fast_mode,
+                search_type=search_type,
+            )
+            if engine_error:
+                raise ValueError(engine_error)
+            if streaming:
+                return self._stream_answer_via_deepresearch_instant(
+                    query=query,
+                    structured_output=structured_output,
+                    search_type=search_type,
+                    country_code=country_code,
+                    included_sources=included_sources,
+                    excluded_sources=excluded_sources,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+            return self._fetch_answer_via_deepresearch_instant(
+                query=query,
+                structured_output=structured_output,
+                search_type=search_type,
+                country_code=country_code,
+                included_sources=included_sources,
+                excluded_sources=excluded_sources,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
         payload = self._build_answer_payload(
             query=query,
             structured_output=structured_output,
@@ -761,6 +807,183 @@ class Valyu:
             return self._stream_answer(payload)
         else:
             return self._fetch_answer(payload)
+
+    def _validate_instant_answer_params(
+        self,
+        data_max_price: Optional[float],
+        fast_mode: bool,
+        search_type: SearchType,
+    ) -> Optional[str]:
+        """Params the default engine supports but DeepResearch instant has no equivalent for."""
+        if data_max_price is not None:
+            return "data_max_price has no equivalent on engine='deepresearch_instant'"
+        if fast_mode:
+            return "fast_mode has no equivalent on engine='deepresearch_instant' (instant is its own, separate mode)"
+        if search_type == "news":
+            return "search_type='news' is not supported on engine='deepresearch_instant'"
+        return None
+
+    def _deepresearch_instant_search_config(
+        self,
+        search_type: SearchType,
+        country_code: Optional[str],
+        included_sources: Optional[List[str]],
+        excluded_sources: Optional[List[str]],
+        start_date: Optional[str],
+        end_date: Optional[str],
+    ) -> Dict[str, Any]:
+        """Map answer()'s search params onto DeepResearch's `search` config, best-effort."""
+        search: Dict[str, Any] = {}
+        if search_type is not None:
+            search["search_type"] = search_type
+        if country_code is not None:
+            search["country_code"] = country_code.upper()
+        if included_sources is not None:
+            search["included_sources"] = included_sources
+        if excluded_sources is not None:
+            search["excluded_sources"] = excluded_sources
+        if start_date is not None:
+            search["start_date"] = start_date
+        if end_date is not None:
+            search["end_date"] = end_date
+        return search
+
+    def _run_deepresearch_instant(
+        self,
+        query: str,
+        structured_output: Optional[Dict[str, Any]],
+        search_type: SearchType,
+        country_code: Optional[str],
+        included_sources: Optional[List[str]],
+        excluded_sources: Optional[List[str]],
+        start_date: Optional[str],
+        end_date: Optional[str],
+    ):
+        """Create and wait on an `instant` DeepResearch task for answer(engine='deepresearch_instant')."""
+        search = self._deepresearch_instant_search_config(
+            search_type, country_code, included_sources, excluded_sources, start_date, end_date
+        )
+        create_kwargs: Dict[str, Any] = {"query": query, "mode": "instant"}
+        if search:
+            create_kwargs["search"] = search
+        if structured_output is not None:
+            # DeepResearch's output_formats takes a JSON Schema object directly, same shape
+            # as the Answer API's structured_output.
+            create_kwargs["output_formats"] = [structured_output]
+        created = self.deepresearch.create(**create_kwargs)
+        if not created.success or not created.deepresearch_id:
+            raise ValueError(created.error or created.error_message or "Failed to create DeepResearch instant task")
+        return self.deepresearch.wait(created.deepresearch_id, max_wait_time=300)
+
+    def _adapt_deepresearch_instant_to_answer(self, status) -> AnswerResponse:
+        """A completed/failed `instant` task's status -> the Answer API's response shape."""
+        if status.status != "completed":
+            message = status.error_message or status.error or f"DeepResearch instant task ended as {status.status}"
+            return AnswerErrorResponse(error=message)
+
+        def _to_search_result(s) -> SearchResult:
+            content = s.snippet or s.description or ""
+            return SearchResult(
+                title=s.title,
+                url=s.url,
+                content=content,
+                description=s.description,
+                source=s.source or "",
+                source_type=None,
+                data_type=None,
+                date=None,
+                length=len(content),
+            )
+
+        search_results = [_to_search_result(s) for s in (status.sources or [])]
+        contents: Union[str, Dict[str, Any]] = status.output if status.output is not None else ""
+        return AnswerSuccessResponse(
+            tx_id=status.deepresearch_id or "",
+            original_query=status.query or "",
+            contents=contents,
+            search_results=search_results,
+            search_metadata=SearchMetadata(
+                tx_ids=[status.deepresearch_id] if status.deepresearch_id else [],
+                number_of_results=len(search_results),
+                total_characters=sum(len(str(r.content)) for r in search_results),
+            ),
+            # DeepResearch does not report token counts the way the default engine does, so
+            # these are zero rather than an invented number.
+            ai_usage=AIUsage(input_tokens=0, output_tokens=0),
+            cost=CostBreakdown(
+                total_deduction_dollars=status.cost or 0,
+                search_deduction_dollars=0.0,
+                ai_deduction_dollars=status.cost or 0,
+                contents_deduction_dollars=0.0,
+            ),
+        )
+
+    def _fetch_answer_via_deepresearch_instant(
+        self,
+        query: str,
+        structured_output: Optional[Dict[str, Any]],
+        search_type: SearchType,
+        country_code: Optional[str],
+        included_sources: Optional[List[str]],
+        excluded_sources: Optional[List[str]],
+        start_date: Optional[str],
+        end_date: Optional[str],
+    ) -> AnswerResponse:
+        try:
+            status = self._run_deepresearch_instant(
+                query, structured_output, search_type, country_code,
+                included_sources, excluded_sources, start_date, end_date,
+            )
+        except (ValueError, TimeoutError) as e:
+            return AnswerErrorResponse(error=str(e))
+        return self._adapt_deepresearch_instant_to_answer(status)
+
+    def _stream_answer_via_deepresearch_instant(
+        self,
+        query: str,
+        structured_output: Optional[Dict[str, Any]],
+        search_type: SearchType,
+        country_code: Optional[str],
+        included_sources: Optional[List[str]],
+        excluded_sources: Optional[List[str]],
+        start_date: Optional[str],
+        end_date: Optional[str],
+    ) -> AnswerStreamGenerator:
+        """Synthetic streaming: instant has no incremental output, so this runs the task to
+        completion first, then yields search_results, one content chunk, metadata and done —
+        a fixed frame sequence."""
+        try:
+            status = self._run_deepresearch_instant(
+                query, structured_output, search_type, country_code,
+                included_sources, excluded_sources, start_date, end_date,
+            )
+        except (ValueError, TimeoutError) as e:
+            def error_gen():
+                yield AnswerStreamChunk(type="error", error=str(e))
+            return error_gen()
+
+        answer = self._adapt_deepresearch_instant_to_answer(status)
+        if isinstance(answer, AnswerErrorResponse):
+            def error_gen():
+                yield AnswerStreamChunk(type="error", error=answer.error)
+            return error_gen()
+
+        def gen():
+            yield AnswerStreamChunk(type="search_results", search_results=answer.search_results)
+            content_text = answer.contents if isinstance(answer.contents, str) else json.dumps(answer.contents)
+            yield AnswerStreamChunk(type="content", content=content_text, finish_reason="stop")
+            yield AnswerStreamChunk(
+                type="metadata",
+                tx_id=answer.tx_id,
+                original_query=answer.original_query,
+                contents=answer.contents,
+                search_metadata=answer.search_metadata,
+                ai_usage=answer.ai_usage,
+                cost=answer.cost,
+            )
+            yield AnswerStreamChunk(type="done")
+
+        return gen()
 
     def _validate_answer_params(
         self,
