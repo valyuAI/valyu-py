@@ -342,7 +342,7 @@ class DeepResearchClient:
             mode: Research mode - "instant", "fast", "standard" (default), "heavy", or "max".
                   "instant" is the quickest and lowest-cost mode, typically finishing in
                   under 30 seconds; it does not support hitl checkpoints. Preferred over model parameter.
-            model: Research mode (backward compatibility - use 'mode' instead) - "instant", "fast",
+            model: Deprecated. Use 'mode' instead. Research mode - "instant", "fast",
                   "standard" (default), "heavy" or "max"
             output_formats: Output formats - ["markdown"], ["markdown", "pdf"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
@@ -422,6 +422,12 @@ class DeepResearchClient:
         Returns:
             DeepResearchCreateResponse with task ID and status
         """
+        if model is not None:
+            warnings.warn(
+                '"model" is deprecated. Use "mode" instead.',
+                DeprecationWarning,
+                stacklevel=2,
+            )
         if mode == "lite" or model == "lite":
             warnings.warn(
                 'mode "lite" is deprecated and is sent as "standard". '
@@ -567,9 +573,6 @@ class DeepResearchClient:
             # Also send input if it was provided (for backward compatibility with older API versions)
             if input:
                 payload["input"] = input
-            # Also send model if it was explicitly provided (for backward compatibility)
-            if model is not None:
-                payload["model"] = model if model != "lite" else "standard"
 
             # Freeform-only fields — a workflow template supplies these instead
             if strategy:

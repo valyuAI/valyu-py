@@ -42,8 +42,10 @@ class LiteModeTest(unittest.TestCase):
             client.create(query="q", model="lite")
         body = _body(session)
         self.assertEqual(body["mode"], "standard")
-        self.assertEqual(body["model"], "standard")
-        self.assertEqual(len([w for w in caught if issubclass(w.category, DeprecationWarning)]), 1)
+        self.assertNotIn("model", body)
+        messages = [str(w.message) for w in caught if issubclass(w.category, DeprecationWarning)]
+        self.assertEqual(len(messages), 2)
+        self.assertTrue(any('"model" is deprecated' in m for m in messages))
 
     def test_workflow_run_maps_lite_and_warns(self):
         client, session = _make_client()

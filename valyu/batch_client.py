@@ -3,6 +3,7 @@ Batch Client for Valyu SDK
 """
 
 import time
+import warnings
 from typing import Optional, List, Literal, Union, Dict, Any, Callable
 from valyu._rate_limit import rate_limit_detail_from_response, send_with_rate_limit_retry
 from valyu.types.deepresearch import (
@@ -51,7 +52,7 @@ class BatchClient:
             mode: Research mode, priced per task - "fast" ($0.15625, 25 credits), "standard" (default,
                   $0.625, 100 credits), "heavy" ($3.125, 500 credits) or "max" ($15.625, 2,500 credits).
                   "instant" is not available for batches.
-            model: Research mode (backward compatibility - use 'mode' instead) - "fast", "standard" (default),
+            model: Deprecated. Use 'mode' instead. Research mode - "fast", "standard" (default),
                   "heavy" or "max"
             output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.
@@ -76,6 +77,12 @@ class BatchClient:
         Returns:
             BatchCreateResponse with batch ID and status
         """
+        if model is not None:
+            warnings.warn(
+                '"model" is deprecated. Use "mode" instead.',
+                DeprecationWarning,
+                stacklevel=2,
+            )
         try:
             # Determine which field to use (prefer mode over model)
             research_mode = (
@@ -85,12 +92,9 @@ class BatchClient:
             )
 
             # Build payload - prefer mode, but send model if only model was provided
-            payload = {
+            payload: Dict[str, Any] = {
                 "mode": research_mode,  # Always send mode (preferred)
             }
-            # Also send model if it was explicitly provided and mode was not (for backward compatibility)
-            if model is not None and mode is None:
-                payload["model"] = model
 
             # Add optional fields
             if name:
@@ -273,7 +277,7 @@ class BatchClient:
         """
         try:
             # Build query parameters
-            params = {}
+            params: Dict[str, Any] = {}
             if status:
                 params["status"] = status
             if limit is not None:
@@ -353,7 +357,7 @@ class BatchClient:
         """
         try:
             # Build query parameters
-            params = {}
+            params: Dict[str, Any] = {}
             if limit is not None:
                 params["limit"] = limit
 
@@ -474,7 +478,7 @@ class BatchClient:
             mode: Research mode, priced per task - "fast" ($0.15625, 25 credits), "standard" (default,
                   $0.625, 100 credits), "heavy" ($3.125, 500 credits) or "max" ($15.625, 2,500 credits).
                   "instant" is not available for batches.
-            model: Research mode (backward compatibility - use 'mode' instead) - "fast", "standard" (default),
+            model: Deprecated. Use 'mode' instead. Research mode - "fast", "standard" (default),
                   "heavy" or "max"
             output_formats: Default output formats - ["markdown"], ["pdf"], ["toon"], or a JSON schema object.
                            When using a JSON schema, the output will be structured JSON instead of markdown.

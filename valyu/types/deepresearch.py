@@ -574,18 +574,6 @@ class InteractionHistoryEntry(BaseModel):
     response: Optional[Dict[str, Any]] = Field(default=None, description="The user's response (absent if timed out)")
 
 
-class ModelLineupEntry(BaseModel):
-    """One model in the `models` lineup of a `historical_cache` task: which model filled which
-    role, and its training-data cutoff (the reason it was chosen for an as-of date before that
-    cutoff)."""
-
-    model_config = ConfigDict(extra="allow")
-
-    role: Optional[str] = None
-    model: Optional[str] = None
-    training_cutoff: Optional[str] = None
-
-
 class StructuredSection(BaseModel):
     """One node of a `structured_report`'s section tree.
 
@@ -685,9 +673,6 @@ class DeepResearchCreateResponse(BaseModel):
         description="Structured detail when `error` is caused by HTTP 429 (rate limited). None otherwise.",
     )
 
-    # The historical_cache model lineup (role, model, training cutoff), present on a
-    # historical_cache task's create response.
-    models: Optional[List[ModelLineupEntry]] = None
     ignored_fields: Optional[List[str]] = None
     error_message: Optional[str] = None
     error_code: Optional[str] = None
@@ -738,8 +723,6 @@ class DeepResearchStatusResponse(BaseModel):
     images: Optional[List[ImageMetadata]] = None
     deliverables: Optional[List[DeliverableResult]] = None
     sources: Optional[List[DeepResearchSource]] = None
-    # The historical_cache model lineup; see `ModelLineupEntry`.
-    models: Optional[List[ModelLineupEntry]] = None
     cost: Optional[float] = None
     cost_breakdown: Optional[DeepResearchCostBreakdown] = Field(default=None, description="Itemized cost breakdown (task, screenshots, code_execution, deliverables)")
     cost_detail: Optional[DeepResearchCostDetail] = Field(
