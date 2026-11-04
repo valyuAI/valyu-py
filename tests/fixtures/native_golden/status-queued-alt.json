@@ -1,0 +1,58 @@
+{
+  "case": "status-queued-alt",
+  "provisional": false,
+  "http": 200,
+  "body": {
+    "deepresearch_id": "s",
+    "status": "s",
+    "query": "s",
+    "title": "s",
+    "mode": "s",
+    "output_formats": [
+      "s"
+    ],
+    "created_at": "s",
+    "public": false,
+    "batch_id": null,
+    "batch_task_id": null,
+    "progress": {
+      "current_step": 0,
+      "total_steps": 0
+    },
+    "interaction": null,
+    "hitl_history": [],
+    "total_word_count": 0,
+    "completed_at": "s",
+    "output": "s",
+    "output_type": "s",
+    "sources": [],
+    "images": [],
+    "pdf_url": "s",
+    "cost": 0.5,
+    "cost_breakdown": {
+      "task": 0.5,
+      "base_usd": 0.5,
+      "tools": [],
+      "datasets": [],
+      "total_usd": 0.5
+    },
+    "harness": "s",
+    "deliverables": [],
+    "attachments": [],
+    "previous_reports": [],
+    "mcp": [],
+    "mcp_servers": [],
+    "context_state": "s",
+    "search_params": null,
+    "tools": {
+      "x_search": false
+    },
+    "ultrasearch": false,
+    "research_strategy": null,
+    "report_format": null,
+    "report_length": null,
+    "webhook_url": null,
+    "alert_email": null,
+    "warnings": []
+  }
+}

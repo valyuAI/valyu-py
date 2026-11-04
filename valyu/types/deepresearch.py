@@ -148,26 +148,40 @@ class Deliverable(BaseModel):
 class DeliverableResult(BaseModel):
     """Deliverable generation result."""
 
+    model_config = ConfigDict(extra="allow")
+
     id: str = Field(..., description="Unique deliverable ID")
     request: str = Field(..., description="Original request description")
-    type: Literal["csv", "xlsx", "pptx", "docx", "pdf", "unknown"] = Field(
+    type: Union[Literal["csv", "xlsx", "pptx", "docx", "pdf", "unknown"], str] = Field(
         ..., description="Deliverable file type"
     )
-    status: Literal["completed", "failed"] = Field(..., description="Generation status")
+    status: Union[Literal["completed", "failed", "pending"], str] = Field(
+        ...,
+        description=(
+            "Generation status. 'pending' means the deliverable is still being produced "
+            "(the task is still running): url, s3_key, row_count and column_count are not "
+            "yet available."
+        ),
+    )
     title: str = Field(..., description="Generated filename/title")
     description: Optional[str] = Field(
         None, description="Deliverable content description"
     )
-    url: str = Field(
-        ..., description="Token-signed authenticated URL to download the file"
+    url: Optional[str] = Field(
+        None, description="Token-signed authenticated URL to download the file (absent while pending)"
     )
-    s3_key: str = Field(..., description="S3 storage key")
+    s3_key: Optional[str] = Field(None, description="S3 storage key (absent while pending)")
     row_count: Optional[int] = Field(None, description="Number of rows (for CSV/XLSX)")
     column_count: Optional[int] = Field(
         None, description="Number of columns (for CSV/XLSX)"
     )
     error: Optional[str] = Field(None, description="Error message if status is failed")
-    created_at: int = Field(..., description="Unix timestamp of creation")
+    created_at: Optional[int] = Field(None, description="Unix timestamp of creation (absent while pending)")
+    # Additional fields, beside the ones above.
+    filename: Optional[str] = None
+    bytes: Optional[int] = None
+    attempts: Optional[int] = None
+    summary: Optional[Dict[str, Any]] = None
 
 
 class SearchConfig(BaseModel):
@@ -288,51 +302,93 @@ class DeepResearchTools(BaseModel):
     Setting max_calls: 0 effectively disables the tool.
     """
 
+    model_config = ConfigDict(extra="allow")
+
     code_execution: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable code execution in sandboxed environment")
     screenshots: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable visual screenshot capture of web pages")
     browser_use: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable autonomous browser sessions")
     charts: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable chart/graph generation embedded in the final report (free, unlimited)")
+    # Newer tool names, returned on reads beside the older names above (a response can carry
+    # both). `read` and `analyse` replace `urls`/`code_execution`; `browse` replaces
+    # `browser_use`; `screenshot` replaces `screenshots`.
+    x_search: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable X (Twitter) search")
+    read: Optional[Union[bool, ToolConfig]] = Field(None, description="Newer name for reading supplied or found URLs")
+    analyse: Optional[Union[bool, ToolConfig]] = Field(None, description="Newer name for code_execution")
+    browse: Optional[Union[bool, ToolConfig]] = Field(None, description="Newer name for browser_use")
+    screenshot: Optional[Union[bool, ToolConfig]] = Field(None, description="Newer name for screenshots")
 
 
 class ImageMetadata(BaseModel):
     """Image metadata."""
 
+    model_config = ConfigDict(extra="allow")
+
     image_id: str
-    image_type: Literal["chart", "ai_generated", "screenshot"]
+    # "attachment": an uploaded or url-supplied image, listed alongside charts and screenshots.
+    # A trailing plain `str` keeps this forward-compatible with an image kind introduced later.
+    image_type: Union[Literal["chart", "ai_generated", "screenshot", "attachment"], str]
     title: str
     description: Optional[str] = None
     image_url: str
-    created_at: int
+    created_at: Optional[int] = None  # absent on an image attachment entry
     # Screenshot-only fields
     source_url: Optional[str] = None
     captured_at: Optional[int] = None
     chart_type: Optional[
-        Literal[
-            "line",
-            "bar",
-            "area",
-            "pie",
-            "doughnut",
-            "radar",
-            "scatter",
-            "horizontalBar",
-            "heatmap",
-            "boxplot",
-            "stackedBar",
-            "stackedArea",
-            "histogram",
-            "waterfall",
-            "timeline",
-            "bubble",
+        Union[
+            Literal[
+                "line",
+                "bar",
+                "area",
+                "pie",
+                "doughnut",
+                "radar",
+                "scatter",
+                "horizontalBar",
+                "heatmap",
+                "boxplot",
+                "stackedBar",
+                "stackedArea",
+                "histogram",
+                "waterfall",
+                "timeline",
+                "bubble",
+                # Newer chart kinds (a response can carry one instead of the 16 older types above).
+                "stacked",
+                "slope",
+            ],
+            str,
         ]
     ] = None
+    # The newer chart kind, kept beside `chart_type` even when `chart_type` holds the value
+    # mapped onto one of the 16 older types above (e.g. "stacked" -> "stackedBar", "slope" ->
+    # "line"). Absent on a chart created before this field existed.
+    chart_kind: Optional[str] = None
     x_axis_label: Optional[str] = None
     y_axis_label: Optional[str] = None
     data_series: Optional[List[ChartDataSeries]] = None
 
 
+class SourceLocation(BaseModel):
+    """One position in a source that the report cited, in first-cited order.
+
+    `piece` and `page` locate the cited passage within a long upload (a document piece, a PDF
+    page); `excerpt` is the verbatim text the report cited there. Any of the three may be absent
+    depending on the source kind. Unknown keys are kept rather than rejected, since this shape may
+    grow server-side ahead of an SDK release.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    piece: Optional[str] = None
+    page: Optional[int] = None
+    excerpt: Optional[str] = None
+
+
 class DeepResearchSource(BaseModel):
     """Source information."""
+
+    model_config = ConfigDict(extra="allow")
 
     title: str
     url: str
@@ -348,6 +404,14 @@ class DeepResearchSource(BaseModel):
     source_id: Optional[int] = None
     word_count: Optional[int] = None
     fragment: Optional[str] = None
+    # Dates and tier.
+    crawl_date: Optional[str] = None
+    updated_date: Optional[str] = None
+    tier: Optional[int] = None
+    tier_label: Optional[str] = None
+    # The positions in this source that the report actually cited (first-cited order).
+    # absent on a task created before this field existed, or when the source has none.
+    locations: Optional[List[SourceLocation]] = None
 
 
 class Usage(BaseModel):
@@ -360,13 +424,65 @@ class Usage(BaseModel):
     total_cost: float
 
 
+class CostDetailLine(BaseModel):
+    """One line of `cost_detail`'s itemized bill (a tool charge or a dataset charge)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    item: Optional[str] = None
+    label: Optional[str] = None
+    pricing: Optional[str] = None
+    unit: Optional[str] = None
+    units: Optional[float] = None
+    free_units: Optional[float] = None
+    billed_units: Optional[float] = None
+    unit_price_usd: Optional[float] = None
+    usd: Optional[float] = None
+    # Kept for callers written against an earlier draft of this shape.
+    amount: Optional[float] = None
+
+
+class DeepResearchCostDetail(BaseModel):
+    """Itemized bill: the base price, each tool and dataset charged, and the total.
+
+    A response can send this beside the numbers-only `cost_breakdown`, or as `cost_breakdown`
+    itself. Read it with `DeepResearchStatusResponse.effective_cost_detail()`.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    task: Optional[float] = None
+    base_usd: Optional[float] = None
+    tools: Optional[List[CostDetailLine]] = None
+    datasets: Optional[List[CostDetailLine]] = None
+    total_usd: Optional[float] = None
+
+
 class DeepResearchCostBreakdown(BaseModel):
-    """Itemized cost breakdown for a deep research task."""
+    """Itemized cost breakdown for a deep research task.
+
+    A response can send this as numbers only (`task`, `screenshots`, ...), with a richer bill
+    beside it under `cost_detail`. It can also send the richer bill directly as `cost_breakdown`.
+    In that case `datasets` and `tools` here are line-item lists, and `base_usd`, `tools` and
+    `total_usd` can be set with no separate `cost_detail`. Prefer `cost_detail` when it is set;
+    otherwise read this model's `base_usd`, `tools` and `total_usd`
+    (see `DeepResearchStatusResponse.effective_cost_detail()`).
+    """
+
+    model_config = ConfigDict(extra="allow")
 
     task: float = Field(..., description="Base task price for the selected mode")
     screenshots: Optional[float] = Field(None, description="Screenshot surcharges ($0.05, 8 credits, per successful capture)")
     code_execution: Optional[float] = Field(None, description="Code execution surcharges ($0.10, 16 credits, per successful run)")
     deliverables: Optional[float] = Field(None, description="Deliverable surcharges ($0.10, 16 credits, per deliverable after the first)")
+    datasets: Optional[Union[float, List[CostDetailLine]]] = Field(None, description="Premium dataset surcharges: a summed number or a line-item list")
+    x_search: Optional[float] = Field(None, description="X search surcharges, summed")
+    browse: Optional[float] = Field(None, description="Browser-use / browse surcharges, summed")
+    other_tools: Optional[float] = Field(None, description="Any other tool surcharge not broken out above")
+    # Present when this is the itemized bill rather than the numbers-only one.
+    base_usd: Optional[float] = None
+    tools: Optional[List[CostDetailLine]] = None
+    total_usd: Optional[float] = None
 
 
 class HitlConfig(BaseModel):
@@ -426,8 +542,89 @@ class InteractionHistoryEntry(BaseModel):
     response: Optional[Dict[str, Any]] = Field(None, description="The user's response (absent if timed out)")
 
 
+class ModelLineupEntry(BaseModel):
+    """One model in the `models` lineup of a `historical_cache` task: which model filled which
+    role, and its training-data cutoff (the reason it was chosen for an as-of date before that
+    cutoff)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    role: Optional[str] = None
+    model: Optional[str] = None
+    training_cutoff: Optional[str] = None
+
+
+class StructuredSection(BaseModel):
+    """One node of a `structured_report`'s section tree.
+
+    `heading` is `None` for the lead: the text between the report's title and its first heading.
+    The tree round-trips to the report body; `markdown` is the section's own text up to its first
+    sub-heading, with citations in the public `[[n]](url)` form; `citations` lists the `[[n]]`
+    numbers that text cites, in order of first use.
+    """
+
+    heading: Optional[str] = None
+    level: int
+    markdown: str
+    citations: List[int] = Field(default_factory=list)
+    children: Optional[List["StructuredSection"]] = None
+
+
+StructuredSection.model_rebuild()
+
+
+class StructuredTable(BaseModel):
+    """One table extracted into a `structured_report`."""
+
+    model_config = ConfigDict(extra="allow")
+
+    id: str
+    caption: Optional[str] = None
+    columns: List[str] = Field(default_factory=list)
+    rows: List[List[Any]] = Field(default_factory=list)
+    citations: List[int] = Field(default_factory=list)
+
+
+class StructuredChart(BaseModel):
+    """One chart referenced from a `structured_report`."""
+
+    model_config = ConfigDict(extra="allow")
+
+    title: str
+    image_url: str
+    data_table_ref: Optional[str] = None
+
+
+class StructuredSourceRef(BaseModel):
+    """One source entry of a `structured_report`, numbered as the report cites it."""
+
+    model_config = ConfigDict(extra="allow")
+
+    n: int
+    title: str
+    url: Optional[str] = None
+
+
+class StructuredReport(BaseModel):
+    """`output_formats: ["structured_report"]`'s typed JSON tree: the report parsed
+    deterministically into sections, tables, charts and sources, with no model rewriting any text.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    title: Optional[str] = None
+    summary: Optional[str] = None
+    sections: List[StructuredSection] = Field(default_factory=list)
+    tables: List[StructuredTable] = Field(default_factory=list)
+    charts: List[StructuredChart] = Field(default_factory=list)
+    sources: List[StructuredSourceRef] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+
+
 class DeepResearchCreateResponse(BaseModel):
     """Response from creating a deep research task."""
+
+    model_config = ConfigDict(extra="allow")
 
     success: bool
     deepresearch_id: Optional[str] = None
@@ -438,6 +635,10 @@ class DeepResearchCreateResponse(BaseModel):
         None,
         description="Research mode as sent by the API. mode is filled from it when the response has no mode.",
     )
+    output_formats: Optional[List[Union[str, Dict[str, Any]]]] = None
+    research_output_formats: Optional[List[Union[str, Dict[str, Any]]]] = None
+    query: Optional[str] = None
+    title: Optional[str] = None
     created_at: Optional[str] = None
     metadata: Optional[Dict[str, Union[str, int, bool]]] = None
     public: Optional[bool] = None
@@ -452,6 +653,13 @@ class DeepResearchCreateResponse(BaseModel):
         description="Structured detail when `error` is caused by HTTP 429 (rate limited). None otherwise.",
     )
 
+    # The historical_cache model lineup (role, model, training cutoff), present on a
+    # historical_cache task's create response.
+    models: Optional[List[ModelLineupEntry]] = None
+    ignored_fields: Optional[List[str]] = None
+    error_message: Optional[str] = None
+    error_code: Optional[str] = None
+
     @model_validator(mode="before")
     @classmethod
     def fill_mode_from_research_mode(cls, data):
@@ -460,6 +668,8 @@ class DeepResearchCreateResponse(BaseModel):
 
 class DeepResearchStatusResponse(BaseModel):
     """Response from getting task status."""
+
+    model_config = ConfigDict(extra="allow")
 
     success: bool
     deepresearch_id: Optional[str] = None
@@ -473,6 +683,7 @@ class DeepResearchStatusResponse(BaseModel):
     output_formats: Optional[
         List[Union[Literal["markdown", "pdf", "toon"], str, Dict[str, Any]]]
     ] = None
+    research_output_formats: Optional[List[Union[str, Dict[str, Any]]]] = None
     created_at: Optional[str] = None
     public: Optional[bool] = None
 
@@ -482,17 +693,31 @@ class DeepResearchStatusResponse(BaseModel):
     completed_at: Optional[str] = None
     output: Optional[Union[str, Dict[str, Any], Any]] = None
     output_type: Optional[Union[Literal["markdown", "json", "toon"], str]] = None
+    # The markdown rendering beside a structured/json `output` (e.g. when `output_formats`
+    # includes `structured_report`, which answers `output_type: "json"` with `output` the typed
+    # tree below; `markdown` carries the equivalent report text).
+    markdown: Optional[str] = None
+    structured_report: Optional[StructuredReport] = Field(
+        None, description="The typed JSON tree for output_formats: ['structured_report']"
+    )
     title: Optional[str] = None
     total_word_count: Optional[int] = None
     pdf_url: Optional[str] = None
     images: Optional[List[ImageMetadata]] = None
     deliverables: Optional[List[DeliverableResult]] = None
     sources: Optional[List[DeepResearchSource]] = None
+    # The historical_cache model lineup; see `ModelLineupEntry`.
+    models: Optional[List[ModelLineupEntry]] = None
     cost: Optional[float] = None
     cost_breakdown: Optional[DeepResearchCostBreakdown] = Field(None, description="Itemized cost breakdown (task, screenshots, code_execution, deliverables)")
+    cost_detail: Optional[DeepResearchCostDetail] = Field(
+        None, description="Itemized bill (base_usd, labelled tool/dataset lines, total_usd), beside cost_breakdown"
+    )
     tools: Optional[DeepResearchTools] = Field(None, description="Resolved tools configuration")
     batch_id: Optional[str] = None
     batch_task_id: Optional[str] = None
+    harness: Optional[str] = Field(None, description="The task's harness id (e.g. 'default', 'people', 'forecasting')")
+    ignored_fields: Optional[List[str]] = Field(None, description="Top-level request fields the server ignored")
 
     # HITL fields
     hitl_config: Optional[Dict[str, Any]] = Field(None, description="HITL configuration (mirrors request hitl param)")
@@ -501,6 +726,8 @@ class DeepResearchStatusResponse(BaseModel):
 
     warnings: ResponseWarnings = None
     error: Optional[str] = None
+    error_message: Optional[str] = Field(None, description="User-facing sentence for `error_code` (present only for user-visible codes)")
+    error_code: Optional[str] = Field(None, description="Catalogue error code, e.g. 'research.no_evidence'")
     unreachable: Optional[bool] = Field(
         None,
         description=(
@@ -516,9 +743,24 @@ class DeepResearchStatusResponse(BaseModel):
     def fill_mode_from_research_mode(cls, data):
         return _mode_from_research_mode(data)
 
+    def effective_cost_detail(self) -> Optional["DeepResearchCostDetail"]:
+        """The itemized bill, wherever it was sent: the separate `cost_detail` field, or
+        `cost_breakdown` itself when that field already holds the itemized bill
+        (`base_usd`/`tools`/`total_usd` set, with no separate `cost_detail`)."""
+        if self.cost_detail is not None:
+            return self.cost_detail
+        cb = self.cost_breakdown
+        if cb is None or cb.base_usd is None:
+            return None
+        tools = cb.tools
+        datasets = cb.datasets if isinstance(cb.datasets, list) else None
+        return DeepResearchCostDetail(task=cb.task, base_usd=cb.base_usd, tools=tools, datasets=datasets, total_usd=cb.total_usd)
+
 
 class DeepResearchTaskListItem(BaseModel):
     """Minimal task info for list view."""
+
+    model_config = ConfigDict(extra="allow")
 
     deepresearch_id: str
     query: str
@@ -539,37 +781,53 @@ class DeepResearchListResponse(BaseModel):
 class DeepResearchUpdateResponse(BaseModel):
     """Response from updating a task."""
 
+    model_config = ConfigDict(extra="allow")
+
     success: bool
     message: Optional[str] = None
     deepresearch_id: Optional[str] = None
     error: Optional[str] = None
+    error_message: Optional[str] = None
+    error_code: Optional[str] = None
 
 
 class DeepResearchCancelResponse(BaseModel):
     """Response from cancelling a task."""
 
+    model_config = ConfigDict(extra="allow")
+
     success: bool
     message: Optional[str] = None
     deepresearch_id: Optional[str] = None
     error: Optional[str] = None
+    error_message: Optional[str] = None
+    error_code: Optional[str] = None
 
 
 class DeepResearchRespondResponse(BaseModel):
     """Response from responding to a HITL checkpoint."""
 
+    model_config = ConfigDict(extra="allow")
+
     success: bool
     status: Optional[str] = None
     deepresearch_id: Optional[str] = None
     error: Optional[str] = None
+    error_message: Optional[str] = None
+    error_code: Optional[str] = None
 
 
 class DeepResearchDeleteResponse(BaseModel):
     """Response from deleting a task."""
 
+    model_config = ConfigDict(extra="allow")
+
     success: bool
     message: Optional[str] = None
     deepresearch_id: Optional[str] = None
     error: Optional[str] = None
+    error_message: Optional[str] = None
+    error_code: Optional[str] = None
 
 
 class DeepResearchTogglePublicResponse(BaseModel):
@@ -680,6 +938,8 @@ class BatchTaskInput(BaseModel):
 class DeepResearchBatch(BaseModel):
     """Batch of deep research tasks."""
 
+    model_config = ConfigDict(extra="allow")
+
     batch_id: str = Field(..., description="Unique batch ID")
     organisation_id: Optional[str] = Field(None, description="Organization ID")
     api_key_id: Optional[str] = Field(None, description="API key ID")
@@ -688,10 +948,13 @@ class DeepResearchBatch(BaseModel):
     mode: _OpenMode = Field(
         ..., description="Research mode (preferred field name)"
     )
+    # See `DeepResearchStatusResponse.research_mode`: the mode as sent by the API.
+    research_mode: Optional[_OpenMode] = None
     name: Optional[str] = Field(None, description="Batch name")
     output_formats: Optional[
         List[Union[Literal["markdown", "pdf", "toon"], str, Dict[str, Any]]]
     ] = Field(None, description="Default output formats")
+    research_output_formats: Optional[List[Union[str, Dict[str, Any]]]] = None
     search_params: Optional[Dict[str, Any]] = Field(
         None, description="Default search parameters"
     )
@@ -712,6 +975,7 @@ class DeepResearchBatch(BaseModel):
     metadata: Optional[Dict[str, Union[str, int, bool]]] = Field(
         None, description="Custom metadata"
     )
+    warnings: Optional[List[str]] = None
 
     # Backward compatibility fields
     model: Optional[_OpenMode] = Field(
@@ -725,6 +989,14 @@ class DeepResearchBatch(BaseModel):
         None,
         description="Last update timestamp (backward compatibility - field removed from API, ISO 8601 string)",
     )
+
+    def effective_mode(self) -> Optional[str]:
+        """See `DeepResearchStatusResponse.effective_mode()`."""
+        return self.research_mode or self.mode
+
+    def effective_output_formats(self) -> Optional[List[Union[str, Dict[str, Any]]]]:
+        """See `DeepResearchStatusResponse.effective_output_formats()`."""
+        return self.research_output_formats or self.output_formats
 
     @model_validator(mode="before")
     @classmethod
@@ -761,14 +1033,18 @@ class DeepResearchBatch(BaseModel):
 class BatchCreateResponse(BaseModel):
     """Response from creating a batch."""
 
+    model_config = ConfigDict(extra="allow")
+
     success: bool
     batch_id: Optional[str] = None
     status: Optional[_OpenBatchStatus] = None
     mode: Optional[_OpenMode] = None
+    research_mode: Optional[_OpenMode] = None
     name: Optional[str] = None
     output_formats: Optional[
-        List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
+        List[Union[Literal["markdown", "pdf", "toon"], str, Dict[str, Any]]]
     ] = None
+    research_output_formats: Optional[List[Union[str, Dict[str, Any]]]] = None
     search_params: Optional[Dict[str, Any]] = None
     counts: Optional[BatchCounts] = None
     cost: Optional[float] = None
@@ -776,16 +1052,29 @@ class BatchCreateResponse(BaseModel):
     webhook_secret: Optional[str] = None
     message: Optional[str] = None
     brand_collection_id: Optional[str] = None
+    warnings: Optional[List[str]] = None
+    ignored_fields: Optional[List[str]] = None
     error: Optional[str] = None
     rate_limit: Optional[RateLimitDetail] = Field(
         default=None,
         description="Structured detail when `error` is caused by HTTP 429 (rate limited). None otherwise.",
     )
 
+    error_message: Optional[str] = None
+    error_code: Optional[str] = None
+
     # Backward compatibility fields - populated by validator
     model: Optional[_OpenMode] = Field(
         None, description="Research mode (backward compatibility - use 'mode' instead)"
     )
+
+    def effective_mode(self) -> Optional[str]:
+        """See `DeepResearchStatusResponse.effective_mode()`."""
+        return self.research_mode or self.mode or self.model
+
+    def effective_output_formats(self) -> Optional[List[Union[str, Dict[str, Any]]]]:
+        """See `DeepResearchStatusResponse.effective_output_formats()`."""
+        return self.research_output_formats or self.output_formats
 
     @model_validator(mode="before")
     @classmethod
@@ -837,6 +1126,8 @@ class BatchStatusResponse(BaseModel):
 class BatchTaskListItem(BaseModel):
     """Task info in batch list. Extended fields included when include_output=True."""
 
+    model_config = ConfigDict(extra="allow")
+
     deepresearch_id: str
     task_id: Optional[str] = None
     query: str
@@ -851,6 +1142,8 @@ class BatchTaskListItem(BaseModel):
     pdf_url: Optional[str] = None
     deliverables: Optional[Any] = None
     error: Optional[str] = None
+    error_message: Optional[str] = None
+    error_code: Optional[str] = None
     cost: Optional[float] = None
 
 
@@ -881,6 +1174,8 @@ class BatchCancelResponse(BaseModel):
     cancelled_count: Optional[int] = None
     message: Optional[str] = None
     error: Optional[str] = None
+    error_message: Optional[str] = None
+    error_code: Optional[str] = None
 
 
 class BatchListResponse(BaseModel):
@@ -889,5 +1184,24 @@ class BatchListResponse(BaseModel):
     success: bool
     batches: Optional[List[DeepResearchBatch]] = None
     error: Optional[str] = None
+
+
+# `error_code` values worth an automatic retry: each names a condition that is transient or
+# never billed, rather than a refusal of the request itself. Not exhaustive — treat an unlisted
+# code as non-retryable. See docs/errors for the full catalogue.
+RETRYABLE_ERROR_CODES: frozenset = frozenset(
+    {
+        "research.no_evidence",
+        "research.query_failed",
+        "credits.unavailable",
+        "pricing.admissions_paused",
+        "rate_limited",
+    }
+)
+
+
+def is_retryable_error(error_code: Optional[str]) -> bool:
+    """True when `error_code` (from a status, create or webhook body) is worth retrying."""
+    return error_code is not None and error_code in RETRYABLE_ERROR_CODES
 
 

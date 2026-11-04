@@ -816,7 +816,7 @@ class DeepResearchClient:
             if status.status == DeepResearchStatus.COMPLETED:
                 return status
             elif status.status == DeepResearchStatus.FAILED:
-                raise ValueError(f"Task failed: {status.error}")
+                raise ValueError(f"Task failed: {status.error_message or status.error}")
             elif status.status == DeepResearchStatus.CANCELLED:
                 raise ValueError("Task was cancelled")
 

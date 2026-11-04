@@ -1,0 +1,8 @@
+{
+  "case": "people-list",
+  "provisional": false,
+  "http": 404,
+  "body": {
+    "error": "s"
+  }
+}
