@@ -145,10 +145,24 @@ class Deliverable(BaseModel):
     template: Optional[str] = Field(None, description="Template name to use")
 
 
+def _drop_keys(*names):
+    """A before-validator that removes internal keys a response may carry, so they are not
+    kept as extra fields on a model that allows extras."""
+
+    def drop(cls, data):
+        if isinstance(data, dict) and any(n in data for n in names):
+            data = {k: v for k, v in data.items() if k not in names}
+        return data
+
+    return model_validator(mode="before")(classmethod(drop))
+
+
 class DeliverableResult(BaseModel):
     """Deliverable generation result."""
 
     model_config = ConfigDict(extra="allow")
+
+    _strip_internal = _drop_keys("s3_key")
 
     id: str = Field(..., description="Unique deliverable ID")
     request: str = Field(..., description="Original request description")
@@ -409,18 +423,17 @@ class DeepResearchSource(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
+    _strip_internal = _drop_keys("org_id", "doc_id", "source_id")
+
     title: str
     url: str
     snippet: Optional[str] = None
     description: Optional[str] = None
     source: Optional[str] = None
-    org_id: Optional[str] = None
     price: Optional[float] = None
     id: Optional[str] = None
-    doc_id: Optional[int] = None
     doi: Optional[str] = None
     category: Optional[str] = None
-    source_id: Optional[int] = None
     word_count: Optional[int] = None
     fragment: Optional[str] = None
     # Dates and tier.
@@ -959,10 +972,9 @@ class DeepResearchBatch(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
+    _strip_internal = _drop_keys("organisation_id", "api_key_id", "credit_id")
+
     batch_id: str = Field(..., description="Unique batch ID")
-    organisation_id: Optional[str] = Field(None, description="Organization ID")
-    api_key_id: Optional[str] = Field(None, description="API key ID")
-    credit_id: Optional[str] = Field(None, description="Credit ID")
     status: _OpenBatchStatus = Field(..., description="Current batch status")
     mode: _OpenMode = Field(
         ..., description="Research mode (preferred field name)"
