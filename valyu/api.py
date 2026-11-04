@@ -958,8 +958,10 @@ class Valyu:
                 included_sources, excluded_sources, start_date, end_date,
             )
         except (ValueError, TimeoutError) as e:
+            error_message = str(e)
+
             def error_gen():
-                yield AnswerStreamChunk(type="error", error=str(e))
+                yield AnswerStreamChunk(type="error", error=error_message)
             return error_gen()
 
         answer = self._adapt_deepresearch_instant_to_answer(status)

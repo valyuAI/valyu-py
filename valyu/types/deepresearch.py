@@ -13,7 +13,7 @@ class AlertEmailConfig(BaseModel):
 
     email: str = Field(..., description="Email address to send alerts to")
     custom_url: Optional[str] = Field(
-        None, description="Custom URL with {id} placeholder, replaced with task ID"
+        default=None, description="Custom URL with {id} placeholder, replaced with task ID"
     )
 
 
@@ -40,9 +40,9 @@ class DeepResearchStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-def _open_enum(enum_cls):
+def _open_enum(enum_cls: Any) -> Callable[[Any], Any]:
     """
-    Type for an enum field in an API response that tolerates values added
+    Validator for an enum field in an API response that tolerates values added
     after this SDK release. A known value parses to the enum member as usual;
     an unknown string is kept as a plain string instead of failing the whole
     response.
@@ -54,11 +54,11 @@ def _open_enum(enum_cls):
         except (ValueError, TypeError):
             return value
 
-    return Annotated[Union[enum_cls, str], BeforeValidator(parse)]
+    return parse
 
 
-_OpenMode = _open_enum(DeepResearchMode)
-_OpenStatus = _open_enum(DeepResearchStatus)
+_OpenMode = Annotated[Union[DeepResearchMode, str], BeforeValidator(_open_enum(DeepResearchMode))]
+_OpenStatus = Annotated[Union[DeepResearchStatus, str], BeforeValidator(_open_enum(DeepResearchStatus))]
 
 
 def _mode_from_research_mode(data):
@@ -81,7 +81,7 @@ class FileAttachment(BaseModel):
     filename: str = Field(..., description="Original filename")
     media_type: str = Field(..., description="MIME type", alias="mediaType")
     context: Optional[str] = Field(
-        None,
+        default=None,
         description="Context about the file (max 50,000 characters; 100,000 combined across all files)",
     )
 
@@ -100,18 +100,18 @@ class CoverArt(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     kind: Optional[Literal["image", "pattern"]] = Field(
-        None,
+        default=None,
         description='"image" (photo or illustration, default) or "pattern" (brand graphic, shown more quietly)',
     )
     data: Optional[str] = Field(
-        None, description="Base64 string or data URL of the picture (PNG or JPEG)"
+        default=None, description="Base64 string or data URL of the picture (PNG or JPEG)"
     )
     url: Optional[str] = Field(
-        None, description="Public https URL of the picture, fetched when the report is rendered"
+        default=None, description="Public https URL of the picture, fetched when the report is rendered"
     )
-    filename: Optional[str] = Field(None, description="File name (optional)")
+    filename: Optional[str] = Field(default=None, description="File name (optional)")
     media_type: Optional[str] = Field(
-        None, description='"image/png" or "image/jpeg" (optional)', alias="mediaType"
+        default=None, description='"image/png" or "image/jpeg" (optional)', alias="mediaType"
     )
 
 
@@ -119,10 +119,10 @@ class MCPServerConfig(BaseModel):
     """MCP server configuration."""
 
     url: str = Field(..., description="MCP server URL")
-    name: Optional[str] = Field(None, description="Server name")
-    tool_prefix: Optional[str] = Field(None, description="Custom tool prefix")
-    auth: Optional[Dict[str, Any]] = Field(None, description="Authentication config")
-    allowed_tools: Optional[List[str]] = Field(None, description="Allowed tools")
+    name: Optional[str] = Field(default=None, description="Server name")
+    tool_prefix: Optional[str] = Field(default=None, description="Custom tool prefix")
+    auth: Optional[Dict[str, Any]] = Field(default=None, description="Authentication config")
+    allowed_tools: Optional[List[str]] = Field(default=None, description="Allowed tools")
 
 
 class Deliverable(BaseModel):
@@ -135,14 +135,14 @@ class Deliverable(BaseModel):
         ..., max_length=500, description="What data to extract or content to generate"
     )
     columns: Optional[List[str]] = Field(
-        None, description="Suggested column names (for CSV/XLSX)"
+        default=None, description="Suggested column names (for CSV/XLSX)"
     )
     include_headers: Optional[bool] = Field(
         True, description="Include column headers (for CSV/XLSX)"
     )
-    sheet_name: Optional[str] = Field(None, description="Sheet name (for XLSX only)")
-    slides: Optional[int] = Field(None, description="Number of slides (for PPTX only)")
-    template: Optional[str] = Field(None, description="Template name to use")
+    sheet_name: Optional[str] = Field(default=None, description="Sheet name (for XLSX only)")
+    slides: Optional[int] = Field(default=None, description="Number of slides (for PPTX only)")
+    template: Optional[str] = Field(default=None, description="Template name to use")
 
 
 def _drop_keys(*names):
@@ -179,17 +179,17 @@ class DeliverableResult(BaseModel):
     )
     title: str = Field(..., description="Generated filename/title")
     description: Optional[str] = Field(
-        None, description="Deliverable content description"
+        default=None, description="Deliverable content description"
     )
     url: Optional[str] = Field(
-        None, description="Token-signed authenticated URL to download the file (absent while pending)"
+        default=None, description="Token-signed authenticated URL to download the file (absent while pending)"
     )
-    row_count: Optional[int] = Field(None, description="Number of rows (for CSV/XLSX)")
+    row_count: Optional[int] = Field(default=None, description="Number of rows (for CSV/XLSX)")
     column_count: Optional[int] = Field(
-        None, description="Number of columns (for CSV/XLSX)"
+        default=None, description="Number of columns (for CSV/XLSX)"
     )
-    error: Optional[str] = Field(None, description="Error message if status is failed")
-    created_at: Optional[int] = Field(None, description="Unix timestamp of creation (absent while pending)")
+    error: Optional[str] = Field(default=None, description="Error message if status is failed")
+    created_at: Optional[int] = Field(default=None, description="Unix timestamp of creation (absent while pending)")
     # Additional fields, beside the ones above.
     filename: Optional[str] = None
     bytes: Optional[int] = None
@@ -237,33 +237,33 @@ class SearchConfig(BaseModel):
     """
 
     search_type: Optional[Literal["all", "web", "proprietary"]] = Field(
-        None, description="Search scope: 'all', 'web', or 'proprietary'"
+        default=None, description="Search scope: 'all', 'web', or 'proprietary'"
     )
     included_sources: Optional[List[str]] = Field(
-        None,
+        default=None,
         description="Source types to include: 'web', 'academic', 'finance', 'patent', 'transportation', 'politics', 'legal'",
     )
     excluded_sources: Optional[List[str]] = Field(
-        None, description="Source types to exclude from search"
+        default=None, description="Source types to exclude from search"
     )
     start_date: Optional[str] = Field(
-        None,
+        default=None,
         description="Inclusive start bound. Bare date (YYYY-MM-DD) or full ISO-8601 datetime; a datetime with any time component requires historical_cache=True, else HTTP 400.",
     )
     end_date: Optional[str] = Field(
-        None,
+        default=None,
         description="Inclusive end bound. Bare date (YYYY-MM-DD) or full ISO-8601 datetime; a datetime with any time component requires historical_cache=True, else HTTP 400.",
     )
     historical_cache: Optional[bool] = Field(
-        None,
+        default=None,
         description="When True and a date range is set, return the newest cached snapshot inside the range (leak-safe as-of backtest) instead of the latest crawl. Also required to pass any sub-day timestamp on start_date/end_date. No-op without a date range. User-set only.",
     )
-    category: Optional[str] = Field(None, description="Category filter for results")
+    category: Optional[str] = Field(default=None, description="Category filter for results")
     country_code: Optional[str] = Field(
-        None, description="ISO country code for location-filtered searches (e.g., 'US', 'GB')"
+        default=None, description="ISO country code for location-filtered searches (e.g., 'US', 'GB')"
     )
     source_biases: Optional[Dict[str, int]] = Field(
-        None,
+        default=None,
         description="Bias values for specific sources (-5 to +5) to influence ranking without hard filtering",
     )
 
@@ -297,7 +297,7 @@ class ToolConfig(BaseModel):
     """Per-tool configuration with optional call limit."""
 
     enabled: Optional[bool] = Field(True, description="Enable or disable the tool")
-    max_calls: Optional[int] = Field(None, description="Max invocations per task. Capped at system default if exceeded.")
+    max_calls: Optional[int] = Field(default=None, description="Max invocations per task. Capped at system default if exceeded.")
 
 
 class UltrasearchConfig(BaseModel):
@@ -330,20 +330,20 @@ class DeepResearchTools(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    code_execution: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable code execution in sandboxed environment")
-    screenshots: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable visual screenshot capture of web pages")
-    browser_use: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable autonomous browser sessions")
-    charts: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable chart/graph generation embedded in the final report (free, unlimited)")
+    code_execution: Optional[Union[bool, ToolConfig]] = Field(default=None, description="Enable code execution in sandboxed environment")
+    screenshots: Optional[Union[bool, ToolConfig]] = Field(default=None, description="Enable visual screenshot capture of web pages")
+    browser_use: Optional[Union[bool, ToolConfig]] = Field(default=None, description="Enable autonomous browser sessions")
+    charts: Optional[Union[bool, ToolConfig]] = Field(default=None, description="Enable chart/graph generation embedded in the final report (free, unlimited)")
     # Newer tool names, returned on reads beside the older names above (a response can carry
     # both). `read` and `analyse` replace `urls`/`code_execution`; `browse` replaces
     # `browser_use`; `screenshot` replaces `screenshots`.
-    x_search: Optional[Union[bool, ToolConfig]] = Field(None, description="Enable X (Twitter) search")
-    read: Optional[Union[bool, ToolConfig]] = Field(None, description="Newer name for reading supplied or found URLs")
-    analyse: Optional[Union[bool, ToolConfig]] = Field(None, description="Newer name for code_execution")
-    browse: Optional[Union[bool, ToolConfig]] = Field(None, description="Newer name for browser_use")
-    screenshot: Optional[Union[bool, ToolConfig]] = Field(None, description="Newer name for screenshots")
+    x_search: Optional[Union[bool, ToolConfig]] = Field(default=None, description="Enable X (Twitter) search")
+    read: Optional[Union[bool, ToolConfig]] = Field(default=None, description="Newer name for reading supplied or found URLs")
+    analyse: Optional[Union[bool, ToolConfig]] = Field(default=None, description="Newer name for code_execution")
+    browse: Optional[Union[bool, ToolConfig]] = Field(default=None, description="Newer name for browser_use")
+    screenshot: Optional[Union[bool, ToolConfig]] = Field(default=None, description="Newer name for screenshots")
     ultrasearch: Optional[Union[bool, "UltrasearchConfig"]] = Field(
-        None,
+        default=None,
         description=(
             "Enable Ultrasearch (Heavy and Max modes only). True uses the default spend cap; "
             "an UltrasearchConfig sets max_usd. False or None leaves it off."
@@ -504,13 +504,13 @@ class DeepResearchCostBreakdown(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     task: float = Field(..., description="Base task price for the selected mode")
-    screenshots: Optional[float] = Field(None, description="Screenshot surcharges ($0.05, 8 credits, per successful capture)")
-    code_execution: Optional[float] = Field(None, description="Code execution surcharges ($0.10, 16 credits, per successful run)")
-    deliverables: Optional[float] = Field(None, description="Deliverable surcharges ($0.10, 16 credits, per deliverable after the first)")
-    datasets: Optional[Union[float, List[CostDetailLine]]] = Field(None, description="Premium dataset surcharges: a summed number or a line-item list")
-    x_search: Optional[float] = Field(None, description="X search surcharges, summed")
-    browse: Optional[float] = Field(None, description="Browser-use / browse surcharges, summed")
-    other_tools: Optional[float] = Field(None, description="Any other tool surcharge not broken out above")
+    screenshots: Optional[float] = Field(default=None, description="Screenshot surcharges ($0.05, 8 credits, per successful capture)")
+    code_execution: Optional[float] = Field(default=None, description="Code execution surcharges ($0.10, 16 credits, per successful run)")
+    deliverables: Optional[float] = Field(default=None, description="Deliverable surcharges ($0.10, 16 credits, per deliverable after the first)")
+    datasets: Optional[Union[float, List[CostDetailLine]]] = Field(default=None, description="Premium dataset surcharges: a summed number or a line-item list")
+    x_search: Optional[float] = Field(default=None, description="X search surcharges, summed")
+    browse: Optional[float] = Field(default=None, description="Browser-use / browse surcharges, summed")
+    other_tools: Optional[float] = Field(default=None, description="Any other tool surcharge not broken out above")
     # Present when this is the itemized bill rather than the numbers-only one.
     base_usd: Optional[float] = None
     tools: Optional[List[CostDetailLine]] = None
@@ -525,16 +525,16 @@ class HitlConfig(BaseModel):
     """
 
     planning_questions: Optional[bool] = Field(
-        None, description="Pause before research to ask clarifying questions"
+        default=None, description="Pause before research to ask clarifying questions"
     )
     plan_review: Optional[bool] = Field(
-        None, description="Pause after planning for user to review the research plan"
+        default=None, description="Pause after planning for user to review the research plan"
     )
     source_review: Optional[bool] = Field(
-        None, description="Pause after research for user to filter sources by domain"
+        default=None, description="Pause after research for user to filter sources by domain"
     )
     outline_review: Optional[bool] = Field(
-        None, description="Pause after source review for user to review the report outline"
+        default=None, description="Pause after source review for user to review the report outline"
     )
 
 
@@ -547,7 +547,7 @@ class InteractionType(str, Enum):
     OUTLINE_REVIEW = "outline_review"
 
 
-_OpenInteractionType = _open_enum(InteractionType)
+_OpenInteractionType = Annotated[Union[InteractionType, str], BeforeValidator(_open_enum(InteractionType))]
 
 
 class Interaction(BaseModel):
@@ -559,7 +559,7 @@ class Interaction(BaseModel):
     created_at: int = Field(..., description="Unix timestamp (ms) when checkpoint fired")
     timeout_ms: int = Field(..., description="Timeout duration in milliseconds")
     expected_response: Optional[Dict[str, Any]] = Field(
-        None, description="Schema hint for the expected response shape"
+        default=None, description="Schema hint for the expected response shape"
     )
 
 
@@ -569,9 +569,9 @@ class InteractionHistoryEntry(BaseModel):
     interaction_id: str
     type: _OpenInteractionType
     created_at: int = Field(..., description="When the checkpoint fired (ms)")
-    responded_at: Optional[int] = Field(None, description="When the user responded (ms)")
+    responded_at: Optional[int] = Field(default=None, description="When the user responded (ms)")
     auto_continued: bool = Field(..., description="True if timed out, false if user responded")
-    response: Optional[Dict[str, Any]] = Field(None, description="The user's response (absent if timed out)")
+    response: Optional[Dict[str, Any]] = Field(default=None, description="The user's response (absent if timed out)")
 
 
 class ModelLineupEntry(BaseModel):
@@ -664,7 +664,7 @@ class DeepResearchCreateResponse(BaseModel):
     mode: Optional[_OpenMode] = None
     model: Optional[_OpenMode] = None
     research_mode: Optional[str] = Field(
-        None,
+        default=None,
         description="Research mode as sent by the API. mode is filled from it when the response has no mode.",
     )
     output_formats: Optional[List[Union[str, Dict[str, Any]]]] = None
@@ -709,7 +709,7 @@ class DeepResearchStatusResponse(BaseModel):
     query: Optional[str] = None
     mode: Optional[_OpenMode] = None
     research_mode: Optional[str] = Field(
-        None,
+        default=None,
         description="Research mode as sent by the API. mode is filled from it when the response has no mode.",
     )
     output_formats: Optional[
@@ -730,7 +730,7 @@ class DeepResearchStatusResponse(BaseModel):
     # tree below; `markdown` carries the equivalent report text).
     markdown: Optional[str] = None
     structured_report: Optional[StructuredReport] = Field(
-        None, description="The typed JSON tree for output_formats: ['structured_report']"
+        default=None, description="The typed JSON tree for output_formats: ['structured_report']"
     )
     title: Optional[str] = None
     total_word_count: Optional[int] = None
@@ -741,27 +741,27 @@ class DeepResearchStatusResponse(BaseModel):
     # The historical_cache model lineup; see `ModelLineupEntry`.
     models: Optional[List[ModelLineupEntry]] = None
     cost: Optional[float] = None
-    cost_breakdown: Optional[DeepResearchCostBreakdown] = Field(None, description="Itemized cost breakdown (task, screenshots, code_execution, deliverables)")
+    cost_breakdown: Optional[DeepResearchCostBreakdown] = Field(default=None, description="Itemized cost breakdown (task, screenshots, code_execution, deliverables)")
     cost_detail: Optional[DeepResearchCostDetail] = Field(
-        None, description="Itemized bill (base_usd, labelled tool/dataset lines, total_usd), beside cost_breakdown"
+        default=None, description="Itemized bill (base_usd, labelled tool/dataset lines, total_usd), beside cost_breakdown"
     )
-    tools: Optional[DeepResearchTools] = Field(None, description="Resolved tools configuration")
+    tools: Optional[DeepResearchTools] = Field(default=None, description="Resolved tools configuration")
     batch_id: Optional[str] = None
     batch_task_id: Optional[str] = None
-    harness: Optional[str] = Field(None, description="The task's harness id (e.g. 'default', 'people', 'forecasting')")
-    ignored_fields: Optional[List[str]] = Field(None, description="Top-level request fields the server ignored")
+    harness: Optional[str] = Field(default=None, description="The task's harness id (e.g. 'default', 'people', 'forecasting')")
+    ignored_fields: Optional[List[str]] = Field(default=None, description="Top-level request fields the server ignored")
 
     # HITL fields
-    hitl_config: Optional[Dict[str, Any]] = Field(None, description="HITL configuration (mirrors request hitl param)")
-    interaction: Optional[Interaction] = Field(None, description="Current HITL checkpoint (present when awaiting_input or paused)")
-    hitl_history: Optional[List[InteractionHistoryEntry]] = Field(None, description="History of completed HITL checkpoints")
+    hitl_config: Optional[Dict[str, Any]] = Field(default=None, description="HITL configuration (mirrors request hitl param)")
+    interaction: Optional[Interaction] = Field(default=None, description="Current HITL checkpoint (present when awaiting_input or paused)")
+    hitl_history: Optional[List[InteractionHistoryEntry]] = Field(default=None, description="History of completed HITL checkpoints")
 
     warnings: ResponseWarnings = None
     error: Optional[str] = None
-    error_message: Optional[str] = Field(None, description="User-facing sentence for `error_code` (present only for user-visible codes)")
-    error_code: Optional[str] = Field(None, description="Catalogue error code, e.g. 'research.no_evidence'")
+    error_message: Optional[str] = Field(default=None, description="User-facing sentence for `error_code` (present only for user-visible codes)")
+    error_code: Optional[str] = Field(default=None, description="Catalogue error code, e.g. 'research.no_evidence'")
     unreachable: Optional[bool] = Field(
-        None,
+        default=None,
         description=(
             "True when success=False because the status endpoint could not be "
             "reached after retries (transient gateway/network failure). This is "
@@ -887,7 +887,7 @@ class BatchStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-_OpenBatchStatus = _open_enum(BatchStatus)
+_OpenBatchStatus = Annotated[Union[BatchStatus, str], BeforeValidator(_open_enum(BatchStatus))]
 
 
 class BatchCounts(BaseModel):
@@ -913,27 +913,27 @@ class BatchUsage(BaseModel):
 class BatchTaskInput(BaseModel):
     """Input for a batch task."""
 
-    id: Optional[str] = Field(None, description="User-provided task ID")
+    id: Optional[str] = Field(default=None, description="User-provided task ID")
     query: Optional[str] = Field(
-        None, description="Research query or task description (preferred)"
+        default=None, description="Research query or task description (preferred)"
     )
     input: Optional[str] = Field(
-        None,
+        default=None,
         description="Research query or task description (deprecated, use query instead)",
     )
     strategy: Optional[str] = Field(
-        None, description="Natural language strategy (deprecated, use research_strategy)"
+        default=None, description="Natural language strategy (deprecated, use research_strategy)"
     )
     research_strategy: Optional[str] = Field(
-        None, description="Natural language strategy to guide the research phase"
+        default=None, description="Natural language strategy to guide the research phase"
     )
     report_format: Optional[str] = Field(
-        None,
+        default=None,
         description="Natural language instructions for output format (highest priority, overrides defaults)",
     )
-    urls: Optional[List[str]] = Field(None, description="URLs to extract and analyze")
+    urls: Optional[List[str]] = Field(default=None, description="URLs to extract and analyze")
     metadata: Optional[Dict[str, Union[str, int, bool]]] = Field(
-        None, description="Custom metadata"
+        default=None, description="Custom metadata"
     )
 
     @model_validator(mode="after")
@@ -981,43 +981,43 @@ class DeepResearchBatch(BaseModel):
     )
     # See `DeepResearchStatusResponse.research_mode`: the mode as sent by the API.
     research_mode: Optional[_OpenMode] = None
-    name: Optional[str] = Field(None, description="Batch name")
+    name: Optional[str] = Field(default=None, description="Batch name")
     output_formats: Optional[
         List[Union[Literal["markdown", "pdf", "toon"], str, Dict[str, Any]]]
-    ] = Field(None, description="Default output formats")
+    ] = Field(default=None, description="Default output formats")
     research_output_formats: Optional[List[Union[str, Dict[str, Any]]]] = None
     search_params: Optional[Dict[str, Any]] = Field(
-        None, description="Default search parameters"
+        default=None, description="Default search parameters"
     )
     counts: BatchCounts = Field(..., description="Task counts")
     cost: float = Field(..., description="Total cost (replaces usage object)")
     webhook_url: Optional[str] = Field(
-        None, description="Webhook URL for notifications"
+        default=None, description="Webhook URL for notifications"
     )
-    webhook_secret: Optional[str] = Field(None, description="Webhook secret")
+    webhook_secret: Optional[str] = Field(default=None, description="Webhook secret")
     created_at: str = Field(
         ...,
         description="Creation timestamp (ISO 8601 string, e.g., '2025-01-15T10:30:00.000Z')",
     )
     completed_at: Optional[str] = Field(
-        None,
+        default=None,
         description="Completion timestamp (ISO 8601 string, e.g., '2025-01-15T10:35:00.000Z')",
     )
     metadata: Optional[Dict[str, Union[str, int, bool]]] = Field(
-        None, description="Custom metadata"
+        default=None, description="Custom metadata"
     )
     warnings: Optional[List[str]] = None
 
     # Backward compatibility fields
     model: Optional[_OpenMode] = Field(
-        None, description="Research mode (backward compatibility - use 'mode' instead)"
+        default=None, description="Research mode (backward compatibility - use 'mode' instead)"
     )
     usage: Optional[BatchUsage] = Field(
-        None,
+        default=None,
         description="Aggregated usage (backward compatibility - use 'cost' instead)",
     )
     updated_at: Optional[str] = Field(
-        None,
+        default=None,
         description="Last update timestamp (backward compatibility - field removed from API, ISO 8601 string)",
     )
 
@@ -1096,7 +1096,7 @@ class BatchCreateResponse(BaseModel):
 
     # Backward compatibility fields - populated by validator
     model: Optional[_OpenMode] = Field(
-        None, description="Research mode (backward compatibility - use 'mode' instead)"
+        default=None, description="Research mode (backward compatibility - use 'mode' instead)"
     )
 
     def effective_mode(self) -> Optional[str]:

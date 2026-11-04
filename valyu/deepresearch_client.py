@@ -937,7 +937,9 @@ class DeepResearchClient:
                 ]:
                     if on_error:
                         on_error(
-                            ValueError(f"Task {status.status.value}: {status.error}")
+                            ValueError(
+                                f"Task {getattr(status.status, 'value', status.status)}: {status.error}"
+                            )
                         )
                     return
 

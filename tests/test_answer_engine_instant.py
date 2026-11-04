@@ -5,10 +5,10 @@ is untouched by this file.
 """
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from valyu import Valyu
-from valyu.types.answer import AnswerErrorResponse, AnswerStreamChunk, AnswerSuccessResponse
+from valyu.types.answer import AnswerErrorResponse, AnswerSuccessResponse
 from valyu.types.deepresearch import DeepResearchCreateResponse, DeepResearchStatusResponse, DeepResearchSource
 
 
@@ -93,6 +93,14 @@ class AnswerDeepResearchInstantTest(unittest.TestCase):
             result = client.answer("q", engine="deepresearch_instant")
             self.assertIsInstance(result, AnswerErrorResponse)
             self.assertIn("credits.insufficient", result.error)
+
+    def test_streaming_create_error_yields_one_error_chunk(self):
+        client = _client()
+        with patch.object(client.deepresearch, "create") as create:
+            create.side_effect = ValueError("boom")
+            chunks = list(client.answer("q", engine="deepresearch_instant", streaming=True))
+            self.assertEqual([c.type for c in chunks], ["error"])
+            self.assertIn("boom", chunks[0].error)
 
     def test_default_engine_is_unchanged(self):
         """engine defaults to 'default': no behavior change for existing callers who never pass it."""
