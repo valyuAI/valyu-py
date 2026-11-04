@@ -6,6 +6,7 @@ import base64
 import math
 import os
 import time
+import warnings
 import random
 from collections import OrderedDict
 from email.utils import parsedate_to_datetime
@@ -421,6 +422,14 @@ class DeepResearchClient:
         Returns:
             DeepResearchCreateResponse with task ID and status
         """
+        if mode == "lite" or model == "lite":
+            warnings.warn(
+                'mode "lite" is deprecated and is sent as "standard". '
+                'Use "standard" or "fast" instead.',
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         try:
             ultrasearch_error = _validate_ultrasearch(tools)
             if ultrasearch_error:
