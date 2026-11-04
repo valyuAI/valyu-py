@@ -1,4 +1,4 @@
-__version__ = "2.13.5"
+__version__ = "2.13.6"
 
 from .types.response import SearchResponse
 from .types.contents import (
@@ -22,6 +22,18 @@ from .types.deepresearch import (
     Interaction,
     InteractionHistoryEntry,
     DeepResearchRespondResponse,
+    DeepResearchMode,
+    DeepResearchStatus,
+    SourceLocation,
+    StructuredSection,
+    StructuredTable,
+    StructuredChart,
+    StructuredSourceRef,
+    StructuredReport,
+    DeepResearchCostDetail,
+    CostDetailLine,
+    RETRYABLE_ERROR_CODES,
+    is_retryable_error,
 )
 from .types.workflows import (
     Workflow,
@@ -68,6 +80,18 @@ __all__ = [
     "Interaction",
     "InteractionHistoryEntry",
     "DeepResearchRespondResponse",
+    "DeepResearchMode",
+    "DeepResearchStatus",
+    "SourceLocation",
+    "StructuredSection",
+    "StructuredTable",
+    "StructuredChart",
+    "StructuredSourceRef",
+    "StructuredReport",
+    "DeepResearchCostDetail",
+    "CostDetailLine",
+    "RETRYABLE_ERROR_CODES",
+    "is_retryable_error",
     "Workflow",
     "WorkflowVariable",
     "WorkflowVariableValidation",

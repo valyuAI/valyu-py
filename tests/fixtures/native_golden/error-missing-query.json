@@ -1,0 +1,8 @@
+{
+  "case": "error-missing-query",
+  "provisional": false,
+  "http": 400,
+  "body": {
+    "error": "s"
+  }
+}

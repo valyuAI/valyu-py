@@ -170,6 +170,16 @@ task = valyu.deepresearch.create(query="What is the capital of Australia?", mode
 result = valyu.deepresearch.wait(task.deepresearch_id)
 ```
 
+**Ultrasearch.** Set `tools={"ultrasearch": True}` to let a task analyse structured datasets in depth. Pass `{"ultrasearch": {"max_usd": 2.0}}` to set your own spend cap in USD (`max_usd` must be greater than 0). `True` uses the default cap of $0.50. Ultrasearch works in `"heavy"` and `"max"` modes only. It does not work on a backtest task (`reference_date` in `search_params`, or `historical_cache` with an `end_date`). The API refuses these requests with a 400 error. Charges appear as ordinary lines in `cost_breakdown`.
+
+```python
+task = valyu.deepresearch.create(
+    query="Compare US state unemployment rates since 2019",
+    mode="heavy",
+    tools={"ultrasearch": {"max_usd": 2.0}},
+)
+```
+
 **Polling.** `status()`, `wait()` and `stream()` poll conditionally. When the server returns an `ETag`, the next poll for that task sends it as `If-None-Match`; a `304 Not Modified` reuses the previous response with no body transferred, and `on_progress` / stream progress callbacks are not repeated for a 304. When `poll_interval` is not set, `wait()` and `stream()` follow the server's `Retry-After` hint (clamped to 1-30 seconds, default 5); an explicit `poll_interval` always wins. Rate limits (429) and server errors (5xx) are retried with jittered exponential backoff. Servers that send no `ETag` are polled exactly as before.
 
 ### Batch

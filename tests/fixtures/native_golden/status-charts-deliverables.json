@@ -1,0 +1,868 @@
+{
+  "case": "status-charts-deliverables",
+  "provisional": false,
+  "http": 200,
+  "body": {
+    "deepresearch_id": "s",
+    "status": "s",
+    "query": "s",
+    "title": "s",
+    "mode": "s",
+    "output_formats": [
+      "s"
+    ],
+    "created_at": "s",
+    "public": false,
+    "batch_id": null,
+    "batch_task_id": null,
+    "progress": {
+      "current_step": 0,
+      "total_steps": 0
+    },
+    "messages": [
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "text": "s"
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "text": "s"
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "text": "s"
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          },
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "sources": [
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  },
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "sources": [
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  },
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  },
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          },
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "sources": [
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "sources": [
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          },
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "sources": [
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "sources": [
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  },
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  },
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "sources": [
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          },
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "sources": [
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "sources": []
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          },
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "sources": []
+              }
+            }
+          },
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "sources": [
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          },
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "sources": [
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "sources": [
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  },
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  },
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  },
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  },
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "sources": [
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          },
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "input": {
+              "objective": "s"
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "sources": [
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  },
+                  {
+                    "source_id": 0,
+                    "title": "s",
+                    "url": "s"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "s",
+            "toolCallId": "s",
+            "toolName": "s",
+            "output": {
+              "type": "s",
+              "value": {
+                "success": false,
+                "exitCode": 0,
+                "executionTime": 0
+              }
+            }
+          }
+        ]
+      },
+      {
+        "role": "s",
+        "content": [
+          {
+            "type": "s",
+            "text": "s"
+          }
+        ]
+      }
+    ],
+    "interaction": null,
+    "hitl_history": [],
+    "total_word_count": 0,
+    "completed_at": "s",
+    "output": "s",
+    "output_type": "s",
+    "sources": [
+      {
+        "source_id": 0,
+        "title": "s",
+        "url": "s",
+        "snippet": "s",
+        "description": "s",
+        "source": "s",
+        "org_id": "s",
+        "word_count": 0,
+        "crawl_date": "s",
+        "tier": 0,
+        "tier_label": "s",
+        "locations": [
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          }
+        ]
+      },
+      {
+        "source_id": 0,
+        "title": "s",
+        "url": "s",
+        "snippet": "s",
+        "description": "s",
+        "source": "s",
+        "org_id": "s",
+        "word_count": 0,
+        "crawl_date": "s",
+        "tier": 0,
+        "tier_label": "s",
+        "locations": [
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          }
+        ]
+      },
+      {
+        "source_id": 0,
+        "title": "s",
+        "url": "s",
+        "snippet": "s",
+        "description": "s",
+        "source": "s",
+        "org_id": "s",
+        "word_count": 0,
+        "crawl_date": "s",
+        "tier": 0,
+        "tier_label": "s",
+        "locations": [
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          }
+        ]
+      },
+      {
+        "source_id": 0,
+        "title": "s",
+        "url": "s",
+        "snippet": "s",
+        "description": "s",
+        "source": "s",
+        "org_id": "s",
+        "word_count": 0,
+        "crawl_date": "s",
+        "updated_date": "s",
+        "tier": 0,
+        "tier_label": "s",
+        "locations": [
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          }
+        ]
+      },
+      {
+        "source_id": 0,
+        "title": "s",
+        "url": "s",
+        "snippet": "s",
+        "description": "s",
+        "source": "s",
+        "org_id": "s",
+        "word_count": 0,
+        "crawl_date": "s",
+        "tier": 0,
+        "tier_label": "s"
+      },
+      {
+        "source_id": 0,
+        "title": "s",
+        "url": "s",
+        "snippet": "s",
+        "description": "s",
+        "source": "s",
+        "org_id": "s",
+        "word_count": 0,
+        "crawl_date": "s",
+        "tier": 0,
+        "tier_label": "s",
+        "locations": [
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          }
+        ]
+      },
+      {
+        "source_id": 0,
+        "title": "s",
+        "url": "s",
+        "snippet": "s",
+        "description": "s",
+        "source": "s",
+        "org_id": "s",
+        "word_count": 0,
+        "crawl_date": "s",
+        "tier": 0,
+        "tier_label": "s",
+        "locations": [
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          },
+          {},
+          {
+            "excerpt": "s"
+          },
+          {
+            "excerpt": "s"
+          }
+        ]
+      }
+    ],
+    "images": [
+      {
+        "image_id": "s",
+        "image_type": "s",
+        "title": "s",
+        "chart_type": "s",
+        "image_url": "s",
+        "table_id": "s",
+        "notes": []
+      },
+      {
+        "image_id": "s",
+        "image_type": "s",
+        "title": "s",
+        "image_url": "s",
+        "source_url": "s",
+        "description": null
+      },
+      {
+        "image_id": "s",
+        "image_type": "s",
+        "title": "s",
+        "image_url": "s",
+        "source_url": "s",
+        "description": "s"
+      }
+    ],
+    "pdf_url": "s",
+    "cost": 0.5,
+    "cost_breakdown": {
+      "task": 0.5,
+      "code_execution": 0.5,
+      "base_usd": 0.5,
+      "tools": [
+        {
+          "item": "s",
+          "label": "s",
+          "pricing": "s",
+          "unit": "s",
+          "units": 0,
+          "free_units": 0,
+          "billed_units": 0,
+          "unit_price_usd": 0.5,
+          "usd": 0.5
+        }
+      ],
+      "datasets": [],
+      "total_usd": 0.5
+    },
+    "harness": "s",
+    "deliverables": [
+      {
+        "id": "s",
+        "request": "s",
+        "type": "s",
+        "status": "s",
+        "title": "s",
+        "description": "s",
+        "url": "s",
+        "filename": "s",
+        "bytes": 0,
+        "row_count": 0,
+        "column_count": 0,
+        "summary": {
+          "rows": 0,
+          "columns": 0
+        },
+        "attempts": 0
+      },
+      {
+        "id": "s",
+        "request": "s",
+        "type": "s",
+        "status": "s",
+        "title": "s",
+        "description": "s",
+        "url": "s",
+        "error": "s",
+        "attempts": 0
+      }
+    ],
+    "attachments": [],
+    "previous_reports": [],
+    "mcp": [],
+    "mcp_servers": [],
+    "context_state": "s",
+    "search_params": null,
+    "tools": {
+      "code_execution": false,
+      "x_search": false
+    },
+    "ultrasearch": false,
+    "research_strategy": null,
+    "report_format": null,
+    "report_length": null,
+    "webhook_url": null,
+    "alert_email": null,
+    "warnings": []
+  }
+}
