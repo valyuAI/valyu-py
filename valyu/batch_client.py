@@ -32,8 +32,8 @@ class BatchClient:
     def create(
         self,
         name: Optional[str] = None,
-        mode: Optional[Literal["lite", "standard", "heavy", "fast", "max"]] = None,
-        model: Optional[Literal["lite", "standard", "heavy", "fast", "max"]] = None,
+        mode: Optional[Literal["instant", "lite", "standard", "heavy", "fast", "max"]] = None,
+        model: Optional[Literal["instant", "lite", "standard", "heavy", "fast", "max"]] = None,
         output_formats: Optional[
             List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
         ] = None,
@@ -41,6 +41,7 @@ class BatchClient:
         webhook_url: Optional[str] = None,
         brand_collection_id: Optional[str] = None,
         metadata: Optional[Dict[str, Union[str, int, bool]]] = None,
+        tasks: Optional[List[Union[BatchTaskInput, Dict[str, Any]]]] = None,
     ) -> BatchCreateResponse:
         """
         Create a new batch for bulk deep research tasks.
@@ -67,6 +68,10 @@ class BatchClient:
             webhook_url: HTTPS webhook URL for completion notification
             brand_collection_id: Brand collection to apply to all deliverables
             metadata: Custom metadata (key-value pairs)
+            tasks: Tasks to create the batch with (each a BatchTaskInput or dict with at least
+                  'id'/'query'). Optional when the batch is built with add_tasks() afterwards.
+                  When the API requires tasks at creation, pass them here; the batch can then
+                  not change after creation.
 
         Returns:
             BatchCreateResponse with batch ID and status
@@ -104,6 +109,11 @@ class BatchClient:
                 payload["brand_collection_id"] = brand_collection_id
             if metadata:
                 payload["metadata"] = metadata
+            if tasks:
+                payload["tasks"] = [
+                    t.model_dump(exclude_none=True) if isinstance(t, BatchTaskInput) else t
+                    for t in tasks
+                ]
 
             # A 429 here means the batch was never created and never
             # billed, so retrying it is always safe.
