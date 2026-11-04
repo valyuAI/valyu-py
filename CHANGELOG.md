@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.13.6
+
+- DeepResearch: new `tools.ultrasearch` option on `deepresearch.create()`. Pass `True` for the default spend cap, or `{"max_usd": <number greater than 0>}` to set the cap in USD. It works in `heavy` and `max` modes only. It is refused on a backtest task. The SDK sends only `tools.ultrasearch`, and only when you set it. A non-positive or non-finite `max_usd` returns an error response before any request is sent. New exported `UltrasearchConfig` type in `valyu.types`.
+- DeepResearch responses: new typed fields `structured_report`, `cost_detail` (with `effective_cost_detail()`), `sources[].locations`, `error_code`, `error_message`, `ignored_fields` and `models`. `DeepResearchCostBreakdown` accepts line-item `datasets` and `tools`. Chart, image and deliverable types accept newer values. New `is_retryable_error()` and `RETRYABLE_ERROR_CODES`. Unknown values in these fields no longer fail the parse.
+- `answer()` accepts `engine="deepresearch_instant"`, an opt-in path that runs an instant DeepResearch task and returns it in the Answer response shape. Streaming emits one `search_results` chunk, one `content` chunk, then `metadata` and `done`. `data_max_price`, `fast_mode=True` and `search_type="news"` raise `ValueError` on this engine. The default engine (`engine="default"`) does not change.
+- `batch.create()` accepts an optional `tasks` argument, so you can create a batch with its tasks in one call.
+
 ## 2.13.5
 
 - DeepResearch: new `cover_art` option on `deepresearch.create()`, a cover picture for one report. It replaces the brand kit's cover art on the report PDF and PDF deliverable, and works without a kit. Pass a `CoverArt` or dict (`kind`, `data` or `url`, `filename`, `mediaType`), raw image `bytes`, or a file path (read and base64-encoded). PNG or JPEG, at most 2 MB, 800 px or more on the short side. A picture that cannot be used does not fail the task; the response `warnings` include `cover_art_not_used`.

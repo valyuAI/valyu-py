@@ -287,6 +287,19 @@ class ToolConfig(BaseModel):
     max_calls: Optional[int] = Field(None, description="Max invocations per task. Capped at system default if exceeded.")
 
 
+class UltrasearchConfig(BaseModel):
+    """Ultrasearch options. Pass as ``tools.ultrasearch`` in Heavy or Max mode."""
+
+    model_config = ConfigDict(extra="allow")
+
+    max_usd: float = Field(
+        ...,
+        gt=0,
+        allow_inf_nan=False,
+        description="Maximum spend for Ultrasearch on this task, in USD. Must be greater than 0.",
+    )
+
+
 class DeepResearchTools(BaseModel):
     """Tools configuration for deep research tasks.
 
@@ -316,6 +329,13 @@ class DeepResearchTools(BaseModel):
     analyse: Optional[Union[bool, ToolConfig]] = Field(None, description="Newer name for code_execution")
     browse: Optional[Union[bool, ToolConfig]] = Field(None, description="Newer name for browser_use")
     screenshot: Optional[Union[bool, ToolConfig]] = Field(None, description="Newer name for screenshots")
+    ultrasearch: Optional[Union[bool, "UltrasearchConfig"]] = Field(
+        None,
+        description=(
+            "Enable Ultrasearch (Heavy and Max modes only). True uses the default spend cap; "
+            "an UltrasearchConfig sets max_usd. False or None leaves it off."
+        ),
+    )
 
 
 class ImageMetadata(BaseModel):

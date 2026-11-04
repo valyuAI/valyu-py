@@ -3,6 +3,7 @@ DeepResearch Client for Valyu SDK
 """
 
 import base64
+import math
 import os
 import time
 import random
@@ -89,6 +90,37 @@ def _next_poll_interval(
 
 _MAX_FILE_CONTEXT_CHARS = 50000
 _MAX_TOTAL_FILE_CONTEXT_CHARS = 100000
+
+
+def _validate_ultrasearch(tools: Any) -> Optional[str]:
+    """Check ``tools.ultrasearch``: a boolean, or an object with only a positive ``max_usd``."""
+    if tools is None:
+        return None
+    value = (
+        tools.get("ultrasearch")
+        if isinstance(tools, dict)
+        else getattr(tools, "ultrasearch", None)
+    )
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, dict):
+        config: Dict[str, Any] = value
+    elif hasattr(value, "model_dump"):
+        config = value.model_dump(exclude_none=True)
+    else:
+        return "tools.ultrasearch must be a boolean or an object with max_usd"
+    unknown = sorted(set(config) - {"max_usd"})
+    if unknown:
+        return f"tools.ultrasearch has unknown field(s): {', '.join(unknown)}"
+    max_usd = config.get("max_usd")
+    if (
+        isinstance(max_usd, bool)
+        or not isinstance(max_usd, (int, float))
+        or not math.isfinite(max_usd)
+        or max_usd <= 0
+    ):
+        return "tools.ultrasearch.max_usd must be a finite number greater than 0"
+    return None
 
 
 def _validate_file_contexts(files: Optional[List[Any]]) -> Optional[str]:
@@ -342,11 +374,15 @@ class DeepResearchClient:
             mcp_servers: MCP server configurations for custom tools
             code_execution: Enable/disable code execution (deprecated, use tools parameter instead)
             tools: Tools configuration. Controls which optional tools the research agent can use.
-                  Available tools: code_execution, screenshots, browser_use.
+                  Available tools: code_execution, screenshots, browser_use, ultrasearch.
                   Each tool accepts a boolean or an object with `enabled` (bool) and `max_calls` (int).
                   max_calls can only lower the system default, not raise it.
                   System defaults: browser_use=5, screenshots=15, code_execution=10.
                   If both tools and code_execution are provided, tools takes precedence.
+                  ultrasearch accepts True (default spend cap) or {"max_usd": 2.0} to set the
+                  cap in USD. It is available in "heavy" and "max" modes only. Ultrasearch
+                  charges appear as ordinary lines in cost_breakdown. It cannot run on a
+                  backtest task (search with reference_date, or historical_cache with end_date).
             previous_reports: Previous report IDs for context (max 3)
             webhook_url: HTTPS webhook URL for completion notification
             alert_email: Email for completion alerts. Can be a string (email address) or
@@ -386,6 +422,10 @@ class DeepResearchClient:
             DeepResearchCreateResponse with task ID and status
         """
         try:
+            ultrasearch_error = _validate_ultrasearch(tools)
+            if ultrasearch_error:
+                return DeepResearchCreateResponse(success=False, error=ultrasearch_error)
+
             # Client-side guard mirroring the server's hard cap so callers get
             # an identical error without a round-trip. The server reads
             # research_strategy ?? strategy, so mirror that precedence here and
