@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.13.6
+
+- DeepResearch status responses gain optional fields: `cost_credits`, `cost_breakdown_credits`, `cost_detail` (new `DeepResearchCostDetail` type), `pending_deliverables`, `research_output_formats` and `error_code`. `images[]` gain `chart_kind`, and `created_at` on images and deliverables is optional.
+- `cost_breakdown` accepts the keys `datasets`, `x_search`, `browse`, `ocr`, `urls` and `other_tools`, and keeps unknown extra numeric keys.
+- Parsing is tolerant: an unknown `image_type`, `chart_type`, deliverable `type` or `status` stays a plain string, and a missing optional field no longer fails the response.
+- `deepresearch.create()` accepts an optional `skills` list. The SDK sends it only when you set it.
+
 ## 2.13.5
 
 - DeepResearch: new `cover_art` option on `deepresearch.create()`, a cover picture for one report. It replaces the brand kit's cover art on the report PDF and PDF deliverable, and works without a kit. Pass a `CoverArt` or dict (`kind`, `data` or `url`, `filename`, `mediaType`), raw image `bytes`, or a file path (read and base64-encoded). PNG or JPEG, at most 2 MB, 800 px or more on the short side. A picture that cannot be used does not fail the task; the response `warnings` include `cover_art_not_used`.

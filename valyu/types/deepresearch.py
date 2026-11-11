@@ -149,25 +149,27 @@ class DeliverableResult(BaseModel):
     """Deliverable generation result."""
 
     id: str = Field(..., description="Unique deliverable ID")
-    request: str = Field(..., description="Original request description")
-    type: Literal["csv", "xlsx", "pptx", "docx", "pdf", "unknown"] = Field(
-        ..., description="Deliverable file type"
+    request: Optional[str] = Field(None, description="Original request description")
+    type: Union[Literal["csv", "xlsx", "pptx", "docx", "pdf", "unknown"], str] = Field(
+        ..., description="Deliverable file type (new types may appear; kept as a string)"
     )
-    status: Literal["completed", "failed"] = Field(..., description="Generation status")
-    title: str = Field(..., description="Generated filename/title")
+    status: Union[Literal["completed", "failed", "pending"], str] = Field(
+        ..., description="Generation status (new values may appear; kept as a string)"
+    )
+    title: Optional[str] = Field(None, description="Generated filename/title")
     description: Optional[str] = Field(
         None, description="Deliverable content description"
     )
-    url: str = Field(
-        ..., description="Token-signed authenticated URL to download the file"
+    url: Optional[str] = Field(
+        None, description="Token-signed authenticated URL to download the file (absent while pending)"
     )
-    s3_key: str = Field(..., description="S3 storage key")
+    s3_key: Optional[str] = Field(None, description="Storage key (absent while pending)")
     row_count: Optional[int] = Field(None, description="Number of rows (for CSV/XLSX)")
     column_count: Optional[int] = Field(
         None, description="Number of columns (for CSV/XLSX)"
     )
     error: Optional[str] = Field(None, description="Error message if status is failed")
-    created_at: int = Field(..., description="Unix timestamp of creation")
+    created_at: Optional[int] = Field(None, description="Unix timestamp of creation")
 
 
 class SearchConfig(BaseModel):
@@ -298,16 +300,16 @@ class ImageMetadata(BaseModel):
     """Image metadata."""
 
     image_id: str
-    image_type: Literal["chart", "ai_generated", "screenshot"]
-    title: str
+    image_type: Union[Literal["chart", "ai_generated", "screenshot"], str]
+    title: Optional[str] = None
     description: Optional[str] = None
     image_url: str
-    created_at: int
+    created_at: Optional[int] = Field(None, description="Creation time, epoch milliseconds")
     # Screenshot-only fields
     source_url: Optional[str] = None
     captured_at: Optional[int] = None
     chart_type: Optional[
-        Literal[
+        Union[Literal[
             "line",
             "bar",
             "area",
@@ -324,8 +326,12 @@ class ImageMetadata(BaseModel):
             "waterfall",
             "timeline",
             "bubble",
-        ]
+        ], str]
     ] = None
+    chart_kind: Optional[str] = Field(
+        None,
+        description="Chart kind (the chart types above plus values such as 'stacked' and 'slope'; open string)",
+    )
     x_axis_label: Optional[str] = None
     y_axis_label: Optional[str] = None
     data_series: Optional[List[ChartDataSeries]] = None
@@ -361,12 +367,65 @@ class Usage(BaseModel):
 
 
 class DeepResearchCostBreakdown(BaseModel):
-    """Itemized cost breakdown for a deep research task."""
+    """Itemized cost breakdown for a deep research task.
 
-    task: float = Field(..., description="Base task price for the selected mode")
-    screenshots: Optional[float] = Field(None, description="Screenshot surcharges ($0.05, 8 credits, per successful capture)")
-    code_execution: Optional[float] = Field(None, description="Code execution surcharges ($0.10, 16 credits, per successful run)")
-    deliverables: Optional[float] = Field(None, description="Deliverable surcharges ($0.10, 16 credits, per deliverable after the first)")
+    Only ``task`` is always present; the other keys appear when non-zero.
+    Unknown extra numeric keys are kept.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    task: Optional[float] = Field(None, description="Base task price for the selected mode")
+    screenshots: Optional[float] = Field(None, description="Screenshot surcharges")
+    code_execution: Optional[float] = Field(None, description="Code execution surcharges")
+    deliverables: Optional[float] = Field(None, description="Deliverable surcharges")
+    datasets: Optional[float] = Field(None, description="Dataset charges")
+    x_search: Optional[float] = Field(None, description="X search charges")
+    browse: Optional[float] = Field(None, description="Browse charges")
+    ocr: Optional[float] = Field(None, description="OCR charges")
+    urls: Optional[float] = Field(None, description="URL charges")
+    other_tools: Optional[float] = Field(None, description="Other tool charges")
+
+
+class CostDetailTool(BaseModel):
+    """One tool line in ``cost_detail``."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    item: Optional[str] = None
+    label: Optional[str] = None
+    pricing: Optional[str] = None
+    unit: Optional[str] = None
+    units: Optional[float] = None
+    free_units: Optional[float] = None
+    billed_units: Optional[float] = None
+    unit_price_usd: Optional[float] = None
+    usd: Optional[float] = None
+    credits: Optional[float] = None
+
+
+class CostDetailDataset(BaseModel):
+    """One dataset line in ``cost_detail``."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    source: Optional[str] = None
+    rows: Optional[float] = None
+    usd: Optional[float] = None
+    credits: Optional[float] = None
+
+
+class DeepResearchCostDetail(BaseModel):
+    """Line-item cost detail for a deep research task."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    base_usd: Optional[float] = None
+    tools: Optional[List[CostDetailTool]] = None
+    datasets: Optional[List[CostDetailDataset]] = None
+    total_usd: Optional[float] = None
+    base_credits: Optional[float] = None
+    total_credits: Optional[float] = None
 
 
 class HitlConfig(BaseModel):
@@ -473,6 +532,9 @@ class DeepResearchStatusResponse(BaseModel):
     output_formats: Optional[
         List[Union[Literal["markdown", "pdf", "toon"], str, Dict[str, Any]]]
     ] = None
+    research_output_formats: Optional[List[Union[str, Dict[str, Any]]]] = Field(
+        None, description="Output formats as sent by the API (strings or schema objects)"
+    )
     created_at: Optional[str] = None
     public: Optional[bool] = None
 
@@ -487,9 +549,17 @@ class DeepResearchStatusResponse(BaseModel):
     pdf_url: Optional[str] = None
     images: Optional[List[ImageMetadata]] = None
     deliverables: Optional[List[DeliverableResult]] = None
+    pending_deliverables: Optional[List[DeliverableResult]] = Field(
+        None, description="Deliverables still being generated (status 'pending')"
+    )
     sources: Optional[List[DeepResearchSource]] = None
     cost: Optional[float] = None
-    cost_breakdown: Optional[DeepResearchCostBreakdown] = Field(None, description="Itemized cost breakdown (task, screenshots, code_execution, deliverables)")
+    cost_credits: Optional[float] = Field(None, description="Cost in platform credits")
+    cost_breakdown: Optional[DeepResearchCostBreakdown] = Field(None, description="Itemized cost breakdown")
+    cost_breakdown_credits: Optional[DeepResearchCostBreakdown] = Field(
+        None, description="Itemized cost breakdown, values in credits"
+    )
+    cost_detail: Optional[DeepResearchCostDetail] = Field(None, description="Line-item cost detail")
     tools: Optional[DeepResearchTools] = Field(None, description="Resolved tools configuration")
     batch_id: Optional[str] = None
     batch_task_id: Optional[str] = None
@@ -501,6 +571,7 @@ class DeepResearchStatusResponse(BaseModel):
 
     warnings: ResponseWarnings = None
     error: Optional[str] = None
+    error_code: Optional[str] = Field(None, description="Machine-readable error code, when present")
     unreachable: Optional[bool] = Field(
         None,
         description=(
