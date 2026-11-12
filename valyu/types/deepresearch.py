@@ -370,7 +370,12 @@ class DeepResearchCostBreakdown(BaseModel):
     """Itemized cost breakdown for a deep research task.
 
     Only ``task`` is always present; the other keys appear when non-zero.
-    Unknown extra numeric keys are kept.
+    Unknown extra keys are kept.
+
+    The API can also send the v2 form of this object: ``base_usd``,
+    ``tools`` (a list of tool lines), ``datasets`` (a list of dataset
+    lines instead of a number), ``total_usd``, ``base_credits`` and
+    ``total_credits``. Both forms parse.
     """
 
     model_config = ConfigDict(extra="allow")
@@ -379,12 +384,19 @@ class DeepResearchCostBreakdown(BaseModel):
     screenshots: Optional[float] = Field(None, description="Screenshot surcharges")
     code_execution: Optional[float] = Field(None, description="Code execution surcharges")
     deliverables: Optional[float] = Field(None, description="Deliverable surcharges")
-    datasets: Optional[float] = Field(None, description="Dataset charges")
+    datasets: Optional[Union[float, List[Dict[str, Any]]]] = Field(
+        None, description="Dataset charges: a number, or a list of dataset lines in the v2 form"
+    )
     x_search: Optional[float] = Field(None, description="X search charges")
     browse: Optional[float] = Field(None, description="Browse charges")
     ocr: Optional[float] = Field(None, description="OCR charges")
     urls: Optional[float] = Field(None, description="URL charges")
     other_tools: Optional[float] = Field(None, description="Other tool charges")
+    base_usd: Optional[float] = Field(None, description="Base price in USD (v2 form)")
+    tools: Optional[List[Dict[str, Any]]] = Field(None, description="Tool lines (v2 form)")
+    total_usd: Optional[float] = Field(None, description="Total in USD (v2 form)")
+    base_credits: Optional[float] = Field(None, description="Base price in credits (v2 form)")
+    total_credits: Optional[float] = Field(None, description="Total in credits (v2 form)")
 
 
 class CostDetailTool(BaseModel):
@@ -837,8 +849,9 @@ class BatchCreateResponse(BaseModel):
     status: Optional[_OpenBatchStatus] = None
     mode: Optional[_OpenMode] = None
     name: Optional[str] = None
+    # Open to any string: the API can return newer formats (for example "structured_report").
     output_formats: Optional[
-        List[Union[Literal["markdown", "pdf", "toon"], Dict[str, Any]]]
+        List[Union[Literal["markdown", "pdf", "toon"], str, Dict[str, Any]]]
     ] = None
     search_params: Optional[Dict[str, Any]] = None
     counts: Optional[BatchCounts] = None

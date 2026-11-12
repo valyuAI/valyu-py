@@ -177,6 +177,44 @@ def _client():
     return DeepResearchClient(parent), session
 
 
+class V2ShapeTest(unittest.TestCase):
+    def test_v2_cost_breakdown_parses(self):
+        r = DeepResearchStatusResponse(
+            **{
+                "success": True,
+                "deepresearch_id": "dr_1",
+                "status": "completed",
+                "cost": 0.75,
+                "cost_breakdown": {
+                    "task": 0.15,
+                    "base_usd": 0.15,
+                    "tools": [{"item": "xSearch", "units": 3, "usd": 0.6}],
+                    "datasets": [{"source": "s", "usd": 0}],
+                    "total_usd": 0.75,
+                    "base_credits": 24,
+                    "total_credits": 120,
+                },
+            }
+        )
+        cb = r.cost_breakdown
+        self.assertEqual(cb.task, 0.15)
+        self.assertEqual(cb.datasets[0]["source"], "s")
+        self.assertEqual(cb.tools[0]["units"], 3)
+        self.assertEqual((cb.total_usd, cb.total_credits), (0.75, 120))
+
+    def test_v1_cost_breakdown_still_parses(self):
+        r = DeepResearchStatusResponse(
+            **{"success": True, "deepresearch_id": "dr_1", "status": "completed", "cost_breakdown": {"task": 1.0, "datasets": 0.2}}
+        )
+        self.assertEqual(r.cost_breakdown.datasets, 0.2)
+
+    def test_batch_create_accepts_new_output_format(self):
+        from valyu.types.deepresearch import BatchCreateResponse
+
+        r = BatchCreateResponse(**{"success": True, "batch_id": "b", "output_formats": ["markdown", "structured_report"]})
+        self.assertEqual(r.output_formats, ["markdown", "structured_report"])
+
+
 class SkillsPayloadTest(unittest.TestCase):
     def test_skills_omitted_by_default(self):
         client, session = _client()
