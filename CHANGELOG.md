@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.13.8
+## 2.13.7
 
 - DeepResearch status responses gain optional fields: `cost_credits`, `cost_breakdown_credits`, `cost_detail` (new `DeepResearchCostDetail` type), `pending_deliverables`, `research_output_formats` and `error_code`. `images[]` gain `chart_kind`, and `created_at` on images and deliverables is optional.
 - `cost_breakdown` accepts the keys `datasets`, `x_search`, `browse`, `ocr`, `urls` and `other_tools`, and keeps unknown extra numeric keys.
