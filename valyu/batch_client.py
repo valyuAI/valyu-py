@@ -333,10 +333,12 @@ class BatchClient:
         limit: Optional[int] = None,
     ) -> BatchListResponse:
         """
-        List all batches.
+        List batches, newest first.
 
         Args:
-            limit: Maximum number of batches to return (optional, no limit if not specified)
+            limit: Maximum number of batches to return (1 to 100). If you do not
+                specify it, the API uses its default page size, which can be
+                smaller than your total number of batches.
 
         Returns:
             BatchListResponse with list of batches

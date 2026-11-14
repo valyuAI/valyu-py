@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.13.7
+
+- DeepResearch status responses gain optional fields: `cost_credits`, `cost_breakdown_credits`, `cost_detail` (new `DeepResearchCostDetail` type), `pending_deliverables`, `research_output_formats` and `error_code`. `images[]` gain `chart_kind`, and `created_at` on images and deliverables is optional.
+- `cost_breakdown` accepts the keys `datasets`, `x_search`, `browse`, `ocr`, `urls` and `other_tools`, and keeps unknown extra numeric keys.
+- Parsing is tolerant: an unknown `image_type`, `chart_type`, deliverable `type` or `status` stays a plain string, and a missing optional field no longer fails the response.
+- `deepresearch.create()` accepts an optional `skills` list. The SDK sends it only when you set it.
+- `cost_breakdown` also parses the v2 form of the object: `datasets` as a list of lines, plus `base_usd`, `tools`, `total_usd`, `base_credits` and `total_credits`. The number form still parses.
+- Batch create responses accept any `output_formats` string, for example `structured_report`. Before, a newer format failed validation. The call then returned `success=False`, but the API created the batch.
+- `batches.list()`: the docstring now says that `limit` is 1 to 100. Without `limit`, the API applies its default page size.
+
 ## 2.13.6
 
 - Successful contents results gain `final_url`: the page the request ended on, when the URL redirected to a different page (for example a closed job posting that redirects to the careers page). `None` when there was no redirect. A change of scheme, host case, `www.`, trailing slash or fragment is not a different page.
