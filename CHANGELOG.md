@@ -10,6 +10,10 @@
 - Batch create responses accept any `output_formats` string, for example `structured_report`. Before, a newer format failed validation. The call then returned `success=False`, but the API created the batch.
 - `batches.list()`: the docstring now says that `limit` is 1 to 100. Without `limit`, the API applies its default page size.
 
+## 2.13.6
+
+- Successful contents results gain `final_url`: the page the request ended on, when the URL redirected to a different page (for example a closed job posting that redirects to the careers page). `None` when there was no redirect. A change of scheme, host case, `www.`, trailing slash or fragment is not a different page.
+
 ## 2.13.5
 
 - DeepResearch: new `cover_art` option on `deepresearch.create()`, a cover picture for one report. It replaces the brand kit's cover art on the report PDF and PDF deliverable, and works without a kit. Pass a `CoverArt` or dict (`kind`, `data` or `url`, `filename`, `mediaType`), raw image `bytes`, or a file path (read and base64-encoded). PNG or JPEG, at most 2 MB, 800 px or more on the short side. A picture that cannot be used does not fail the task; the response `warnings` include `cover_art_not_used`.
