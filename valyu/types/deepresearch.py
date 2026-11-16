@@ -165,19 +165,19 @@ class DeliverableResult(BaseModel):
     _strip_internal = _drop_keys("s3_key")
 
     id: str = Field(..., description="Unique deliverable ID")
-    request: str = Field(..., description="Original request description")
+    request: Optional[str] = Field(default=None, description="Original request description")
     type: Union[Literal["csv", "xlsx", "pptx", "docx", "pdf", "unknown"], str] = Field(
-        ..., description="Deliverable file type"
+        ..., description="Deliverable file type (new types may appear; kept as a string)"
     )
     status: Union[Literal["completed", "failed", "pending"], str] = Field(
         ...,
         description=(
-            "Generation status. 'pending' means the deliverable is still being produced "
-            "(the task is still running): url, row_count and column_count are not "
-            "yet available."
+            "Generation status (new values may appear; kept as a string). 'pending' means the "
+            "deliverable is still being produced (the task is still running): url, row_count "
+            "and column_count are not yet available."
         ),
     )
-    title: str = Field(..., description="Generated filename/title")
+    title: Optional[str] = Field(default=None, description="Generated filename/title")
     description: Optional[str] = Field(
         default=None, description="Deliverable content description"
     )
@@ -360,10 +360,10 @@ class ImageMetadata(BaseModel):
     # "attachment": an uploaded or url-supplied image, listed alongside charts and screenshots.
     # A trailing plain `str` keeps this forward-compatible with an image kind introduced later.
     image_type: Union[Literal["chart", "ai_generated", "screenshot", "attachment"], str]
-    title: str
+    title: Optional[str] = None
     description: Optional[str] = None
     image_url: str
-    created_at: Optional[int] = None  # absent on an image attachment entry
+    created_at: Optional[int] = Field(None, description="Creation time, epoch milliseconds; absent on an image attachment entry")
     # Screenshot-only fields
     source_url: Optional[str] = None
     captured_at: Optional[int] = None
@@ -470,8 +470,19 @@ class CostDetailLine(BaseModel):
     billed_units: Optional[float] = None
     unit_price_usd: Optional[float] = None
     usd: Optional[float] = None
+    credits: Optional[float] = None
+    # Dataset lines
+    source: Optional[str] = None
+    rows: Optional[float] = None
     # Kept for callers written against an earlier draft of this shape.
     amount: Optional[float] = None
+
+    def __getitem__(self, key: str) -> Any:
+        """Read a line like a dict (`line["usd"]`), as the v2 form was first typed as dicts."""
+        try:
+            return getattr(self, key)
+        except AttributeError:
+            raise KeyError(key)
 
 
 class DeepResearchCostDetail(BaseModel):
@@ -488,33 +499,45 @@ class DeepResearchCostDetail(BaseModel):
     tools: Optional[List[CostDetailLine]] = None
     datasets: Optional[List[CostDetailLine]] = None
     total_usd: Optional[float] = None
+    base_credits: Optional[float] = None
+    total_credits: Optional[float] = None
 
 
 class DeepResearchCostBreakdown(BaseModel):
     """Itemized cost breakdown for a deep research task.
 
     A response can send this as numbers only (`task`, `screenshots`, ...), with a richer bill
-    beside it under `cost_detail`. It can also send the richer bill directly as `cost_breakdown`.
-    In that case `datasets` and `tools` here are line-item lists, and `base_usd`, `tools` and
-    `total_usd` can be set with no separate `cost_detail`. Prefer `cost_detail` when it is set;
-    otherwise read this model's `base_usd`, `tools` and `total_usd`
-    (see `DeepResearchStatusResponse.effective_cost_detail()`).
+    beside it under `cost_detail`. It can also send the richer bill directly as `cost_breakdown`
+    (the v2 form). In that case `datasets` and `tools` here are line-item lists, and `base_usd`,
+    `tools` and `total_usd` can be set with no separate `cost_detail`. Both forms parse.
+    Only ``task`` is present in the numbers form; the other keys appear when non-zero. Unknown
+    extra keys are kept. Prefer `cost_detail` when it is set; otherwise read this model's
+    `base_usd`, `tools` and `total_usd` (see `DeepResearchStatusResponse.effective_cost_detail()`).
     """
 
     model_config = ConfigDict(extra="allow")
 
-    task: float = Field(..., description="Base task price for the selected mode")
-    screenshots: Optional[float] = Field(default=None, description="Screenshot surcharges ($0.05, 8 credits, per successful capture)")
-    code_execution: Optional[float] = Field(default=None, description="Code execution surcharges ($0.10, 16 credits, per successful run)")
-    deliverables: Optional[float] = Field(default=None, description="Deliverable surcharges ($0.10, 16 credits, per deliverable after the first)")
-    datasets: Optional[Union[float, List[CostDetailLine]]] = Field(default=None, description="Premium dataset surcharges: a summed number or a line-item list")
+    task: Optional[float] = Field(default=None, description="Base task price for the selected mode")
+    screenshots: Optional[float] = Field(default=None, description="Screenshot surcharges")
+    code_execution: Optional[float] = Field(default=None, description="Code execution surcharges")
+    deliverables: Optional[float] = Field(default=None, description="Deliverable surcharges")
+    datasets: Optional[Union[float, List[CostDetailLine]]] = Field(default=None, description="Dataset charges: a summed number, or a line-item list in the v2 form")
     x_search: Optional[float] = Field(default=None, description="X search surcharges, summed")
     browse: Optional[float] = Field(default=None, description="Browser-use / browse surcharges, summed")
+    ocr: Optional[float] = Field(default=None, description="OCR charges")
+    urls: Optional[float] = Field(default=None, description="URL charges")
     other_tools: Optional[float] = Field(default=None, description="Any other tool surcharge not broken out above")
     # Present when this is the itemized bill rather than the numbers-only one.
-    base_usd: Optional[float] = None
-    tools: Optional[List[CostDetailLine]] = None
-    total_usd: Optional[float] = None
+    base_usd: Optional[float] = Field(default=None, description="Base price in USD (v2 form)")
+    tools: Optional[List[CostDetailLine]] = Field(default=None, description="Tool lines (v2 form)")
+    total_usd: Optional[float] = Field(default=None, description="Total in USD (v2 form)")
+    base_credits: Optional[float] = Field(default=None, description="Base price in credits (v2 form)")
+    total_credits: Optional[float] = Field(default=None, description="Total in credits (v2 form)")
+
+
+# Kept as aliases: tool and dataset lines share one tolerant line model.
+CostDetailTool = CostDetailLine
+CostDetailDataset = CostDetailLine
 
 
 class HitlConfig(BaseModel):
@@ -722,9 +745,16 @@ class DeepResearchStatusResponse(BaseModel):
     pdf_url: Optional[str] = None
     images: Optional[List[ImageMetadata]] = None
     deliverables: Optional[List[DeliverableResult]] = None
+    pending_deliverables: Optional[List[DeliverableResult]] = Field(
+        None, description="Deliverables still being generated (status 'pending')"
+    )
     sources: Optional[List[DeepResearchSource]] = None
     cost: Optional[float] = None
+    cost_credits: Optional[float] = Field(default=None, description="Cost in platform credits")
     cost_breakdown: Optional[DeepResearchCostBreakdown] = Field(default=None, description="Itemized cost breakdown (task, screenshots, code_execution, deliverables)")
+    cost_breakdown_credits: Optional[DeepResearchCostBreakdown] = Field(
+        default=None, description="Itemized cost breakdown, values in credits"
+    )
     cost_detail: Optional[DeepResearchCostDetail] = Field(
         default=None, description="Itemized bill (base_usd, labelled tool/dataset lines, total_usd), beside cost_breakdown"
     )
@@ -1055,6 +1085,7 @@ class BatchCreateResponse(BaseModel):
     mode: Optional[_OpenMode] = None
     research_mode: Optional[_OpenMode] = None
     name: Optional[str] = None
+    # Open to any string: the API can return newer formats (for example "structured_report").
     output_formats: Optional[
         List[Union[Literal["markdown", "pdf", "toon"], str, Dict[str, Any]]]
     ] = None

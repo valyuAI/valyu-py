@@ -51,6 +51,10 @@ class ContentsResultSuccess(BaseModel):
     # 404 when the page returned 404 but its body is a real page. None for a
     # normal page.
     http_status: Optional[int] = None
+    # The page the request ended on, when it redirected to a different page
+    # (for example a closed job that redirects to the careers page). None
+    # when there was no redirect.
+    final_url: Optional[str] = None
 
 
 class ContentsResultFailed(BaseModel):

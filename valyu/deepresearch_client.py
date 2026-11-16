@@ -233,6 +233,7 @@ class DeepResearchClient:
         hitl=None,
         tools=None,
         code_execution=None,
+        skills=None,
     ) -> Dict[str, Any]:
         """
         Build the request fields that are valid for both freeform and workflow runs.
@@ -294,6 +295,8 @@ class DeepResearchClient:
             fields["cover_art"] = _build_cover_art(cover_art)
         if metadata:
             fields["metadata"] = metadata
+        if skills:
+            fields["skills"] = list(skills)
         if hitl is not None:
             fields["hitl"] = (
                 hitl.model_dump(exclude_none=True)
@@ -329,6 +332,7 @@ class DeepResearchClient:
         cover_art: Optional[Union[CoverArt, Dict[str, Any], bytes, str, "os.PathLike[str]"]] = None,
         hitl: Optional[Union[HitlConfig, Dict[str, bool]]] = None,
         metadata: Optional[Dict[str, Union[str, int, bool]]] = None,
+        skills: Optional[List[str]] = None,
         workflow_id: Optional[str] = None,
         workflow_params: Optional[Dict[str, Any]] = None,
         workflow_version: Optional[int] = None,
@@ -406,6 +410,7 @@ class DeepResearchClient:
                 - outline_review: Review the report outline
                 Not available for batch requests or in "instant" mode.
             metadata: Custom metadata (key-value pairs)
+            skills: Optional list of skill names to enable for the task (for example ["forecasting"]). Sent only when given.
             workflow_id: Slug of a workflow to run (see client.workflows.list()).
                         The workflow's template supplies the prompt, strategy,
                         report format, deliverables, and mode. Mutually exclusive
@@ -507,6 +512,7 @@ class DeepResearchClient:
                         hitl=hitl,
                         tools=tools,
                         code_execution=code_execution,
+                        skills=skills,
                     )
                 )
 
@@ -598,6 +604,7 @@ class DeepResearchClient:
                     hitl=hitl,
                     tools=tools,
                     code_execution=code_execution,
+                    skills=skills,
                 )
             )
 
