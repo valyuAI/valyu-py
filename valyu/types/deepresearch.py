@@ -126,9 +126,19 @@ class MCPServerConfig(BaseModel):
 
 
 class Deliverable(BaseModel):
-    """Deliverable file configuration."""
+    """Deliverable file configuration.
 
-    type: Literal["csv", "xlsx", "pptx", "docx", "pdf"] = Field(
+    For ``type="json"``, set ``json_schema`` to a JSON Schema (2020-12 by default,
+    draft-07 when the ``$schema`` header says so) that the produced file must
+    validate against. It is sent as ``schema`` in the request body. Without it,
+    the file has this shape: ``{title, as_of, summary, key_findings: [{finding,
+    citations: [int]}], tables: [{title, columns, rows: [{...}]}], sources: [{n,
+    title, url}]}``.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    type: Literal["csv", "xlsx", "pptx", "docx", "pdf", "html", "json"] = Field(
         ..., description="File type"
     )
     description: str = Field(
@@ -143,6 +153,15 @@ class Deliverable(BaseModel):
     sheet_name: Optional[str] = Field(None, description="Sheet name (for XLSX only)")
     slides: Optional[int] = Field(None, description="Number of slides (for PPTX only)")
     template: Optional[str] = Field(None, description="Template name to use")
+    json_schema: Optional[Dict[str, Any]] = Field(
+        None,
+        alias="schema",
+        description=(
+            "JSON Schema the produced file must validate against (json type only; "
+            "the API ignores it with a warning on other types, and returns 400 "
+            "DELIVERABLE_SCHEMA_INVALID for an invalid schema)"
+        ),
+    )
 
 
 class DeliverableResult(BaseModel):
@@ -150,7 +169,7 @@ class DeliverableResult(BaseModel):
 
     id: str = Field(..., description="Unique deliverable ID")
     request: Optional[str] = Field(None, description="Original request description")
-    type: Union[Literal["csv", "xlsx", "pptx", "docx", "pdf", "unknown"], str] = Field(
+    type: Union[Literal["csv", "xlsx", "pptx", "docx", "pdf", "html", "json", "unknown"], str] = Field(
         ..., description="Deliverable file type (new types may appear; kept as a string)"
     )
     status: Union[Literal["completed", "failed", "pending"], str] = Field(
