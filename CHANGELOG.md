@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.14.0
+
+- DeepResearch report editing. Make small, targeted edits to a finished DeepResearch report or deliverable with a plain-language instruction. Untouched text stays exactly as it was, citations stay consistent, and every edit creates a new version you can restore.
+- New methods on `deepresearch`: `edit(task_id, instruction, target=None, focus=None, base_version=None, citations=None, wait_seconds=None, idempotency_key=None)`, `get_edit(task_id, edit_id)`, `list_edits(task_id)`, `wait_for_edit(task_id, edit_id, poll_interval=None, max_wait_time=600)`, `list_versions(task_id)` and `restore_version(task_id, version)`. `edit()` sends only the fields you set, and `idempotency_key` as the `Idempotency-Key` header.
+- `status()` accepts `version` to read an earlier version of an edited report. Each version is cached separately for conditional polling.
+- Status responses gain `editable`, `version`, `version_count`, `revised_at`, `active_edit` and `is_latest`, and a failed status request carries `error_code`.
+- New exported types: `DeepResearchEdit`, `DeepResearchEditResponse`, `DeepResearchEditListResponse`, `DeepResearchEditStatus`, `DeepResearchEditTarget`, `DeepResearchEditFocus`, `DeepResearchEditDecline`, `DeepResearchEditError`, `DeepResearchFocusCandidate`, `DeepResearchVersion`, `DeepResearchVersionListResponse` and `DeepResearchVersionRestoreResponse`.
+- A rejected edit request returns `success=False` with `error_code` (for example `edit.in_progress`, `edit.revision_conflict` or `focus.ambiguous`) and, for an ambiguous focus, `candidates`. A declined edit is `success=True` with `status="declined"` and `decline`.
+
 ## 2.13.9
 
 - DeepResearch deliverables accept the types `html` and `json`. Results with these types parse as before.
