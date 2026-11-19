@@ -1,4 +1,4 @@
-__version__ = "2.13.9"
+__version__ = "2.14.0"
 
 from .types.response import SearchResponse
 from .types.contents import (
@@ -22,6 +22,18 @@ from .types.deepresearch import (
     Interaction,
     InteractionHistoryEntry,
     DeepResearchRespondResponse,
+    DeepResearchEditStatus,
+    DeepResearchEditTarget,
+    DeepResearchEditFocus,
+    DeepResearchEditDecline,
+    DeepResearchEditError,
+    DeepResearchFocusCandidate,
+    DeepResearchEdit,
+    DeepResearchEditResponse,
+    DeepResearchEditListResponse,
+    DeepResearchVersion,
+    DeepResearchVersionListResponse,
+    DeepResearchVersionRestoreResponse,
 )
 from .types.workflows import (
     Workflow,
@@ -68,6 +80,18 @@ __all__ = [
     "Interaction",
     "InteractionHistoryEntry",
     "DeepResearchRespondResponse",
+    "DeepResearchEditStatus",
+    "DeepResearchEditTarget",
+    "DeepResearchEditFocus",
+    "DeepResearchEditDecline",
+    "DeepResearchEditError",
+    "DeepResearchFocusCandidate",
+    "DeepResearchEdit",
+    "DeepResearchEditResponse",
+    "DeepResearchEditListResponse",
+    "DeepResearchVersion",
+    "DeepResearchVersionListResponse",
+    "DeepResearchVersionRestoreResponse",
     "Workflow",
     "WorkflowVariable",
     "WorkflowVariableValidation",

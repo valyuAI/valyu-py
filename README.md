@@ -162,6 +162,12 @@ print(result.pdf_url)  # PDF download link
 | `cancel(task_id)` | Cancel a running task |
 | `delete(task_id)` | Delete a task |
 | `toggle_public(task_id, is_public)` | Toggle public access |
+| `edit(task_id, instruction, ...)` | Edit a finished report or deliverable |
+| `get_edit(task_id, edit_id)` | Get one edit |
+| `list_edits(task_id)` | List a task's edits |
+| `wait_for_edit(task_id, edit_id, ...)` | Poll until an edit finishes |
+| `list_versions(task_id)` | List report versions |
+| `restore_version(task_id, version)` | Restore an earlier version |
 
 </details>
 
@@ -173,6 +179,42 @@ result = valyu.deepresearch.wait(task.deepresearch_id)
 ```
 
 **Polling.** `status()`, `wait()` and `stream()` poll conditionally. When the server returns an `ETag`, the next poll for that task sends it as `If-None-Match`; a `304 Not Modified` reuses the previous response with no body transferred, and `on_progress` / stream progress callbacks are not repeated for a 304. When `poll_interval` is not set, `wait()` and `stream()` follow the server's `Retry-After` hint (clamped to 1-30 seconds, default 5); an explicit `poll_interval` always wins. Rate limits (429) and server errors (5xx) are retried with jittered exponential backoff. Servers that send no `ETag` are polled exactly as before.
+
+#### Edit a finished report
+
+Make small, targeted edits to a finished DeepResearch report or deliverable with a plain-language instruction. Untouched text stays exactly as it was, citations stay consistent, and every edit creates a new version you can restore.
+
+```python
+result = valyu.deepresearch.wait(task.deepresearch_id)
+
+if result.editable:
+    edit = valyu.deepresearch.edit(
+        task.deepresearch_id,
+        "Cut the executive summary to 3 bullets and add the Q3 revenue figure with its citation.",
+        focus={"section": "Executive Summary", "scope": "strict"},
+        base_version=result.version,
+        wait_seconds=15,
+    )
+    if edit.success and edit.status == "running":
+        edit = valyu.deepresearch.wait_for_edit(task.deepresearch_id, edit.edit_id)
+
+    if edit.status == "applied":
+        print(f"Version {edit.version}: {edit.summary}")
+        updated = valyu.deepresearch.status(task.deepresearch_id)
+    elif edit.status == "declined":
+        print(edit.decline.code, edit.decline.suggestion)
+    else:
+        print(edit.error_code, edit.error)
+```
+
+- **Target.** Edits change the report by default. Pass `target={"kind": "deliverable", "deliverable_id": "f_01"}` to edit a deliverable file, using the `id` from the task's `deliverables`.
+- **Focus.** `focus` (a `DeepResearchEditFocus` or dict) points the edit at a passage (`start_char`/`end_char` UTF-16 offsets into the version's `output`, `text`, `prefix`, `suffix`) or a `section` heading. `scope="strict"` rejects any change outside it; the default is `"prefer"`.
+- **Citations.** `citations="stable"` (the default) keeps existing citation numbers; `"compact"` renumbers them by first appearance.
+- **Concurrency.** Pass `base_version` (the `version` from `status()`) to fail with `edit.revision_conflict` instead of editing a report that changed since you read it. Pass `idempotency_key` so a retried request returns the same edit.
+- **Outcomes.** A finished edit is `applied`, `declined` (a normal outcome with `decline.code`, for example `edit.out_of_evidence` or `edit.rewrite_requested`; start a new task for those) or `failed` (`error.code`, for example `edit.interrupted`). A rejected request has `success=False` and an `error_code` such as `edit.in_progress`, `edit.task_not_completed` or `focus.ambiguous` (with `candidates`).
+- **Versions.** `list_versions(task_id)` lists every version (version 1 is the original), `status(task_id, version=N)` reads one, and `restore_version(task_id, N)` makes version N current again as a new version. No version is deleted.
+
+Guide: https://docs.valyu.ai/guides/deepresearch-editing
 
 ### Batch
 
