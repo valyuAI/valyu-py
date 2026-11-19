@@ -239,7 +239,7 @@ class DeepResearchClient:
             ]
         if deliverables:
             fields["deliverables"] = [
-                d.model_dump(exclude_none=True) if isinstance(d, Deliverable) else d
+                d.model_dump(exclude_none=True, by_alias=True) if isinstance(d, Deliverable) else d
                 for d in deliverables
             ]
         if mcp_servers:
@@ -341,7 +341,7 @@ class DeepResearchClient:
                    - category: Category filter for results
             urls: URLs to extract and analyze
             files: File attachments (PDFs, images)
-            deliverables: Additional file outputs to generate (CSV, Excel, PowerPoint, Word, PDF). Max 10.
+            deliverables: Additional file outputs to generate (CSV, Excel, PowerPoint, Word, PDF, HTML, JSON). Max 10.
                          Can be simple strings or Deliverable objects with detailed configuration.
             mcp_servers: MCP server configurations for custom tools
             code_execution: Enable/disable code execution (deprecated, use tools parameter instead)

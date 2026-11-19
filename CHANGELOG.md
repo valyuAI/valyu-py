@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.13.9
+
+- DeepResearch deliverables accept the types `html` and `json`. Results with these types parse as before.
+- `Deliverable` gains `json_schema` (sent as `schema`) for `type="json"`: a JSON Schema the produced file must validate against. Without it, the file has the default shape `{title, as_of, summary, key_findings, tables, sources}`.
+
 ## 2.13.8
 
 - Deprecation: the Answer API stops working on 2026-12-17, when the endpoint returns HTTP 410. `answer()` still works as before, but now emits a `DeprecationWarning` on each call. Use DeepResearch with `mode="instant"`, or `search()` plus your own LLM. Migration guide: https://docs.valyu.ai/api-reference/endpoint/answer#migrate-from-answer
