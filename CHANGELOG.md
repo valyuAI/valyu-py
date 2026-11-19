@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.14.1
+
+- `deepresearch.status()`: `version` is keyword-only, so `status(task_id, version=2)` is the only way to read a version. Before, `status(task_id, 2)` set `max_attempts` and returned the current report. Calls that pass `max_attempts` positionally work as before.
+
 ## 2.14.0
 
 - DeepResearch report editing. Make small, targeted edits to a finished DeepResearch report or deliverable with a plain-language instruction. Untouched text stays exactly as it was, citations stay consistent, and every edit creates a new version you can restore.

@@ -595,7 +595,7 @@ class DeepResearchClient:
             )
 
     def status(
-        self, task_id: str, max_attempts: int = 5, version: Optional[int] = None
+        self, task_id: str, max_attempts: int = 5, *, version: Optional[int] = None
     ) -> DeepResearchStatusResponse:
         """
         Get the status of a deep research task.
@@ -608,8 +608,8 @@ class DeepResearchClient:
         The status endpoint is idempotent and built to be polled, so transient
         failures are retried with exponential backoff + jitter instead of being
         reported as task failures. Treated as transient (and retried):
-        connection errors and timeouts, HTTP 429/5xx (e.g. an ALB 502 gateway
-        page), and non-JSON or empty response bodies. Only a definitive error
+        connection errors and timeouts, HTTP 429/5xx (e.g. a 502 page from a
+        proxy or gateway), and non-JSON or empty response bodies. Only a definitive error
         response (a 4xx other than 429 carrying a JSON error) is returned as a
         failure. A Retry-After header on a 429/503 lengthens the backoff.
 

@@ -232,6 +232,18 @@ class TestVersions(unittest.TestCase):
         )
         self.assertEqual((restored.version, restored.restored_from), (3, 1))
 
+    def test_status_version_cannot_be_passed_positionally(self):
+        """status(task_id, 2) must not be read as a version request: the
+        second positional argument is max_attempts, so version is keyword-only
+        and a positional version fails loudly instead of returning the head."""
+        client, session = _make_client()
+        session.get.return_value = _response(200, {"deepresearch_id": "dr_1", "status": "completed"})
+
+        client.status("dr_1", 2)
+        self.assertNotIn("params", session.get.call_args.kwargs)
+        with self.assertRaises(TypeError):
+            client.status("dr_1", 5, 2)
+
     def test_status_version_is_not_served_from_the_head_cache(self):
         """status(version=N) sends ?version=N and must not send the current
         report's ETag, or a 304 would hand back the wrong version."""
