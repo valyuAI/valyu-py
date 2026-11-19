@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.13.10
+
+- DeepResearch: new `tools.ultrasearch` option on `deepresearch.create()`. Pass `True` for the default spend cap, or `{"max_usd": <number greater than 0>}` to set the cap in USD. It works in `heavy` and `max` modes only. It is refused on a backtest task. The SDK sends only `tools.ultrasearch`, and only when you set it. A non-positive or non-finite `max_usd` returns an error response before any request is sent. New exported `UltrasearchConfig` type in `valyu.types`.
+- DeepResearch responses: new typed fields `structured_report`, `sources[].locations`, `error_message` and `ignored_fields`. Image `image_type` accepts `attachment`. `chart_type` accepts `stacked` and `slope`. Deliverables can carry `filename`, `bytes`, `attempts` and `summary`. Cost line items also accept `credits`, `source` and `rows`. New `is_retryable_error()` and `RETRYABLE_ERROR_CODES`. Unknown values in these fields no longer fail the parse.
+- Response types no longer expose internal fields. `DeliverableResult.s3_key`, `DeepResearchSource.org_id`, `doc_id` and `source_id`, and `DeepResearchBatch.organisation_id`, `api_key_id` and `credit_id` are removed. The SDK also drops these keys if a response still carries them.
+- `deepresearch.create()` now emits a `DeprecationWarning` when `mode` or `model` is `"lite"`. The SDK still sends `"standard"` for it. Use `"standard"` or `"fast"`.
+- The `model` argument of `deepresearch.create()`, `batch.create()` and `batch.create_and_run()` is deprecated. Use `mode`. Passing `model` emits a `DeprecationWarning`, and the SDK sends its value as `mode` only.
+- `batch.create()` accepts an optional `tasks` argument, so you can create a batch with its tasks in one call.
+
 ## 2.13.9
 
 - DeepResearch deliverables accept the types `html` and `json`. Results with these types parse as before.

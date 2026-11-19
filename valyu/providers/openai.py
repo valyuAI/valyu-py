@@ -123,7 +123,7 @@ class OpenAIProvider(BaseProvider[OpenAITool, OpenAIToolCollection]):
         :param response: Response object from openai.responses.create function call
         :return: A list of output objects from the function calls
         """
-        outputs = []
+        outputs: t.List[t.Dict[str, t.Any]] = []
 
         if not response or not hasattr(response, "output") or not response.output:
             return outputs
