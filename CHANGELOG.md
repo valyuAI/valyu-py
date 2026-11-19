@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.13.9
+## 2.13.10
 
 - DeepResearch: new `tools.ultrasearch` option on `deepresearch.create()`. Pass `True` for the default spend cap, or `{"max_usd": <number greater than 0>}` to set the cap in USD. It works in `heavy` and `max` modes only. It is refused on a backtest task. The SDK sends only `tools.ultrasearch`, and only when you set it. A non-positive or non-finite `max_usd` returns an error response before any request is sent. New exported `UltrasearchConfig` type in `valyu.types`.
 - DeepResearch responses: new typed fields `structured_report`, `sources[].locations`, `error_message` and `ignored_fields`. Image `image_type` accepts `attachment`. `chart_type` accepts `stacked` and `slope`. Deliverables can carry `filename`, `bytes`, `attempts` and `summary`. Cost line items also accept `credits`, `source` and `rows`. New `is_retryable_error()` and `RETRYABLE_ERROR_CODES`. Unknown values in these fields no longer fail the parse.
@@ -8,6 +8,15 @@
 - `deepresearch.create()` now emits a `DeprecationWarning` when `mode` or `model` is `"lite"`. The SDK still sends `"standard"` for it. Use `"standard"` or `"fast"`.
 - The `model` argument of `deepresearch.create()`, `batch.create()` and `batch.create_and_run()` is deprecated. Use `mode`. Passing `model` emits a `DeprecationWarning`, and the SDK sends its value as `mode` only.
 - `batch.create()` accepts an optional `tasks` argument, so you can create a batch with its tasks in one call.
+
+## 2.13.9
+
+- DeepResearch deliverables accept the types `html` and `json`. Results with these types parse as before.
+- `Deliverable` gains `json_schema` (sent as `schema`) for `type="json"`: a JSON Schema the produced file must validate against. Without it, the file has the default shape `{title, as_of, summary, key_findings, tables, sources}`.
+
+## 2.13.8
+
+- Deprecation: the Answer API stops working on 2026-12-17, when the endpoint returns HTTP 410. `answer()` still works as before, but now emits a `DeprecationWarning` on each call. Use DeepResearch with `mode="instant"`, or `search()` plus your own LLM. Migration guide: https://docs.valyu.ai/api-reference/endpoint/answer#migrate-from-answer
 
 ## 2.13.7
 

@@ -1,3 +1,7 @@
+# DEPRECATED: the Answer API stops working on 2026-12-17 (the endpoint then
+# returns HTTP 410). Use DeepResearch with mode="instant", or search() plus your
+# own LLM. Migration guide:
+# https://docs.valyu.ai/api-reference/endpoint/answer#migrate-from-answer
 """
 Example demonstrating the Valyu Answer API endpoint.
 The Answer API provides AI-processed responses to questions using search data.

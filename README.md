@@ -111,6 +111,8 @@ The `include_image_links` option (default `True`) is also available on `valyu.se
 
 ### Answer
 
+> **Deprecated.** The Answer API is deprecated (announced 2026-11-17) and stops working on 2026-12-17, when the endpoint returns HTTP 410. `valyu.answer()` still works until then but emits a `DeprecationWarning`. Use DeepResearch with `mode="instant"`, or `search()` plus your own LLM. See the [migration guide](https://docs.valyu.ai/api-reference/endpoint/answer#migrate-from-answer).
+
 AI-generated answers grounded by Valyu's search. Supports streaming.
 
 ```python

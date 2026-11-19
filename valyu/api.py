@@ -2,6 +2,7 @@ import json
 import os
 import platform
 import time
+import warnings
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -697,6 +698,17 @@ class Valyu:
         """
         Query the Valyu Answer API to get AI-processed answers to your questions.
 
+        .. deprecated:: 2.13.8
+            The Answer API stops working on 2026-12-17 (the endpoint then returns
+            HTTP 410). Use DeepResearch with ``mode="instant"``
+            (``valyu.deepresearch.create(query, mode="instant")``) or ``search()``
+            with your own LLM. Migration guide:
+            https://docs.valyu.ai/api-reference/endpoint/answer#migrate-from-answer
+
+            This method emits a ``DeprecationWarning`` on every call. Python hides
+            ``DeprecationWarning`` by default outside ``__main__``; run with
+            ``python -W default`` or ``pytest`` to see it.
+
         Args:
             query (str): The query string.
             structured_output (Optional[Dict[str, Any]]): JSON Schema object. When provided,
@@ -727,6 +739,15 @@ class Valyu:
                 - If streaming=False: Returns AnswerSuccessResponse or AnswerErrorResponse
                 - If streaming=True: Returns a generator yielding AnswerStreamChunk objects
         """
+        warnings.warn(
+            "Valyu.answer() is deprecated and stops working on 2026-12-17. "
+            "Use DeepResearch with mode='instant' (valyu.deepresearch.create(query, mode='instant')) "
+            "or search(). Migration guide: "
+            "https://docs.valyu.ai/api-reference/endpoint/answer#migrate-from-answer",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         # Validate inputs first
         validation_error = self._validate_answer_params(
             included_sources=included_sources,
