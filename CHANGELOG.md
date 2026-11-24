@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.13.10
+## 2.14.2
 
 - DeepResearch: new `tools.ultrasearch` option on `deepresearch.create()`. Pass `True` for the default spend cap, or `{"max_usd": <number greater than 0>}` to set the cap in USD. It works in `heavy` and `max` modes only. It is refused on a backtest task. The SDK sends only `tools.ultrasearch`, and only when you set it. A non-positive or non-finite `max_usd` returns an error response before any request is sent. New exported `UltrasearchConfig` type in `valyu.types`.
 - DeepResearch responses: new typed fields `structured_report`, `sources[].locations`, `error_message` and `ignored_fields`. Image `image_type` accepts `attachment`. `chart_type` accepts `stacked` and `slope`. Deliverables can carry `filename`, `bytes`, `attempts` and `summary`. Cost line items also accept `credits`, `source` and `rows`. New `is_retryable_error()` and `RETRYABLE_ERROR_CODES`. Unknown values in these fields no longer fail the parse.
@@ -8,6 +8,19 @@
 - `deepresearch.create()` now emits a `DeprecationWarning` when `mode` or `model` is `"lite"`. The SDK still sends `"standard"` for it. Use `"standard"` or `"fast"`.
 - The `model` argument of `deepresearch.create()`, `batch.create()` and `batch.create_and_run()` is deprecated. Use `mode`. Passing `model` emits a `DeprecationWarning`, and the SDK sends its value as `mode` only.
 - `batch.create()` accepts an optional `tasks` argument, so you can create a batch with its tasks in one call.
+
+## 2.14.1
+
+- `deepresearch.status()`: `version` is keyword-only, so `status(task_id, version=2)` is the only way to read a version. Before, `status(task_id, 2)` set `max_attempts` and returned the current report. Calls that pass `max_attempts` positionally work as before.
+
+## 2.14.0
+
+- DeepResearch report editing. Make small, targeted edits to a finished DeepResearch report or deliverable with a plain-language instruction. Untouched text stays exactly as it was, citations stay consistent, and every edit creates a new version you can restore.
+- New methods on `deepresearch`: `edit(task_id, instruction, target=None, focus=None, base_version=None, citations=None, wait_seconds=None, idempotency_key=None)`, `get_edit(task_id, edit_id)`, `list_edits(task_id)`, `wait_for_edit(task_id, edit_id, poll_interval=None, max_wait_time=600)`, `list_versions(task_id)` and `restore_version(task_id, version)`. `edit()` sends only the fields you set, and `idempotency_key` as the `Idempotency-Key` header.
+- `status()` accepts `version` to read an earlier version of an edited report. Each version is cached separately for conditional polling.
+- Status responses gain `editable`, `version`, `version_count`, `revised_at`, `active_edit` and `is_latest`, and a failed status request carries `error_code`.
+- New exported types: `DeepResearchEdit`, `DeepResearchEditResponse`, `DeepResearchEditListResponse`, `DeepResearchEditStatus`, `DeepResearchEditTarget`, `DeepResearchEditFocus`, `DeepResearchEditDecline`, `DeepResearchEditError`, `DeepResearchFocusCandidate`, `DeepResearchVersion`, `DeepResearchVersionListResponse` and `DeepResearchVersionRestoreResponse`.
+- A rejected edit request returns `success=False` with `error_code` (for example `edit.in_progress`, `edit.revision_conflict` or `focus.ambiguous`) and, for an ambiguous focus, `candidates`. A declined edit is `success=True` with `status="declined"` and `decline`.
 
 ## 2.13.9
 

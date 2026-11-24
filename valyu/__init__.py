@@ -1,4 +1,4 @@
-__version__ = "2.13.10"
+__version__ = "2.14.2"
 
 from .types.response import SearchResponse
 from .types.contents import (
@@ -34,6 +34,18 @@ from .types.deepresearch import (
     CostDetailLine,
     RETRYABLE_ERROR_CODES,
     is_retryable_error,
+    DeepResearchEditStatus,
+    DeepResearchEditTarget,
+    DeepResearchEditFocus,
+    DeepResearchEditDecline,
+    DeepResearchEditError,
+    DeepResearchFocusCandidate,
+    DeepResearchEdit,
+    DeepResearchEditResponse,
+    DeepResearchEditListResponse,
+    DeepResearchVersion,
+    DeepResearchVersionListResponse,
+    DeepResearchVersionRestoreResponse,
 )
 from .types.workflows import (
     Workflow,
@@ -92,6 +104,18 @@ __all__ = [
     "CostDetailLine",
     "RETRYABLE_ERROR_CODES",
     "is_retryable_error",
+    "DeepResearchEditStatus",
+    "DeepResearchEditTarget",
+    "DeepResearchEditFocus",
+    "DeepResearchEditDecline",
+    "DeepResearchEditError",
+    "DeepResearchFocusCandidate",
+    "DeepResearchEdit",
+    "DeepResearchEditResponse",
+    "DeepResearchEditListResponse",
+    "DeepResearchVersion",
+    "DeepResearchVersionListResponse",
+    "DeepResearchVersionRestoreResponse",
     "Workflow",
     "WorkflowVariable",
     "WorkflowVariableValidation",

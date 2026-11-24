@@ -36,6 +36,12 @@ from valyu.types.deepresearch import (
     DeepResearchDeleteResponse,
     DeepResearchTogglePublicResponse,
     DeepResearchRespondResponse,
+    DeepResearchEditFocus,
+    DeepResearchEditTarget,
+    DeepResearchEditResponse,
+    DeepResearchEditListResponse,
+    DeepResearchVersionListResponse,
+    DeepResearchVersionRestoreResponse,
 )
 
 
@@ -640,15 +646,22 @@ class DeepResearchClient:
                 error=str(e),
             )
 
-    def status(self, task_id: str, max_attempts: int = 5) -> DeepResearchStatusResponse:
+    def status(
+        self, task_id: str, max_attempts: int = 5, *, version: Optional[int] = None
+    ) -> DeepResearchStatusResponse:
         """
         Get the status of a deep research task.
+
+        Pass ``version`` to read an earlier version of an edited report: its
+        ``output``, ``sources``, ``pdf_url`` and ``deliverables``, with
+        ``is_latest`` saying whether it is the current one. Only the task
+        owner can read a version other than the current one.
 
         The status endpoint is idempotent and built to be polled, so transient
         failures are retried with exponential backoff + jitter instead of being
         reported as task failures. Treated as transient (and retried):
-        connection errors and timeouts, HTTP 429/5xx (e.g. an ALB 502 gateway
-        page), and non-JSON or empty response bodies. Only a definitive error
+        connection errors and timeouts, HTTP 429/5xx (e.g. a 502 page from a
+        proxy or gateway), and non-JSON or empty response bodies. Only a definitive error
         response (a 4xx other than 429 carrying a JSON error) is returned as a
         failure. A Retry-After header on a 429/503 lengthens the backoff.
 
@@ -665,15 +678,17 @@ class DeepResearchClient:
         Args:
             task_id: Task ID to check
             max_attempts: Attempts before giving up as unreachable (default: 5)
+            version: Report version to read (1 is the original). Omit it for
+                the current version.
 
         Returns:
             DeepResearchStatusResponse with current status
         """
-        status, _, _ = self._poll_status(task_id, max_attempts)
+        status, _, _ = self._poll_status(task_id, max_attempts, version)
         return status
 
     def _poll_status(
-        self, task_id: str, max_attempts: int = 5
+        self, task_id: str, max_attempts: int = 5, version: Optional[int] = None
     ) -> Tuple[DeepResearchStatusResponse, bool, Optional[float]]:
         """
         Read a task's status, conditionally when an ETag is cached.
@@ -684,25 +699,31 @@ class DeepResearchClient:
             server's polling hint in seconds, or None.
         """
         url = f"{self._base_url}/deepresearch/tasks/{task_id}/status"
+        # Each version has its own ETag; caching it under the bare task ID
+        # would answer a version read with the current report.
+        cache_key = task_id if version is None else f"{task_id}@{version}"
+        get_kwargs: Dict[str, Any] = {}
+        if version is not None:
+            get_kwargs["params"] = {"version": version}
         last_error = "status endpoint unreachable"
 
         for attempt in range(max_attempts):
             retry_after = None
-            cached = self._poll_cache.get(task_id)
+            cached = self._poll_cache.get(cache_key)
             try:
                 if cached is not None and cached[0]:
                     response = self._session.get(
-                        url, headers={"If-None-Match": cached[0]}
+                        url, headers={"If-None-Match": cached[0]}, **get_kwargs
                     )
                 else:
-                    response = self._session.get(url)
+                    response = self._session.get(url, **get_kwargs)
                 retry_after = _parse_retry_after(response.headers.get("Retry-After"))
 
                 if response.status_code == 304:
                     if cached is not None:
                         # Not modified: the body is empty by definition, so
                         # reuse the last response rather than parse it.
-                        self._poll_cache.move_to_end(task_id)
+                        self._poll_cache.move_to_end(cache_key)
                         return cached[1].model_copy(), False, retry_after
                     # A 304 we did not ask for has nothing to reuse.
                     last_error = "HTTP 304 without a cached response"
@@ -733,6 +754,7 @@ class DeepResearchClient:
                                     error=data.get(
                                         "error", f"HTTP Error: {response.status_code}"
                                     ),
+                                    error_code=data.get("code"),
                                 ),
                                 True,
                                 retry_after,
@@ -753,7 +775,7 @@ class DeepResearchClient:
                             )
                         etag = response.headers.get("ETag")
                         self._remember(
-                            task_id,
+                            cache_key,
                             etag if isinstance(etag, str) else None,
                             status.model_copy(),
                         )
@@ -1347,3 +1369,280 @@ class DeepResearchClient:
                 success=False,
                 error=str(e),
             )
+
+    # ------------------------------------------------------------------
+    # Report editing
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _edit_response(response) -> DeepResearchEditResponse:
+        """
+        Parse an edit response. A failed request keeps its ``code`` (and the
+        ``candidates`` of an ambiguous focus); a record the SDK can't parse is
+        a definitive failure.
+        """
+        data = response.json()
+        if not response.ok:
+            body = data if isinstance(data, dict) else {}
+            candidates = body.get("candidates")
+            return DeepResearchEditResponse(
+                success=False,
+                error=_error_message(body, response.status_code),
+                error_code=body.get("code"),
+                candidates=candidates if isinstance(candidates, list) else None,
+                status_code=response.status_code,
+                rate_limit=(
+                    rate_limit_detail_from_response(body, response.headers)
+                    if response.status_code == 429
+                    else None
+                ),
+            )
+        data.pop("success", None)
+        try:
+            return DeepResearchEditResponse(success=True, **data)
+        except ValidationError as e:
+            return DeepResearchEditResponse(
+                success=False,
+                error=f"Unexpected edit response: {e}",
+                status_code=response.status_code,
+            )
+
+    @staticmethod
+    def _simple_response(response, model):
+        """Parse a list or restore response into ``model``."""
+        data = response.json()
+        if not response.ok:
+            return model(
+                success=False,
+                error=_error_message(data, response.status_code),
+                error_code=data.get("code") if isinstance(data, dict) else None,
+            )
+        data.pop("success", None)
+        return model(success=True, **data)
+
+    def edit(
+        self,
+        task_id: str,
+        instruction: str,
+        target: Optional[Union[DeepResearchEditTarget, Dict[str, Any]]] = None,
+        focus: Optional[Union[DeepResearchEditFocus, Dict[str, Any]]] = None,
+        base_version: Optional[int] = None,
+        citations: Optional[Literal["stable", "compact"]] = None,
+        wait_seconds: Optional[float] = None,
+        idempotency_key: Optional[str] = None,
+    ) -> DeepResearchEditResponse:
+        """
+        Make small, targeted edits to a finished DeepResearch report or
+        deliverable with a plain-language instruction. Untouched text stays
+        exactly as it was, citations stay consistent, and every edit creates
+        a new version you can restore.
+
+        The task must be completed and ``editable`` in its status. The edit
+        runs in the background: the response has ``status="running"`` and an
+        ``edit_id`` to pass to ``wait_for_edit()`` or ``get_edit()``. With
+        ``wait_seconds``, an edit that finishes in time comes back complete.
+        A declined edit (``status="declined"``) is a normal outcome: read
+        ``decline.code`` and ``decline.suggestion``.
+
+        Args:
+            task_id: The deepresearch_id of a completed task
+            instruction: What to change, in plain language (1 to 4000 characters)
+            target: ``{"kind": "report"}`` (default) or
+                ``{"kind": "deliverable", "deliverable_id": "f_01"}``
+            focus: A passage or section to edit (``DeepResearchEditFocus`` or dict)
+            base_version: The version you read. If the report has moved on
+                since, the request fails with ``edit.revision_conflict``.
+            citations: ``"stable"`` (default) keeps citation numbers;
+                ``"compact"`` renumbers them by first appearance
+            wait_seconds: Wait up to this many seconds (0 to 20) for the edit
+                to finish before returning
+            idempotency_key: Sending the same key again returns the same edit
+                instead of starting another one
+
+        Returns:
+            DeepResearchEditResponse. ``success=False`` means the request was
+            rejected; ``error_code`` says why (for example ``edit.in_progress``
+            or ``focus.ambiguous``, with ``candidates``).
+        """
+        try:
+            if not instruction or not instruction.strip():
+                return DeepResearchEditResponse(
+                    success=False,
+                    error="instruction is required and cannot be empty",
+                )
+
+            payload: Dict[str, Any] = {"instruction": instruction}
+            # The endpoint rejects unknown and null fields, so only set keys go out.
+            if target is not None:
+                payload["target"] = (
+                    target.model_dump(exclude_none=True)
+                    if isinstance(target, DeepResearchEditTarget)
+                    else {k: v for k, v in target.items() if v is not None}
+                )
+            if focus is not None:
+                payload["focus"] = (
+                    focus.model_dump(exclude_none=True)
+                    if isinstance(focus, DeepResearchEditFocus)
+                    else {k: v for k, v in focus.items() if v is not None}
+                )
+            if base_version is not None:
+                payload["base_version"] = base_version
+            if citations is not None:
+                payload["citations"] = citations
+            if wait_seconds is not None:
+                payload["wait_seconds"] = wait_seconds
+
+            post_kwargs: Dict[str, Any] = {"json": payload}
+            if idempotency_key:
+                post_kwargs["headers"] = {"Idempotency-Key": idempotency_key}
+
+            # A 429 means the edit was not started, so retrying is safe.
+            response = send_with_rate_limit_retry(
+                lambda: self._session.post(
+                    f"{self._base_url}/deepresearch/tasks/{task_id}/edit",
+                    **post_kwargs,
+                ),
+                self._max_rate_limit_retries,
+            )
+            return self._edit_response(response)
+
+        except Exception as e:
+            return DeepResearchEditResponse(success=False, error=str(e))
+
+    def get_edit(self, task_id: str, edit_id: str) -> DeepResearchEditResponse:
+        """
+        Get one edit of a task.
+
+        Args:
+            task_id: The deepresearch_id of the task
+            edit_id: The edit_id returned by ``edit()``
+
+        Returns:
+            DeepResearchEditResponse with the edit's current status
+        """
+        try:
+            response = self._session.get(
+                f"{self._base_url}/deepresearch/tasks/{task_id}/edits/{edit_id}"
+            )
+            return self._edit_response(response)
+
+        except Exception as e:
+            return DeepResearchEditResponse(success=False, error=str(e))
+
+    def list_edits(self, task_id: str) -> DeepResearchEditListResponse:
+        """
+        List the edits of a task.
+
+        Args:
+            task_id: The deepresearch_id of the task
+
+        Returns:
+            DeepResearchEditListResponse with ``edits``
+        """
+        try:
+            response = self._session.get(
+                f"{self._base_url}/deepresearch/tasks/{task_id}/edits"
+            )
+            return self._simple_response(response, DeepResearchEditListResponse)
+
+        except Exception as e:
+            return DeepResearchEditListResponse(success=False, error=str(e))
+
+    def wait_for_edit(
+        self,
+        task_id: str,
+        edit_id: str,
+        poll_interval: Optional[float] = None,
+        max_wait_time: float = 600,
+    ) -> DeepResearchEditResponse:
+        """
+        Wait for an edit to finish, polling ``get_edit()``.
+
+        Returns the finished edit whether it was applied, declined or failed;
+        check ``status``. A temporary error while polling (HTTP 429/5xx or a
+        network error) is retried until ``max_wait_time``.
+
+        Args:
+            task_id: The deepresearch_id of the task
+            edit_id: The edit_id returned by ``edit()``
+            poll_interval: Seconds between polls. When not set, the edit's
+                ``retry_after_seconds`` hint is used (clamped to 1-30
+                seconds), else 5.
+            max_wait_time: Maximum wait time in seconds (default: 600)
+
+        Returns:
+            The finished DeepResearchEditResponse
+
+        Raises:
+            TimeoutError: If the edit is still running after max_wait_time
+            ValueError: If the edit cannot be read (for example HTTP 404)
+        """
+        start_time = time.time()
+        while True:
+            edit = self.get_edit(task_id, edit_id)
+            retry_after = None
+            if edit.success:
+                if edit.is_terminal:
+                    return edit
+                retry_after = edit.retry_after_seconds
+            elif (
+                edit.status_code is not None
+                and edit.status_code not in _TRANSIENT_STATUS_CODES
+            ):
+                raise ValueError(f"Failed to get edit: {edit.error}")
+            elif edit.rate_limit is not None:
+                retry_after = edit.rate_limit.retry_after
+
+            if time.time() - start_time > max_wait_time:
+                raise TimeoutError(
+                    f"Edit did not finish within {max_wait_time} seconds"
+                )
+            time.sleep(_next_poll_interval(poll_interval, retry_after))
+
+    def list_versions(self, task_id: str) -> DeepResearchVersionListResponse:
+        """
+        List the versions of a report. Version 1 is the original; every
+        applied edit or restore adds one.
+
+        Args:
+            task_id: The deepresearch_id of the task
+
+        Returns:
+            DeepResearchVersionListResponse with ``head`` and ``versions``
+        """
+        try:
+            response = self._session.get(
+                f"{self._base_url}/deepresearch/tasks/{task_id}/versions"
+            )
+            return self._simple_response(response, DeepResearchVersionListResponse)
+
+        except Exception as e:
+            return DeepResearchVersionListResponse(success=False, error=str(e))
+
+    def restore_version(
+        self, task_id: str, version: int
+    ) -> DeepResearchVersionRestoreResponse:
+        """
+        Restore an earlier version of a report. This adds a new current
+        version equal to ``version``; no version is deleted.
+
+        Args:
+            task_id: The deepresearch_id of the task
+            version: The version to restore
+
+        Returns:
+            DeepResearchVersionRestoreResponse with the new ``version`` and
+            ``restored_from``
+        """
+        try:
+            response = send_with_rate_limit_retry(
+                lambda: self._session.post(
+                    f"{self._base_url}/deepresearch/tasks/{task_id}/versions/{version}/restore",
+                    json={},
+                ),
+                self._max_rate_limit_retries,
+            )
+            return self._simple_response(response, DeepResearchVersionRestoreResponse)
+
+        except Exception as e:
+            return DeepResearchVersionRestoreResponse(success=False, error=str(e))

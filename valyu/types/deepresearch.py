@@ -683,6 +683,229 @@ class StructuredReport(BaseModel):
     warnings: List[str] = Field(default_factory=list)
 
 
+# =============================================================================
+# Report editing
+# =============================================================================
+
+
+class DeepResearchEditStatus(str, Enum):
+    """Edit status options. ``running`` is the only non-terminal status."""
+
+    RUNNING = "running"
+    APPLIED = "applied"
+    DECLINED = "declined"
+    FAILED = "failed"
+
+
+_OpenEditStatus = Annotated[Union[DeepResearchEditStatus, str], BeforeValidator(_open_enum(DeepResearchEditStatus))]
+
+
+class DeepResearchEditTarget(BaseModel):
+    """What an edit changes: the written report (default) or one deliverable file."""
+
+    kind: Union[Literal["report", "deliverable"], str] = Field(
+        "report", description="'report' or 'deliverable'"
+    )
+    deliverable_id: Optional[str] = Field(
+        None,
+        description="ID from deliverables[] in the task status (for example 'f_01'). Required when kind is 'deliverable'.",
+    )
+
+
+class DeepResearchEditFocus(BaseModel):
+    """
+    Where an edit should apply: a highlighted passage, a section, or both.
+
+    ``start_char`` and ``end_char`` go together and are UTF-16 offsets into
+    the ``output`` markdown of the edit's ``base_version``. ``section`` on its
+    own focuses that whole section. ``scope`` is ``"prefer"`` (default, guides
+    the editor) or ``"strict"`` (rejects any change outside the focus).
+    """
+
+    start_char: Optional[int] = Field(None, ge=0, description="Start offset (UTF-16), paired with end_char")
+    end_char: Optional[int] = Field(None, ge=1, description="End offset (UTF-16), greater than start_char")
+    text: Optional[str] = Field(None, max_length=20000, description="The highlighted text")
+    prefix: Optional[str] = Field(None, max_length=2000, description="Text just before the passage")
+    suffix: Optional[str] = Field(None, max_length=2000, description="Text just after the passage")
+    section: Optional[str] = Field(None, min_length=1, max_length=300, description="A section heading")
+    scope: Optional[Union[Literal["prefer", "strict"], str]] = Field(
+        None, description="'prefer' (default) or 'strict'"
+    )
+
+    @model_validator(mode="after")
+    def check_offsets(self):
+        if (self.start_char is None) != (self.end_char is None):
+            raise ValueError("start_char and end_char must be given together")
+        if self.start_char is not None and self.end_char <= self.start_char:
+            raise ValueError("end_char must be greater than start_char")
+        return self
+
+
+class DeepResearchEditDecline(BaseModel):
+    """Why an edit was declined. A decline is a normal outcome, not an HTTP error."""
+
+    code: str = Field(
+        ...,
+        description=(
+            "edit.rewrite_requested, edit.out_of_evidence, edit.contradictory, "
+            "edit.unsafe_instruction, edit.not_applicable or edit.no_change "
+            "(new codes may appear; kept as a string)"
+        ),
+    )
+    message: str
+    suggestion: Optional[str] = None
+
+
+class DeepResearchEditError(BaseModel):
+    """Why an edit failed, on a record with status ``failed``."""
+
+    code: Optional[str] = None
+    message: Optional[str] = None
+    retryable: Optional[bool] = Field(
+        None, description="True when submitting the same edit again may succeed"
+    )
+
+
+class DeepResearchFocusCandidate(BaseModel):
+    """One place an ambiguous focus matched (HTTP 422 focus.ambiguous)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    start_char: Optional[int] = None
+    end_char: Optional[int] = None
+    section: Optional[str] = None
+    prefix: Optional[str] = None
+    suffix: Optional[str] = None
+
+
+class _DeepResearchEditFields(BaseModel):
+    """Fields shared by an edit record and the edit responses."""
+
+    edit_id: Optional[str] = None
+    deepresearch_id: Optional[str] = None
+    status: Optional[_OpenEditStatus] = None
+    target: Optional[DeepResearchEditTarget] = None
+    base_version: Optional[int] = Field(None, description="The version the edit was made against")
+    version: Optional[int] = Field(
+        None, description="The new version an applied edit created; None otherwise"
+    )
+    focus: Optional[DeepResearchEditFocus] = None
+    summary: Optional[str] = Field(None, description="What the edit changed")
+    changes: Optional[List[Dict[str, Any]]] = None
+    unapplied: Optional[List[Union[str, Dict[str, Any]]]] = Field(
+        None, description="Parts of the instruction that were not applied"
+    )
+    stats: Optional[Dict[str, Any]] = None
+    warnings: ResponseWarnings = None
+    decline: Optional[DeepResearchEditDecline] = None
+    pdf_url: Optional[str] = Field(None, description="Re-rendered PDF for the new version, when the task has a PDF")
+    created_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    retry_after_seconds: Optional[float] = Field(
+        None, description="Suggested wait before polling a running edit"
+    )
+
+    @property
+    def is_terminal(self) -> bool:
+        """True once the edit is applied, declined or failed."""
+        return self.status is not None and self.status != DeepResearchEditStatus.RUNNING
+
+
+class DeepResearchEdit(_DeepResearchEditFields):
+    """An edit record: one edit of a finished report or deliverable."""
+
+    error: Optional[DeepResearchEditError] = Field(
+        None, description="Why the edit failed, when status is 'failed'"
+    )
+
+
+class DeepResearchEditResponse(_DeepResearchEditFields):
+    """
+    Response from ``edit()``, ``get_edit()`` and ``wait_for_edit()``.
+
+    ``success`` is False when the request itself failed (HTTP 4xx/5xx or a
+    network error). Then ``error`` is the message, ``error_code`` the
+    machine-readable code (for example ``edit.in_progress`` or
+    ``focus.ambiguous``) and ``candidates`` lists the matches of an ambiguous
+    focus. A declined or failed edit is still ``success=True``: read
+    ``status``, ``decline`` and ``error`` (a ``DeepResearchEditError``).
+    """
+
+    success: bool
+    error: Optional[Union[DeepResearchEditError, str]] = Field(
+        None,
+        description="The message of a failed request (str), or why the edit failed (DeepResearchEditError)",
+    )
+    error_code: Optional[str] = Field(
+        None,
+        description="Machine-readable code of a failed request, or of a failed edit",
+    )
+    candidates: Optional[List[DeepResearchFocusCandidate]] = Field(
+        None, description="Possible matches when the focus was ambiguous (HTTP 422)"
+    )
+    status_code: Optional[int] = Field(None, description="HTTP status of a failed request")
+    rate_limit: Optional[RateLimitDetail] = Field(
+        default=None,
+        description="Structured detail when the request failed with HTTP 429. None otherwise.",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def fill_error_code(cls, data):
+        """Expose a failed edit's ``error.code`` as ``error_code`` too."""
+        if isinstance(data, dict) and not data.get("error_code"):
+            err = data.get("error")
+            if isinstance(err, dict) and err.get("code"):
+                data = {**data, "error_code": err["code"]}
+        return data
+
+
+class DeepResearchEditListResponse(BaseModel):
+    """Response from ``list_edits()``: the task's edits."""
+
+    success: bool
+    deepresearch_id: Optional[str] = None
+    edits: Optional[List[DeepResearchEdit]] = None
+    error: Optional[str] = None
+    error_code: Optional[str] = None
+
+
+class DeepResearchVersion(BaseModel):
+    """One version of a report. Version 1 is the original."""
+
+    version: int
+    kind: Optional[Union[Literal["original", "edit", "restore"], str]] = None
+    target: Optional[DeepResearchEditTarget] = None
+    created_at: Optional[str] = None
+    edit_id: Optional[str] = None
+    instruction: Optional[str] = None
+    summary: Optional[str] = None
+    stats: Optional[Dict[str, Any]] = None
+    is_head: Optional[bool] = None
+    pdf_url: Optional[str] = None
+
+
+class DeepResearchVersionListResponse(BaseModel):
+    """Response from ``list_versions()``."""
+
+    success: bool
+    deepresearch_id: Optional[str] = None
+    head: Optional[int] = Field(None, description="The current version")
+    versions: Optional[List[DeepResearchVersion]] = None
+    error: Optional[str] = None
+    error_code: Optional[str] = None
+
+
+class DeepResearchVersionRestoreResponse(BaseModel):
+    """Response from ``restore_version()``: the new head version and its source."""
+
+    success: bool
+    version: Optional[int] = Field(None, description="The new head version")
+    restored_from: Optional[int] = Field(None, description="The version that was restored")
+    error: Optional[str] = None
+    error_code: Optional[str] = None
+
+
 class DeepResearchCreateResponse(BaseModel):
     """Response from creating a deep research task."""
 
@@ -787,6 +1010,18 @@ class DeepResearchStatusResponse(BaseModel):
     hitl_config: Optional[Dict[str, Any]] = Field(default=None, description="HITL configuration (mirrors request hitl param)")
     interaction: Optional[Interaction] = Field(default=None, description="Current HITL checkpoint (present when awaiting_input or paused)")
     hitl_history: Optional[List[InteractionHistoryEntry]] = Field(default=None, description="History of completed HITL checkpoints")
+
+    # Report editing fields (completed tasks)
+    editable: Optional[bool] = Field(None, description="Whether the report can be edited with edit()")
+    version: Optional[int] = Field(
+        None, description="The current version, or the version requested with status(version=N)"
+    )
+    version_count: Optional[int] = Field(None, description="How many versions the report has")
+    revised_at: Optional[str] = Field(None, description="When the latest edit or restore was applied")
+    active_edit: Optional[DeepResearchEdit] = Field(None, description="The edit running on this task, if any")
+    is_latest: Optional[bool] = Field(
+        None, description="Whether the returned version is the current one (set with status(version=N))"
+    )
 
     warnings: ResponseWarnings = None
     error: Optional[str] = None
