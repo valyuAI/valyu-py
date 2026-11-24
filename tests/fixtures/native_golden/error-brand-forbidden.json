@@ -1,0 +1,9 @@
+{
+  "case": "error-brand-forbidden",
+  "provisional": false,
+  "http": 403,
+  "body": {
+    "error": "s",
+    "code": "s"
+  }
+}

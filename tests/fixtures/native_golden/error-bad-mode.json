@@ -1,0 +1,8 @@
+{
+  "case": "error-bad-mode",
+  "provisional": false,
+  "http": 400,
+  "body": {
+    "error": "s"
+  }
+}

@@ -23,8 +23,11 @@ MAX_RATE_LIMIT_WAIT_SECONDS = 60
 class _Response(Protocol):
     """The subset of ``requests.Response``/``httpx.Response`` this module needs."""
 
-    status_code: int
-    headers: Mapping[str, str]
+    @property
+    def status_code(self) -> int: ...
+
+    @property
+    def headers(self) -> Mapping[str, str]: ...
 
     def json(self) -> Any: ...
 

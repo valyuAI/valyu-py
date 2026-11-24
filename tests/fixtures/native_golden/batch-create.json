@@ -1,0 +1,32 @@
+{
+  "case": "batch-create",
+  "provisional": false,
+  "http": 201,
+  "body": {
+    "batch_id": "s",
+    "status": "s",
+    "mode": "s",
+    "created_at": "s",
+    "name": "s",
+    "output_formats": [
+      "s"
+    ],
+    "counts": {
+      "total": 0,
+      "queued": 0,
+      "running": 0,
+      "completed": 0,
+      "failed": 0,
+      "cancelled": 0
+    },
+    "cost": 0.5,
+    "results_ready": false,
+    "tasks": [
+      {
+        "task_id": "s",
+        "deepresearch_id": "s",
+        "status": "s"
+      }
+    ]
+  }
+}

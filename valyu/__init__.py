@@ -1,4 +1,4 @@
-__version__ = "2.14.1"
+__version__ = "2.14.2"
 
 from .types.response import SearchResponse
 from .types.contents import (
@@ -22,6 +22,18 @@ from .types.deepresearch import (
     Interaction,
     InteractionHistoryEntry,
     DeepResearchRespondResponse,
+    DeepResearchMode,
+    DeepResearchStatus,
+    SourceLocation,
+    StructuredSection,
+    StructuredTable,
+    StructuredChart,
+    StructuredSourceRef,
+    StructuredReport,
+    DeepResearchCostDetail,
+    CostDetailLine,
+    RETRYABLE_ERROR_CODES,
+    is_retryable_error,
     DeepResearchEditStatus,
     DeepResearchEditTarget,
     DeepResearchEditFocus,
@@ -80,6 +92,18 @@ __all__ = [
     "Interaction",
     "InteractionHistoryEntry",
     "DeepResearchRespondResponse",
+    "DeepResearchMode",
+    "DeepResearchStatus",
+    "SourceLocation",
+    "StructuredSection",
+    "StructuredTable",
+    "StructuredChart",
+    "StructuredSourceRef",
+    "StructuredReport",
+    "DeepResearchCostDetail",
+    "CostDetailLine",
+    "RETRYABLE_ERROR_CODES",
+    "is_retryable_error",
     "DeepResearchEditStatus",
     "DeepResearchEditTarget",
     "DeepResearchEditFocus",

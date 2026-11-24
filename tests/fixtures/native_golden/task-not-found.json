@@ -1,0 +1,8 @@
+{
+  "case": "task-not-found",
+  "provisional": false,
+  "http": 404,
+  "body": {
+    "error": "s"
+  }
+}

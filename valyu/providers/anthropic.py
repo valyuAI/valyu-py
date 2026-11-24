@@ -108,7 +108,7 @@ class AnthropicProvider(BaseProvider[AnthropicTool, AnthropicToolCollection]):
         :param modifiers: Optional modifiers for tool execution
         :return: Object containing output data from the tool call
         """
-        tool_name = getattr(tool_call, "name", None)
+        tool_name = getattr(tool_call, "name", None) or ""
         tool_input = getattr(tool_call, "input", {})
 
         return self.execute_tool(
@@ -129,7 +129,7 @@ class AnthropicProvider(BaseProvider[AnthropicTool, AnthropicToolCollection]):
         :param modifiers: Optional modifiers for tool execution
         :return: A list of output objects from the function calls
         """
-        outputs = []
+        outputs: t.List[t.Dict[str, t.Any]] = []
 
         if not response or not hasattr(response, "content"):
             return outputs
